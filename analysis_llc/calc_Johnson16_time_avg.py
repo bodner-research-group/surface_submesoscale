@@ -1,11 +1,5 @@
 # Reproduce the results of Johnson et al. (2016) JPO
-# 1. Plot surface T and S
-# 2. Compute potential density, alpha, and beta
-# 3. Compute and plot the mixed layer depth
-# 4. Find 50%-90% of the mixed layer
-# 5. Compute vertical gradients of temperature and salinity
-# 6. Compute the Turner angle for vertical gradients
-# 7. Plot surface U, V, and W
+# Using time-averaged data
 
 # Load packages
 import multiprocessing as mp
@@ -20,43 +14,89 @@ import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GS
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_time_avg"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
-###############################
-### 1. Plot surface T and S ###
-###############################
-
 # Set indices
 face = 1
-time = 0
+nday_avg = 7                 # 7-day average
+time = slice(0,24*nday_avg,1)   
 k_surf = 0
 i = slice(1000,1200,1)
 j = slice(2800,3000,1)
 
-# Read temperature and salinity data of ocean surface
-tt_surf = ds1.Theta.isel(time=time,k=k_surf,face=face,i=i,j=j)
-ss_surf = ds1.Salt.isel(time=time,k=k_surf,face=face,i=i,j=j)
+# Coordinate
+lat = ds1.YC.isel(face=face,i=1,j=j)
+lon = ds1.XC.isel(face=face,i=i,j=1)
+depth = ds1.Z
 
-# Make one plot of ocean surface T and S to check the data
+# Convert lat/lon from xarray to NumPy arrays
+lat_vals = lat.values  # shape (j,)
+lon_vals = lon.values  # shape (i,)
+
+# Create 2D lat/lon meshgrid
+lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+
+###################################
+### 0. Calculate time averages  ###
+###################################
+# Read temperature and salinity data of the top 1000 m 
+tt = ds1.Theta.isel(time=time,face=face,i=i,j=j) # Potential temperature
+ss = ds1.Salt.isel(time=time,face=face,i=i,j=j)  # Practical salinity
+# eta = ds1.Eta.isel(time=time,face=face,i=i,j=j)  # Surface Height Anomaly
+print(tt.chunks) 
+
+# Re-chunk time dimension to 7-day blocks for efficient averaging
+tt = tt.chunk({'time': 24*nday_avg}) 
+ss = ss.chunk({'time': 24*nday_avg})
+print(tt.chunks) 
+
+# Compute time averages
+# Build a lazy Dask graph — nothing is computed yet
+tt_mean = tt.mean(dim='time')
+ss_mean = ss.mean(dim='time')
+
+# Trigger computation
+tt = tt_mean.compute()
+ss = ss_mean.compute()
+
+##########################################
+### 1. Plot time averaged surface data ###
+##########################################
+
+tt_surf = tt.isel(k=k_surf)
+ss_surf = ss.isel(k=k_surf)
+
 fig, axs = plt.subplots(1,2,figsize=(15,5))
-tt_surf.plot(ax=axs[0],cmap="gist_ncar") # vmin=-2.5,vmax=8.5,
-ss_surf.plot(ax=axs[1],cmap="terrain")   # vmin=33.6,vmax=34.8
+
+pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
+axs[0].set_title('7-day Mean Surface Temperature')
+axs[0].set_xlabel('Longitude')
+axs[0].set_ylabel('Latitude')
+fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
+# cbar_t = fig.colorbar(pcm_t, ax=axs[0])
+# cbar_t.ax.set_title('(\u00B0C)')  # Label on top
+
+pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
+axs[1].set_title('7-day Mean Surface Salinity')
+axs[1].set_xlabel('Longitude')
+axs[1].set_ylabel('Latitude')
+fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
+# cbar_s = fig.colorbar(pcm_s, ax=axs[1])
+# cbar_s.ax.set_title('(psu)')      # Label on top
+
+plt.tight_layout()
 plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=300)
 plt.close()
+
 
 #####################################################
 ### 2. Compute potential density, alpha, and beta ###
 #####################################################
-
-# Read temperature and salinity data of the top 1000 m 
-tt = ds1.Theta.isel(time=time,face=face,i=i,j=j) # Potential temperature
-ss = ds1.Salt.isel(time=time,face=face,i=i,j=j)  # Practical salinity
-lat = ds1.YC.isel(face=face,i=1,j=j)
-lon = ds1.XC.isel(face=face,i=i,j=1)
-depth = ds1.Z
+### Note: Ideally we should compute potential density, alpha, and beta every time step, and then take the time average
+### However, for an estimation, here we use the time-averaged T and S to compute density
 
 # Compute the potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
 SA = gsw.conversions.SA_from_SP(ss, depth, lon, lat) # Absolute salinity
@@ -127,7 +167,7 @@ depth_50 = depth.values[k_50]  # shape (i, j)
 depth_90 = depth.values[k_90]  # shape (i, j)
 dz_5090 = depth_50 - depth_90
 
-# Extract all temperature and salinity data of 50%-90% of the mixed layer
+# Extract temperature and salinity data at 50% and 90% of the mixed layer depth
 # Convert temperature and salinity to DataArray with NumPy backing
 tt_np = tt.values  # shape (k, i, j)
 ss_np = ss.values
@@ -158,32 +198,6 @@ beta_k90 = beta_np[k_90, i_idx, j_idx]
 ### 5. Compute vertical gradients of temperature and salinity ###
 #################################################################
 
-# # Temperature and salinity difference
-# diff_tt = tt_k50-tt_k90
-# diff_ss = ss_k50-ss_k90
-
-# # Flatten to 1D arrays and remove NaNs
-# x = diff_ss.ravel()
-# y = diff_tt.ravel()
-
-# # Create a mask to remove invalid (NaN) points
-# valid = ~np.isnan(x) & ~np.isnan(y)
-
-# x_valid = x[valid]
-# y_valid = y[valid]
-
-# # Scatter Plot
-# plt.figure(figsize=(7, 6))
-# plt.scatter(x_valid, y_valid, s=10, alpha=0.5, c='tab:blue')
-# plt.axhline(0, color='gray', linestyle='--')
-# plt.axvline(0, color='gray', linestyle='--')
-# plt.xlabel("ΔSalinity (SS₅₀ - SS₉₀)")
-# plt.ylabel("ΔTemperature (TT₅₀ - TT₉₀)")
-# plt.title("ΔT vs ΔS (50% - 90% MLD)")
-# plt.grid(True, linestyle=':')
-# plt.tight_layout()
-# plt.savefig(f"{figdir}/test_ts.png", dpi=150)
-# plt.close()
 
 # Gradients
 dT_dz = (tt_k50 - tt_k90) / dz_5090
@@ -261,14 +275,6 @@ plt.close()
 
 ### 6.2 Plot a map of the Turner Angle (Tu)
 
-# Convert lat/lon from xarray to NumPy arrays
-lat_vals = lat.values  # shape (j,)
-lon_vals = lon.values  # shape (i,)
-
-# Create 2D lat/lon meshgrid
-# lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='ij')  # shape (i, j)
-lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
-
 # Plot
 plt.figure(figsize=(10, 6))
 pcm = plt.pcolormesh(lon2d, lat2d, Tu_deg, cmap='twilight', shading='auto', vmin=-90, vmax=90)
@@ -332,40 +338,3 @@ plt.close()
 
 
 
-
-
-###############################
-### 7. Plot surface U, V, W ###
-###############################
-
-# Read surface velocity data
-uu_surf = ds1.U.isel(time=time,k=k_surf,face=face,i_g=i,j=j)
-vv_surf = ds1.V.isel(time=time,k=k_surf,face=face,i=i,j_g=j)
-ww_surf = ds1.W.isel(time=time,k_p1=k_surf,face=face,i=i,j=j)
-
-fig, axs = plt.subplots(1, 3, figsize=(18, 5))
-
-# u component
-pcm_u = axs[0].pcolormesh(lon2d, lat2d, uu_surf, shading='auto', cmap='RdBu_r')
-axs[0].set_title('Surface Zonal Velocity (u)')
-axs[0].set_xlabel('Longitude')
-axs[0].set_ylabel('Latitude')
-fig.colorbar(pcm_u, ax=axs[0], label='m/s')
-
-# v component
-pcm_v = axs[1].pcolormesh(lon2d, lat2d, vv_surf, shading='auto', cmap='RdBu_r')
-axs[1].set_title('Surface Meridional Velocity (v)')
-axs[1].set_xlabel('Longitude')
-axs[1].set_ylabel('Latitude')
-fig.colorbar(pcm_v, ax=axs[1], label='m/s')
-
-# w component
-pcm_w = axs[2].pcolormesh(lon2d, lat2d, ww_surf, shading='auto', cmap='RdBu_r')
-axs[2].set_title('Surface Vertical Velocity (w)')
-axs[2].set_xlabel('Longitude')
-axs[2].set_ylabel('Latitude')
-fig.colorbar(pcm_w, ax=axs[2], label='m/s')
-
-plt.tight_layout()
-plt.savefig(f"{figdir}/surface_uvw.png", dpi=150)
-plt.close()
