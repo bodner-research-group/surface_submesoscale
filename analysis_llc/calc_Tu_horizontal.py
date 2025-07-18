@@ -4,12 +4,16 @@
 # Load packages
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import xarray as xr
 import zarr 
 import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
 from numpy.linalg import lstsq
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
@@ -46,6 +50,9 @@ lon_vals = lon.values  # shape (i,)
 # Create 2D lat/lon meshgrid
 lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
 
+
+######### Load data #########
+
 # Load surface T, S 
 tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (k, j, i)
 ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (k, j, i)
@@ -59,7 +66,7 @@ alpha_surf = gsw.density.alpha(SA_surf, CT_surf, p_ref)             # Thermal ex
 beta_surf = gsw.density.beta(SA_surf, CT_surf, p_ref)               # Saline (i.e. haline) contraction coefficient of seawater at constant Conservative Temperature, shape (k, j, i)
 
 
-# For each horizontal grid point, take the 8 grid points around it, and do a plain fit
+######### For each horizontal grid point, take the 8 grid points around it, and do a plain fit to compute the gradients #########
 
 # 1. Convert surface temperature and salinity to NumPy arrays
 tt_surf_np = tt_surf.values       # shape (j, i)
@@ -103,34 +110,149 @@ for j in range(1, ny - 1):
         ds_dy[j, i] = b_ss / dyF[j, i]
 
 # 5. Plot the horizontal gradients
+vmax_t = np.nanmax(np.abs([dt_dx, dt_dy]))  # symmetric range for temperature gradients
+vmax_s = np.nanmax(np.abs([ds_dx, ds_dy]))  # symmetric range for salinity gradients
+
 fig, axs = plt.subplots(2,2,figsize=(15,10))
 
-p1 = axs[0,0].pcolormesh(lon2d, lat2d, dt_dx, shading='auto', cmap='coolwarm')
-axs[0,0].set_title('Zonal Gradient of Temperature (dT/dx)')
+p1 = axs[0,0].pcolormesh(lon2d, lat2d, dt_dx, shading='auto', cmap='coolwarm', vmin=-vmax_t, vmax=vmax_t)
+axs[0,0].set_title(r'Zonal Temp. Gradient ($\partial_x \theta$)')
 axs[0,0].set_xlabel('Longitude')
 axs[0,0].set_ylabel('Latitude')
-fig.colorbar(p1, ax=axs[0,0], label='(\u00B0C/m)')
+cb1 = fig.colorbar(p1, ax=axs[0,0], label='(\u00B0C/m)')
+cb1.formatter = ticker.ScalarFormatter(useMathText=True)
+cb1.formatter.set_powerlimits((-2, 2)) 
+cb1.update_ticks()
 
-p2 = axs[0,1].pcolormesh(lon2d, lat2d, dt_dy, shading='auto', cmap='coolwarm')
-axs[0,1].set_title('Meridional Gradient of Temperature (dT/dy)')
+p2 = axs[0,1].pcolormesh(lon2d, lat2d, dt_dy, shading='auto', cmap='coolwarm', vmin=-vmax_t, vmax=vmax_t)
+axs[0,1].set_title(r'Merid. Temp. Gradient ($\partial_y \theta$)')
 axs[0,1].set_xlabel('Longitude')
 axs[0,1].set_ylabel('Latitude')
-fig.colorbar(p2, ax=axs[0,1], label='(\u00B0C/m)')
+cb2 = fig.colorbar(p2, ax=axs[0,1], label='(\u00B0C/m)')
+cb2.formatter = ticker.ScalarFormatter(useMathText=True)
+cb2.formatter.set_powerlimits((-2, 2))
+cb2.update_ticks()
 
-p3 = axs[1,0].pcolormesh(lon2d, lat2d, ds_dx, shading='auto', cmap='coolwarm')
-axs[1,0].set_title('Zonal Gradient of Salinity (dS/dx)')
+p3 = axs[1,0].pcolormesh(lon2d, lat2d, ds_dx, shading='auto', cmap='coolwarm', vmin=-vmax_s, vmax=vmax_s)
+axs[1,0].set_title(r'Zonal Salinity Gradient ($\partial_x S$)')
 axs[1,0].set_xlabel('Longitude')
 axs[1,0].set_ylabel('Latitude')
-fig.colorbar(p1, ax=axs[1,0], label='(psu/m)')
+cb3 = fig.colorbar(p3, ax=axs[1,0], label='(psu/m)')
+cb3.formatter = ticker.ScalarFormatter(useMathText=True)
+cb3.formatter.set_powerlimits((-2, 2))
+cb3.update_ticks()
 
-p4 = axs[1,1].pcolormesh(lon2d, lat2d, ds_dy, shading='auto', cmap='coolwarm')
-axs[1,1].set_title('Meridional Gradient of Salinity (dS/dy)')
+p4 = axs[1,1].pcolormesh(lon2d, lat2d, ds_dy, shading='auto', cmap='coolwarm', vmin=-vmax_s, vmax=vmax_s)
+axs[1,1].set_title(r'Merid. Salinity Gradient ($\partial_y S$)')
 axs[1,1].set_xlabel('Longitude')
 axs[1,1].set_ylabel('Latitude')
-fig.colorbar(p2, ax=axs[1,1], label='(psu/m)')
+cb4 = fig.colorbar(p4, ax=axs[1,1], label='(psu/m)')
+cb4.formatter = ticker.ScalarFormatter(useMathText=True)
+cb4.formatter.set_powerlimits((-2, 2))
+cb4.update_ticks()
 
 plt.tight_layout()
 plt.savefig(f"{figdir}/surface_t_s_gradients.png", dpi=150)
 plt.close()
 
-# Calculate the horizontal Turner Angle
+
+######### Calculate the horizontal Turner Angle #########
+
+# 1. Calculate the across-isopycnal gradients
+grad_rho_x = -alpha_surf * dt_dx + beta_surf * ds_dx
+grad_rho_y = -alpha_surf * dt_dy + beta_surf * ds_dy
+
+mag_linear = np.hypot(grad_rho_x, grad_rho_y) # magnitude of horizontal density gradient estimated based on the linear Equation of State
+
+# 2. Define a unit vector (norm_x, norm_y) to represent the direction of the 2D horizontal density gradient
+norm_x = grad_rho_x / mag_linear
+norm_y = grad_rho_y / mag_linear
+
+# 3. Across-isopycnal horizontal surface temperature and salinity gradient
+dt_cross = dt_dx * norm_x + dt_dy * norm_y
+ds_cross = ds_dx * norm_x + ds_dy * norm_y
+
+# 4. Plot dt_cross and ds_cross
+fig, axs = plt.subplots(1,2,figsize=(15,5))
+
+p1 = axs[0].pcolormesh(lon2d, lat2d, dt_cross, shading='auto', cmap='coolwarm', vmin=-vmax_t, vmax=vmax_t)
+axs[0].set_title(r'Cross-isop. Temp. Gradient ($\partial \theta$)')
+axs[0].set_xlabel('Longitude')
+axs[0].set_ylabel('Latitude')
+cb1 = fig.colorbar(p1, ax=axs[0], label='(\u00B0C/m)')
+cb1.formatter = ticker.ScalarFormatter(useMathText=True)
+cb1.formatter.set_powerlimits((-2, 2))  
+cb1.update_ticks()
+
+p2 = axs[1].pcolormesh(lon2d, lat2d, ds_cross, shading='auto', cmap='coolwarm', vmin=-vmax_s, vmax=vmax_s)
+axs[1].set_title(r'Cross-isop. Salinity Gradient ($\partial S$)')
+axs[1].set_xlabel('Longitude')
+axs[1].set_ylabel('Latitude')
+cb2 = fig.colorbar(p2, ax=axs[1], label='(\u00B0C/m)')
+cb2.formatter = ticker.ScalarFormatter(useMathText=True)
+cb2.formatter.set_powerlimits((-2, 2))
+cb2.update_ticks()
+
+plt.tight_layout()
+plt.savefig(f"{figdir}/surface_t_s_gradients_cross.png", dpi=150)
+plt.close()
+
+# 5. Horizontal Turner Angle
+denominator= alpha_surf * dt_cross - beta_surf * ds_cross
+numerator = alpha_surf * dt_cross + beta_surf * ds_cross
+
+Tu_H_rad = np.arctan2(numerator, denominator)
+Tu_H_deg = np.degrees(Tu_H_rad)
+
+# print("Max Turner Angle (deg):", np.nanmax(Tu_H_deg.values))
+# print("Min Turner Angle (deg):", np.nanmin(Tu_H_deg.values))
+
+# 6. Plot a map of the Turner Angle (Tu)
+plt.figure(figsize=(9, 6))
+pcm = plt.pcolormesh(lon2d, lat2d, Tu_H_deg, cmap='twilight_shifted', shading='auto', vmin=-180, vmax=180)
+plt.colorbar(pcm, label=r"$Tu_H$ (°)")
+plt.title(r"Horizontal Turner Angle ($Tu_H$)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle=':')
+plt.tight_layout()
+plt.savefig(f"{figdir}/hori_turner_angle_map.png", dpi=150)
+plt.close()
+
+
+######### Calculate the Kernel PDF distribution #########
+
+# 1. Flatten the Tu_H_deg array and remove NaN values
+Tu_H_flat = Tu_H_deg.values.flatten()
+Tu_H_clean = Tu_H_flat[~np.isnan(Tu_H_flat)]  # remove NaNs
+
+# 2. Plot Kernel PDF
+plt.figure(figsize=(8, 5))
+sns.kdeplot(Tu_H_clean, bw_adjust=0.5, fill=True, color="darkblue", label=r'$Tu_H$ Kernel density estimation')
+plt.xlabel(r'$Tu_H$ (°)')
+plt.ylabel("Density")
+plt.title("Kernel PDF of Horizontal Turner Angle")
+
+plt.grid(True, which='major', linestyle=':')  # major grid lines
+plt.minorticks_on()                           # enable minor ticks
+plt.grid(True, which='minor', linestyle='--', alpha=0.15)  # minor grid lines (lighter and dashed)
+
+# Highlight vertical lines at -90 and 90 degrees
+plt.axvline(x=-90, color='red', linestyle='--', linewidth=2, label='-90°')
+plt.axvline(x=90, color='red', linestyle='--', linewidth=2, label='90°')
+
+plt.legend()
+plt.tight_layout()
+plt.savefig(f"{figdir}/Tu_H_kernel_PDF.png", dpi=150)
+plt.close()
+
+
+# 3. Create a Gaussian Kernel Density Estimator
+kde = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
+
+# 4. Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
+x_grid = np.linspace(-180, 180, 1000)
+
+# 5. Compute the PDF values at the specified points
+pdf_values = kde(x_grid)
+

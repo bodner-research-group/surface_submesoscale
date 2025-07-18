@@ -92,7 +92,7 @@ ss_surf = ss.isel(k=k_surf)
 fig, axs = plt.subplots(1,2,figsize=(15,5))
 
 pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
-axs[0].set_title('7-day Mean Surface Temperature')
+axs[0].set_title('Surface Temperature')
 axs[0].set_xlabel('Longitude')
 axs[0].set_ylabel('Latitude')
 fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
@@ -100,7 +100,7 @@ fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
 # cbar_t.ax.set_title('(\u00B0C)')  # Label on top
 
 pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
-axs[1].set_title('7-day Mean Surface Salinity')
+axs[1].set_title('Surface Salinity')
 axs[1].set_xlabel('Longitude')
 axs[1].set_ylabel('Latitude')
 fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
