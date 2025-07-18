@@ -8,9 +8,6 @@
 # 6. Compute the Turner angle for vertical gradients
 # 7. Plot surface U, V, and W
 
-
-# To do: double check! should line 156 be (k, i, j) or (k, j, i)
-
 # Load packages
 import multiprocessing as mp
 import matplotlib.pyplot as plt
@@ -59,8 +56,8 @@ lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
 ##############################################################
 
 ################ If use instantaneous output
-tt = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j) # Potential temperature
-ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity
+tt = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j) # Potential temperature, shape (k, j, i)
+ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shape (k, j, i)
 ################
 
 # ################ If use time averages
@@ -120,15 +117,15 @@ plt.close()
 ### 2. Compute potential density, alpha, and beta ###
 #####################################################
 ### Note: Ideally we should compute potential density, alpha, and beta every time step, and then take the time average
-### However, for an estimation, here we use the time-averaged T and S to compute density
+### However, for an estimation, here we use the time-averaged T and S to compute density (if time-averaged tt and ss were used)
 
 # Compute the potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
-SA = gsw.conversions.SA_from_SP(ss, depth, lon, lat) # Absolute salinity
-CT = gsw.conversions.CT_from_pt(SA, tt)              # Conservative temperature
+SA = gsw.conversions.SA_from_SP(ss, depth, lon, lat) # Absolute salinity, shape (k, j, i)
+CT = gsw.conversions.CT_from_pt(SA, tt)              # Conservative temperature, shape (k, j, i)
 p_ref = 0                                            # Reference pressure 
-rho = gsw.density.rho(SA, CT, p_ref)                 # Potential density
-alpha = gsw.density.alpha(SA, CT, depth)             # Thermal expansion coefficient with respect to Conservative Temperature
-beta = gsw.density.beta(SA, CT, depth)               # Saline (i.e. haline) contraction coefficient of seawater at constant Conservative Temperature
+rho = gsw.density.rho(SA, CT, p_ref)                 # Potential density, shape (k, j, i)
+alpha = gsw.density.alpha(SA, CT, depth)             # Thermal expansion coefficient with respect to Conservative Temperature, shape (k, j, i)
+beta = gsw.density.beta(SA, CT, depth)               # Saline (i.e. haline) contraction coefficient of seawater at constant Conservative Temperature, shape (k, j, i)
 
 # # Plot to check potential density
 # fig, axs = plt.subplots(1,3,figsize=(22,5))
@@ -150,13 +147,13 @@ beta = gsw.density.beta(SA, CT, depth)               # Saline (i.e. haline) cont
 rho_surface = rho.isel(k=0)
 drho = rho - rho_surface.expand_dims({'k': rho.k})
 
-thresh = xr.where(np.abs(drho) > 0.03, drho.k, np.nan) # thresh = xr.where((np.abs(drho) > 0.03) & (N2 > 1e-5), drho.depth, np.nan)
-mld_idx = thresh.min("k")  # vertical indices of mixed layer depth 
-mld_idx.name = "Vertical indices of mixed layer base"
+# thresh = xr.where(np.abs(drho) > 0.03, drho.k, np.nan) # thresh = xr.where((np.abs(drho) > 0.03) & (N2 > 1e-5), drho.depth, np.nan)
+# mld_idx = thresh.min("k")  # vertical indices of mixed layer depth 
+# mld_idx.name = "Vertical indices of mixed layer base"
 
 drho = drho.assign_coords(k=depth) # replace coordinate k with depth
 thresh = xr.where(np.abs(drho) > 0.03, drho.k, np.nan)
-mld = thresh.max("k")      # mixed layer depth 
+mld = thresh.max("k")      # mixed layer depth, shape (j, i)
 mld.name = "MLD"
 
 # Plot the mixed layer depth indices
@@ -178,49 +175,49 @@ plt.close()
 # Find 50%-90% of the mixed layer (Johnson et al. 2016)
 mld_50 = mld * 0.5
 mld_90 = mld * 0.9
-dz_mld = mld_50 - mld_90
+dz_mld = mld_50 - mld_90     # shape (j, i)
 
 # Expand dimensions of depth to match data shape (k, i, j)
 depth_broadcasted = depth.values[:, None, None]  # (k, 1, 1)
-mld_50_broadcasted = mld_50.values[None, :, :]   # (1, i, j)
-mld_90_broadcasted = mld_90.values[None, :, :]   # (1, i, j)
+mld_50_broadcasted = mld_50.values[None, :, :]   # (1, j, i)
+mld_90_broadcasted = mld_90.values[None, :, :]   # (1, j, i)
 
 # Find index of depth level closest to mld_50 and mld_90
-abs_diff_50 = np.abs(depth_broadcasted - mld_50_broadcasted)  # (k, i, j)
-abs_diff_90 = np.abs(depth_broadcasted - mld_90_broadcasted)  # (k, i, j)
-k_50 = abs_diff_50.argmin(axis=0)  # shape (i, j)
-k_90 = abs_diff_90.argmin(axis=0)  # shape (i, j)
+abs_diff_50 = np.abs(depth_broadcasted - mld_50_broadcasted)  # (k, j, i)
+abs_diff_90 = np.abs(depth_broadcasted - mld_90_broadcasted)  # (k, j, i)
+k_50 = abs_diff_50.argmin(axis=0)  # shape (j, i)
+k_90 = abs_diff_90.argmin(axis=0)  # shape (j, i)
 
 # Use these indices to get the closest depth levels
-depth_50 = depth.values[k_50]  # shape (i, j)
-depth_90 = depth.values[k_90]  # shape (i, j)
+depth_50 = depth.values[k_50]  # shape (j, i)
+depth_90 = depth.values[k_90]  # shape (j, i)
 dz_5090 = depth_50 - depth_90
 
 # Extract temperature and salinity data at 50% and 90% of the mixed layer depth
 # Convert temperature and salinity to DataArray with NumPy backing
-tt_np = tt.values  # shape (k, i, j)
-ss_np = ss.values
-alpha_np = alpha.values
-beta_np = beta.values
+tt_np = tt.values       # shape (k, j, i)
+ss_np = ss.values       # shape (k, j, i)
+alpha_np = alpha.values # shape (k, j, i) 
+beta_np = beta.values   # shape (k, j, i)
 
 # Get dimensions
-i_dim, j_dim = k_50.shape
+j_dim, i_dim = k_50.shape
 
 # Prepare index arrays for advanced indexing
-i_idx, j_idx = np.meshgrid(np.arange(i_dim), np.arange(j_dim), indexing='ij')
+j_idx, i_idx = np.meshgrid(np.arange(j_dim), np.arange(i_dim), indexing='ij')
 
 # Extract temperature and salinity at k_50 and k_90
-tt_k50 = tt_np[k_50, i_idx, j_idx]
-tt_k90 = tt_np[k_90, i_idx, j_idx]
+tt_k50 = tt_np[k_50, j_idx, i_idx]
+tt_k90 = tt_np[k_90, j_idx, i_idx]
 
-ss_k50 = ss_np[k_50, i_idx, j_idx]
-ss_k90 = ss_np[k_90, i_idx, j_idx]
+ss_k50 = ss_np[k_50, j_idx, i_idx]
+ss_k90 = ss_np[k_90, j_idx, i_idx]
 
-alpha_k50 = alpha_np[k_50, i_idx, j_idx]
-alpha_k90 = alpha_np[k_90, i_idx, j_idx]
+alpha_k50 = alpha_np[k_50, j_idx, i_idx]
+alpha_k90 = alpha_np[k_90, j_idx, i_idx]
 
-beta_k50 = beta_np[k_50, i_idx, j_idx]
-beta_k90 = beta_np[k_90, i_idx, j_idx]
+beta_k50 = beta_np[k_50, j_idx, i_idx]
+beta_k90 = beta_np[k_90, j_idx, i_idx]
 
 
 #################################################################

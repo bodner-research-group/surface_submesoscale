@@ -1,4 +1,4 @@
-# Plot T, S, U, V of the LLC4320 data
+# Plot T, S, U, V of the LLC4320 data, for making animations
 # Load packages
 import matplotlib.pyplot as plt
 import numpy as np
