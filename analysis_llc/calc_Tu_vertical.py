@@ -36,7 +36,6 @@ i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
-# Use different sizes for Nx and Ny to avoid using wrong dimensions
 
 # Coordinate
 lat = ds1.YC.isel(face=face,i=1,j=j)
