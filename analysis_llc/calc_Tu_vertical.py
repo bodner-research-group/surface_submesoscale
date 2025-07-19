@@ -1,5 +1,6 @@
 # Calculate the vertical Turner Angle following Johnson et al. (2016) JPO
 # Using instantaneous output or time-averages
+
 # 1. Plot surface T and S
 # 2. Compute potential density, alpha, and beta
 # 3. Compute and plot the mixed layer depth
@@ -7,6 +8,8 @@
 # 5. Compute vertical gradients of temperature and salinity
 # 6. Compute the Turner angle for vertical gradients
 # 7. Plot surface U, V, and W
+# 8. Calculate the Kernel PDF distribution
+
 
 # Load packages
 import multiprocessing as mp
@@ -16,6 +19,10 @@ import xarray as xr
 import zarr 
 import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
+from numpy.linalg import lstsq
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
@@ -399,3 +406,49 @@ fig.colorbar(pcm_w, ax=axs[2], label='m/s')
 plt.tight_layout()
 plt.savefig(f"{figdir}/surface_uvw.png", dpi=150)
 plt.close()
+
+
+
+
+
+
+#################################################
+### 8. Calculate the Kernel PDF distribution  ###
+#################################################
+
+# 1). Flatten the Tu_H_deg array and remove NaN values
+Tu_V_flat = Tu_deg.flatten()
+Tu_V_clean = Tu_V_flat[~np.isnan(Tu_V_flat)]  # remove NaNs
+
+# 2). Plot Kernel PDF
+plt.figure(figsize=(8, 5))
+sns.kdeplot(Tu_V_clean, bw_adjust=0.5, fill=True, color="darkblue", label=r'$Tu_H$ Kernel density estimation')
+plt.xlabel(r'$Tu_V$ (°)')
+plt.ylabel("Density")
+plt.title("Kernel PDF of Vertical Turner Angle")
+
+plt.grid(True, which='major', linestyle=':')  # major grid lines
+plt.minorticks_on()                           # enable minor ticks
+plt.grid(True, which='minor', linestyle='--', alpha=0.15)  # minor grid lines (lighter and dashed)
+
+# Highlight vertical lines at -90 and 90 degrees
+plt.axvline(x=-90, color='red', linestyle='--', linewidth=2, label='-90°')
+plt.axvline(x=90, color='red', linestyle='--', linewidth=2, label='90°')
+
+plt.legend()
+plt.tight_layout()
+plt.savefig(f"{figdir}/Tu_V_kernel_PDF.png", dpi=150)
+plt.close()
+
+
+# # 3). Create a Gaussian Kernel Density Estimator
+# kde = gaussian_kde(Tu_V_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
+
+# # 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
+# x_grid = np.linspace(-180, 180, 1000)
+
+# # 5). Compute the PDF values at the specified points
+# pdf_values = kde(x_grid)
+
+
+

@@ -1,6 +1,11 @@
 # Calculate the horizontal Turner Angle following Johnson et al. (2016) JPO
 # Using instantaneous output or time-averages
 
+# 1. Use plain fit to compute the gradients
+# 2. Calculate the horizontal Turner Angle
+# 3. Calculate the Kernel PDF distribution 
+
+
 # Load packages
 import multiprocessing as mp
 import matplotlib.pyplot as plt
@@ -66,25 +71,27 @@ alpha_surf = gsw.density.alpha(SA_surf, CT_surf, p_ref)             # Thermal ex
 beta_surf = gsw.density.beta(SA_surf, CT_surf, p_ref)               # Saline (i.e. haline) contraction coefficient of seawater at constant Conservative Temperature, shape (k, j, i)
 
 
-######### For each horizontal grid point, take the 8 grid points around it, and do a plain fit to compute the gradients #########
+#############################################################
+######### 1. Use plain fit to compute the gradients #########
+#############################################################
 
-# 1. Convert surface temperature and salinity to NumPy arrays
+# 1). Convert surface temperature and salinity to NumPy arrays
 tt_surf_np = tt_surf.values       # shape (j, i)
 ss_surf_np = ss_surf.values       # shape (j, i)
 ny, nx = tt_surf_np.shape
 
-# 2. Initialize arrays to hold temperature and salinity gradients, filled with NaNs
+# 2). Initialize arrays to hold temperature and salinity gradients, filled with NaNs
 dt_dx = np.full_like(tt_surf_np, np.nan)
 dt_dy = np.full_like(tt_surf_np, np.nan)
 ds_dx = np.full_like(ss_surf_np, np.nan)
 ds_dy = np.full_like(ss_surf_np, np.nan)
 
-# 3. Create relative coordinates for the window
+# 3). Create relative coordinates for the window
 x = np.tile([-1, 0, 1], 3)            # shape (9,)  x = [-1, 0, 1, -1, 0, 1, -1, 0, 1]
 y = np.repeat([-1, 0, 1], 3)          # shape (9,)  y = [-1, -1, -1, 0, 0, 0, 1, 1, 1]
 A = np.vstack([x, y, np.ones(9)]).T   # shape (9, 3)
 
-# 4. Loop through interior points of the grid (excluding edges)
+# 4). Loop through interior points of the grid (excluding edges)
 for j in range(1, ny - 1):
     for i in range(1, nx - 1):
         # 4.1 Extract local 3×3 temperature block （inclusive on the left, exclusive on the right）
@@ -109,7 +116,7 @@ for j in range(1, ny - 1):
         ds_dx[j, i] = a_ss / dxF[j, i]
         ds_dy[j, i] = b_ss / dyF[j, i]
 
-# 5. Plot the horizontal gradients
+# 5). Plot the horizontal gradients
 vmax_t = np.nanmax(np.abs([dt_dx, dt_dy]))  # symmetric range for temperature gradients
 vmax_s = np.nanmax(np.abs([ds_dx, ds_dy]))  # symmetric range for salinity gradients
 
@@ -155,24 +162,25 @@ plt.tight_layout()
 plt.savefig(f"{figdir}/surface_t_s_gradients.png", dpi=150)
 plt.close()
 
+############################################################
+######### 2. Calculate the horizontal Turner Angle #########
+############################################################
 
-######### Calculate the horizontal Turner Angle #########
-
-# 1. Calculate the across-isopycnal gradients
+# 1). Calculate the across-isopycnal gradients
 grad_rho_x = -alpha_surf * dt_dx + beta_surf * ds_dx
 grad_rho_y = -alpha_surf * dt_dy + beta_surf * ds_dy
 
 mag_linear = np.hypot(grad_rho_x, grad_rho_y) # magnitude of horizontal density gradient estimated based on the linear Equation of State
 
-# 2. Define a unit vector (norm_x, norm_y) to represent the direction of the 2D horizontal density gradient
+# 2). Define a unit vector (norm_x, norm_y) to represent the direction of the 2D horizontal density gradient
 norm_x = grad_rho_x / mag_linear
 norm_y = grad_rho_y / mag_linear
 
-# 3. Across-isopycnal horizontal surface temperature and salinity gradient
+# 3). Across-isopycnal horizontal surface temperature and salinity gradient
 dt_cross = dt_dx * norm_x + dt_dy * norm_y
 ds_cross = ds_dx * norm_x + ds_dy * norm_y
 
-# 4. Plot dt_cross and ds_cross
+# 4). Plot dt_cross and ds_cross
 fig, axs = plt.subplots(1,2,figsize=(15,5))
 
 p1 = axs[0].pcolormesh(lon2d, lat2d, dt_cross, shading='auto', cmap='coolwarm', vmin=-vmax_t, vmax=vmax_t)
@@ -197,7 +205,7 @@ plt.tight_layout()
 plt.savefig(f"{figdir}/surface_t_s_gradients_cross.png", dpi=150)
 plt.close()
 
-# 5. Horizontal Turner Angle
+# 5). Horizontal Turner Angle
 denominator= alpha_surf * dt_cross - beta_surf * ds_cross
 numerator = alpha_surf * dt_cross + beta_surf * ds_cross
 
@@ -207,7 +215,7 @@ Tu_H_deg = np.degrees(Tu_H_rad)
 # print("Max Turner Angle (deg):", np.nanmax(Tu_H_deg.values))
 # print("Min Turner Angle (deg):", np.nanmin(Tu_H_deg.values))
 
-# 6. Plot a map of the Turner Angle (Tu)
+# 6). Plot a map of the Turner Angle (Tu)
 plt.figure(figsize=(9, 6))
 pcm = plt.pcolormesh(lon2d, lat2d, Tu_H_deg, cmap='twilight_shifted', shading='auto', vmin=-180, vmax=180)
 plt.colorbar(pcm, label=r"$Tu_H$ (°)")
@@ -220,13 +228,15 @@ plt.savefig(f"{figdir}/hori_turner_angle_map.png", dpi=150)
 plt.close()
 
 
-######### Calculate the Kernel PDF distribution #########
+############################################################
+######### 3. Calculate the Kernel PDF distribution #########
+############################################################
 
-# 1. Flatten the Tu_H_deg array and remove NaN values
+# 1). Flatten the Tu_H_deg array and remove NaN values
 Tu_H_flat = Tu_H_deg.values.flatten()
 Tu_H_clean = Tu_H_flat[~np.isnan(Tu_H_flat)]  # remove NaNs
 
-# 2. Plot Kernel PDF
+# 2). Plot Kernel PDF
 plt.figure(figsize=(8, 5))
 sns.kdeplot(Tu_H_clean, bw_adjust=0.5, fill=True, color="darkblue", label=r'$Tu_H$ Kernel density estimation')
 plt.xlabel(r'$Tu_H$ (°)')
@@ -247,12 +257,20 @@ plt.savefig(f"{figdir}/Tu_H_kernel_PDF.png", dpi=150)
 plt.close()
 
 
-# 3. Create a Gaussian Kernel Density Estimator
+# 3). Create a Gaussian Kernel Density Estimator
 kde = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
-# 4. Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
+# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
 x_grid = np.linspace(-180, 180, 1000)
 
-# 5. Compute the PDF values at the specified points
+# 5). Compute the PDF values at the specified points
 pdf_values = kde(x_grid)
+
+# 6). Test the sensitivity of KDE to smoothing bandwidth
+for bw in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]:
+    kde = gaussian_kde(Tu_H_clean, bw_method=bw)
+    plt.plot(x_grid, kde(x_grid), label=f"bw={bw}")
+plt.legend()
+plt.savefig(f"{figdir}/Tu_H_kernel_PDF-test.png", dpi=150)
+plt.close()
 
