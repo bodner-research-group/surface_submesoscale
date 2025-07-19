@@ -274,3 +274,28 @@ plt.legend()
 plt.savefig(f"{figdir}/Tu_H_kernel_PDF-test.png", dpi=150)
 plt.close()
 
+
+# Open the NETCDF file
+ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")
+
+# Add to the dataset
+ds_out["Tu_H_deg"] = (["lat", "lon"], Tu_H_deg.values)
+ds_out["Tu_abs_diff"] = np.abs(ds_out["Tu_deg"] - Tu_H_deg.values)
+ds_out["dt_dx"] = (["lat", "lon"], dt_dx.values)
+ds_out["dt_dy"] = (["lat", "lon"], dt_dy.values)
+ds_out["ds_dx"] = (["lat", "lon"], ds_dx.values)
+ds_out["ds_dy"] = (["lat", "lon"], ds_dy.values)
+ds_out["norm_x"] = (["lat", "lon"], norm_x.values)
+ds_out["norm_y"] = (["lat", "lon"], norm_y.values)
+ds_out["dt_cross"] = (["lat", "lon"], dt_cross.values)
+ds_out["ds_cross"] = (["lat", "lon"], ds_cross.values)
+ds_out["SA_surf"] = (["lat", "lon"], SA_surf.values)
+ds_out["CT_surf"] = (["lat", "lon"], CT_surf.values)
+ds_out["rho_surf"] = (["lat", "lon"], rho_surf.values)
+ds_out["alpha_surf"] = (["lat", "lon"], alpha_surf.values)
+ds_out["beta_surf"] = (["lat", "lon"], beta_surf.values)
+
+# Save to file
+ds_out.to_netcdf(f"{figdir}/Tu_difference.nc")
+
+print("Saved variables to figdir/Tu_difference.nc")

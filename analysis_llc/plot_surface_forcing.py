@@ -21,7 +21,7 @@ plt.rcParams.update({'font.size': 16})
 face = 1
 nday_avg = 7                 # 7-day average
 time_avg = slice(0,24*nday_avg,1)  
-time_inst = 261
+time_inst = 1
 k_surf = 0
 i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
@@ -82,12 +82,12 @@ variables = [
     (SIhsnow, "Sea Ice Snow Thickness", "(m)"),
     (SIuice, "Sea Ice Zonal Velocity", "(m/s)"),
     (SIvice, "Sea Ice Meridional Velocity", "(m/s)"),
+    (oceTAUX, "Zonal Wind Stress", "(N/m²)"),
+    (oceTAUY, "Meridional Wind Stress", "(N/m²)"),
+    (oceQnet, "Net Heat Flux", "(W/m²)"),
     (oceQsw, "Shortwave Radiation", "(W/m²)"),
     (oceFWflx, "Freshwater Flux", "(kg/m²/s)"),
     (oceSflux, "Salt Flux", "(kg/m²/s)"),
-    (oceQnet, "Net Heat Flux", "(W/m²)"),
-    (oceTAUX, "Zonal Wind Stress", "(N/m²)"),
-    (oceTAUY, "Meridional Wind Stress", "(N/m²)"),
 ]
 
 for fig_idx in range(2):

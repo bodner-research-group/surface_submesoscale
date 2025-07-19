@@ -451,4 +451,16 @@ plt.close()
 # pdf_values = kde(x_grid)
 
 
+# Build an xarray Dataset
+ds_out = xr.Dataset(
+    {
+        "Tu_deg": (["lat", "lon"], Tu_deg),
+        "lon": (["lat", "lon"], lon2d),
+        "lat": (["lat", "lon"], lat2d),
+    }
+)
 
+# save as NetCDF
+ds_out.to_netcdf(f"{figdir}/Tu_difference.nc")
+
+print("Saved output to figdir/Tu_difference.nc")
