@@ -17,5 +17,7 @@ figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face
 ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")
 ds_out.load()
 
+list(ds_out.data_vars)
+
 # Load all variables
 locals().update({k: ds_out[k] for k in ds_out.data_vars})
