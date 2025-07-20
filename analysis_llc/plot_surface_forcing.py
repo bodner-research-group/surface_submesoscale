@@ -8,28 +8,74 @@ import zarr
 import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
 
+from numpy.linalg import lstsq
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+from timezonefinder import TimezoneFinder
+from datetime import datetime
+import pytz
+import pandas as pd
+
+
+
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
-# Set indices
+# Set spatial indices
 face = 1
-nday_avg = 7                 # 7-day average
-time_avg = slice(0,24*nday_avg,1)  
-time_inst = 1
 k_surf = 0
 i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
-
 i_g = i
 j_g = j
+
+# Grid spacings in m
+dxF = ds1.dxF.isel(face=face,i=i,j=j)
+dyF = ds1.dyF.isel(face=face,i=i,j=j)
+
+# Coordinate
+lat = ds1.YC.isel(face=face,i=1,j=j)
+lon = ds1.XC.isel(face=face,i=i,j=1)
+
+# Convert lat/lon from xarray to NumPy arrays
+lat_vals = lat.values  # shape (j,)
+lon_vals = lon.values  # shape (i,)
+
+# Create 2D lat/lon meshgrid
+lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+
+# Find the center location of selected region
+lat_c = float(lat.mean().values)
+lon_c = float(lon.mean().values)
+# print(f"Center location: lat={lat_c}, lon={lon_c}")
+
+# Find the time zone
+tf = TimezoneFinder()
+timezone_str = tf.timezone_at(lng=lon_c, lat=lat_c)
+# print(f"Detected timezone: {timezone_str}")
+
+# Convert UTC to Local time
+time_utc = pd.to_datetime(ds1.time.values)
+time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
+# print(time_local[:5])
+
+# Set temporal indices:
+indices_15 = [i for i, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+# print(indices_15)
+# print(len(indices_15))
+
+time_inst = indices_15[0]                
+
+
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)

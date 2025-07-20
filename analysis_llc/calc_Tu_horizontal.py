@@ -15,25 +15,29 @@ import xarray as xr
 import zarr 
 import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
+
 from numpy.linalg import lstsq
 import seaborn as sns
 from scipy.stats import gaussian_kde
+
+from timezonefinder import TimezoneFinder
+from datetime import datetime
+import pytz
+import pandas as pd
+
 
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
-# Set indices
+# Set spatial indices
 face = 1
-nday_avg = 7                 # 7-day average
-time_avg = slice(0,24*nday_avg,1)  
-time_inst = 0
 k_surf = 0
 i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
@@ -54,6 +58,29 @@ lon_vals = lon.values  # shape (i,)
 
 # Create 2D lat/lon meshgrid
 lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+
+# Find the center location of selected region
+lat_c = float(lat.mean().values)
+lon_c = float(lon.mean().values)
+# print(f"Center location: lat={lat_c}, lon={lon_c}")
+
+# Find the time zone
+tf = TimezoneFinder()
+timezone_str = tf.timezone_at(lng=lon_c, lat=lat_c)
+# print(f"Detected timezone: {timezone_str}")
+
+# Convert UTC to Local time
+time_utc = pd.to_datetime(ds1.time.values)
+time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
+# print(time_local[:5])
+
+# Set temporal indices:
+indices_15 = [i for i, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+# print(indices_15)
+# print(len(indices_15))
+
+time_inst = indices_15[0]                
+
 
 
 ######### Load data #########
@@ -258,18 +285,18 @@ plt.close()
 
 
 # 3). Create a Gaussian Kernel Density Estimator
-kde = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
+kde_h = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
 # 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
-x_grid = np.linspace(-180, 180, 1000)
+x_grid_h = np.linspace(-180, 180, 1000)
 
 # 5). Compute the PDF values at the specified points
-pdf_values = kde(x_grid)
+pdf_values_h = kde_h(x_grid_h)
 
 # 6). Test the sensitivity of KDE to smoothing bandwidth
 for bw in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]:
-    kde = gaussian_kde(Tu_H_clean, bw_method=bw)
-    plt.plot(x_grid, kde(x_grid), label=f"bw={bw}")
+    kde_h = gaussian_kde(Tu_H_clean, bw_method=bw)
+    plt.plot(x_grid_h, kde_h(x_grid_h), label=f"bw={bw}")
 plt.legend()
 plt.savefig(f"{figdir}/Tu_H_kernel_PDF-test.png", dpi=150)
 plt.close()
@@ -281,19 +308,23 @@ ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")
 # Add to the dataset
 ds_out["Tu_H_deg"] = (["lat", "lon"], Tu_H_deg.values)
 ds_out["Tu_abs_diff"] = np.abs(ds_out["Tu_deg"] - Tu_H_deg.values)
-ds_out["dt_dx"] = (["lat", "lon"], dt_dx.values)
-ds_out["dt_dy"] = (["lat", "lon"], dt_dy.values)
-ds_out["ds_dx"] = (["lat", "lon"], ds_dx.values)
-ds_out["ds_dy"] = (["lat", "lon"], ds_dy.values)
-ds_out["norm_x"] = (["lat", "lon"], norm_x.values)
-ds_out["norm_y"] = (["lat", "lon"], norm_y.values)
+ds_out["dt_dx"] = (["lat", "lon"], dt_dx)
+ds_out["dt_dy"] = (["lat", "lon"], dt_dy)
+ds_out["ds_dx"] = (["lat", "lon"], ds_dx)
+ds_out["ds_dy"] = (["lat", "lon"], ds_dy)
 ds_out["dt_cross"] = (["lat", "lon"], dt_cross.values)
 ds_out["ds_cross"] = (["lat", "lon"], ds_cross.values)
+ds_out["norm_x"] = (["lat", "lon"], norm_x.values)
+ds_out["norm_y"] = (["lat", "lon"], norm_y.values)
 ds_out["SA_surf"] = (["lat", "lon"], SA_surf.values)
 ds_out["CT_surf"] = (["lat", "lon"], CT_surf.values)
 ds_out["rho_surf"] = (["lat", "lon"], rho_surf.values)
 ds_out["alpha_surf"] = (["lat", "lon"], alpha_surf.values)
 ds_out["beta_surf"] = (["lat", "lon"], beta_surf.values)
+
+# Add horizontal Turner angle PDF
+ds_out["x_grid_h"] = (["x_grid_h"], x_grid_h)
+ds_out["pdf_values_h"] = (["x_grid_h"], pdf_values_h)
 
 # Save to file
 ds_out.to_netcdf(f"{figdir}/Tu_difference.nc")

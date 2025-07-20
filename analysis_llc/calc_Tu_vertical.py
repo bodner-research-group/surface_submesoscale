@@ -19,25 +19,28 @@ import xarray as xr
 import zarr 
 import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
+
 from numpy.linalg import lstsq
 import seaborn as sns
 from scipy.stats import gaussian_kde
+
+from timezonefinder import TimezoneFinder
+from datetime import datetime
+import pytz
+import pandas as pd
 
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
-# Set indices
+# Set spatial indices
 face = 1
-nday_avg = 7                 # 7-day average
-time_avg = slice(0,24*nday_avg,1)  
-time_inst = 0
 k_surf = 0
 i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
@@ -55,6 +58,31 @@ lon_vals = lon.values  # shape (i,)
 
 # Create 2D lat/lon meshgrid
 lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+
+# Find the center location of selected region
+lat_c = float(lat.mean().values)
+lon_c = float(lon.mean().values)
+# print(f"Center location: lat={lat_c}, lon={lon_c}")
+
+# Find the time zone
+tf = TimezoneFinder()
+timezone_str = tf.timezone_at(lng=lon_c, lat=lat_c)
+# print(f"Detected timezone: {timezone_str}")
+
+# Convert UTC to Local time
+time_utc = pd.to_datetime(ds1.time.values)
+time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
+# print(time_local[:5])
+
+# Set temporal indices:
+indices_15 = [i for i, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+# print(indices_15)
+# print(len(indices_15))
+
+time_inst = indices_15[0]   
+
+nday_avg = 7                 # 7-day average
+time_avg = slice(0,24*nday_avg,1)  
 
 
 ##############################################################
@@ -441,22 +469,24 @@ plt.savefig(f"{figdir}/Tu_V_kernel_PDF.png", dpi=150)
 plt.close()
 
 
-# # 3). Create a Gaussian Kernel Density Estimator
-# kde = gaussian_kde(Tu_V_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
+# 3). Create a Gaussian Kernel Density Estimator
+kde_v = gaussian_kde(Tu_V_clean, bw_method=0.05)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
-# # 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
-# x_grid = np.linspace(-180, 180, 1000)
+# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
+x_grid_v = np.linspace(-180, 180, 1000)
 
-# # 5). Compute the PDF values at the specified points
-# pdf_values = kde(x_grid)
+# 5). Compute the PDF values at the specified points
+pdf_values_v = kde_v(x_grid_v)
 
 
 # Build an xarray Dataset
 ds_out = xr.Dataset(
     {
         "Tu_deg": (["lat", "lon"], Tu_deg),
-        "lon": (["lat", "lon"], lon2d),
-        "lat": (["lat", "lon"], lat2d),
+        "lon2d": (["lat", "lon"], lon2d),
+        "lat2d": (["lat", "lon"], lat2d),
+        "pdf_values_v": (["x_grid_v"], pdf_values_v),   # PDF values
+        "x_grid_v": (["x_grid_v"], x_grid_v),           # Angle grid
     }
 )
 
