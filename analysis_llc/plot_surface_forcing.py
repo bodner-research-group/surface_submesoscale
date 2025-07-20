@@ -23,7 +23,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -31,10 +31,10 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 1
 k_surf = 0
-i = slice(0,100,1) # Southern Ocean
-j = slice(0,101,1) # Southern Ocean
-# i = slice(1000,1200,1) # Tropics
-# j = slice(2800,3001,1) # Tropics
+# i = slice(0,100,1) # Southern Ocean
+# j = slice(0,101,1) # Southern Ocean
+i = slice(1000,1200,1) # Tropics
+j = slice(2800,3001,1) # Tropics
 i_g = i
 j_g = j
 

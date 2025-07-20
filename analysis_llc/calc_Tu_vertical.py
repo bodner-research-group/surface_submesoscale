@@ -14,6 +14,7 @@
 # Load packages
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import xarray as xr
 import zarr 
@@ -34,7 +35,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -42,10 +43,14 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 1
 k_surf = 0
-i = slice(0,100,1) # Southern Ocean
-j = slice(0,101,1) # Southern Ocean
-# i = slice(1000,1200,1) # Tropics
-# j = slice(2800,3001,1) # Tropics
+# i = slice(0,100,1) # Southern Ocean
+# j = slice(0,101,1) # Southern Ocean
+i = slice(1000,1200,1) # Tropics
+j = slice(2800,3001,1) # Tropics
+
+# Grid spacings in m
+dxF = ds1.dxF.isel(face=face,i=i,j=j)
+dyF = ds1.dyF.isel(face=face,i=i,j=j)
 
 # Coordinate
 lat = ds1.YC.isel(face=face,i=1,j=j)
@@ -75,14 +80,20 @@ time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
 # print(time_local[:5])
 
 # Set temporal indices:
-indices_15 = [i for i, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+indices_14 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 14]  # 2pm local time
+indices_15 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]  # 4pm local time
+
 # print(indices_15)
 # print(len(indices_15))
 
 time_inst = indices_15[0]   
 
 nday_avg = 7                 # 7-day average
-time_avg = slice(0,24*nday_avg,1)  
+# time_avg = slice(0,24*nday_avg,1)  
+time_avg = []
+for time_idx in range(nday_avg):
+    time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 
 
 ##############################################################
@@ -92,7 +103,8 @@ time_avg = slice(0,24*nday_avg,1)
 ################ If use instantaneous output
 tt = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j) # Potential temperature, shape (k, j, i)
 ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shape (k, j, i)
-################
+################ End if use instantaneous output
+
 
 # ################ If use time averages
 # # Read temperature and salinity data of the top 1000 m 
@@ -101,9 +113,11 @@ ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shap
 # # eta = ds1.Eta.isel(time=time,face=face,i=i,j=j)  # Surface Height Anomaly
 # print(tt.chunks) 
 
-# # Re-chunk time dimension to 7-day blocks for efficient averaging
-# tt = tt.chunk({'time': 24*nday_avg}) 
-# ss = ss.chunk({'time': 24*nday_avg})
+# # # Re-chunk time dimension for efficient averaging
+# # tt = tt.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# # ss = ss.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# tt = tt.chunk({'time': -1})  # Re-chunk to include all data points
+# ss = ss.chunk({'time': -1})  # Re-chunk to include all data points
 # print(tt.chunks) 
 
 # # Compute time averages
@@ -114,7 +128,7 @@ ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shap
 # # Trigger computation
 # tt = tt_mean.compute()
 # ss = ss_mean.compute()
-# ################
+# ################ End if use time averages
 
 
 ###############################
@@ -472,11 +486,12 @@ plt.close()
 # 3). Create a Gaussian Kernel Density Estimator
 kde_v = gaussian_kde(Tu_V_clean, bw_method=0.05)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
-# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
-x_grid_v = np.linspace(-180, 180, 1000)
+# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 300 points
+x_grid_v = np.linspace(-180, 180, 300)
 
 # 5). Compute the PDF values at the specified points
 pdf_values_v = kde_v(x_grid_v)
+
 
 
 # Build an xarray Dataset

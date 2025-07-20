@@ -11,7 +11,7 @@ import seaborn as sns
 from scipy.stats import gaussian_kde
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_week1_3pm"
 
 # Open the NETCDF file
 ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")

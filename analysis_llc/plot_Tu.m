@@ -1,5 +1,7 @@
-clear all;close all;
-figdir = "figs/face01_day1_3pm";
+clear all;
+% close all;
+% figdir = "figs/face01_day1_3pm";
+figdir = "figs/face01_test2_week1_2pm-4pm";
 ncfile = fullfile(figdir, "Tu_difference.nc");
 
 info = ncinfo(ncfile);
@@ -19,7 +21,7 @@ clear vars info i ncfile varname
 % Create figure
 fontsize = 20;
 
-figure(1);clf;set(gcf,'Color','w')
+figure(2);clf;set(gcf,'Color','w')
 hold on;
 box on;
 % grid on;
@@ -39,7 +41,7 @@ max_ds = max(ds_cross(:),[],'omitnan');
 
 min_dt = min(dt_cross(:),[],'omitnan');
 max_dt = max(dt_cross(:),[],'omitnan');
-c_values = min_dt*2:(max_dt-min_dt)/9:max_dt*2;
+c_values = linspace(min_dt*4, max_dt*4, 30);  
 
 for c = c_values  % adjust for a few density anomaly lines
     T_line = slope_rho * S_line + c; % iso-density lines
@@ -73,10 +75,11 @@ v_cross = v_cross / norm(v_cross);
 v_iso = [1/slope_rho; 1];     % isopycnal
 v_iso = v_iso / norm(v_iso);
 
+x_grid = x_grid_h;
 
 % 5. Plot Turner angle PDF as red direction lines
-for n = 1:length(x_grid_h)
-    angle_deg = x_grid_h(n);         % angle in dgrees
+for n = 1:length(x_grid)
+    angle_deg = x_grid(n);         % angle in dgrees
     dir_vec = cosd(angle_deg)*v_cross + sind(angle_deg)*v_iso;  % rotate from cross-isopycnal
    
     mag = pdf_values_h(n) * 0.01;         % scaled length for visibility
@@ -84,7 +87,7 @@ for n = 1:length(x_grid_h)
     y = [0, mag * dir_vec(2)];
     plot(x, y, 'r', 'LineWidth', 0.7);
 
-    mag = pdf_values_v(n) * 0.002;         % scaled length for visibility
+    mag = pdf_values_v(n) * 0.001;         % scaled length for visibility
     x = [0, mag * dir_vec(1)];
     y = [0, mag * dir_vec(2)];
     plot(x, y, 'g', 'LineWidth', 0.7);

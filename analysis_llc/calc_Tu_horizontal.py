@@ -26,12 +26,11 @@ import pytz
 import pandas as pd
 
 
-
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_day1_3pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -39,10 +38,10 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 1
 k_surf = 0
-i = slice(0,100,1) # Southern Ocean
-j = slice(0,101,1) # Southern Ocean
-# i = slice(1000,1200,1) # Tropics
-# j = slice(2800,3001,1) # Tropics
+# i = slice(0,100,1) # Southern Ocean
+# j = slice(0,101,1) # Southern Ocean
+i = slice(1000,1200,1) # Tropics
+j = slice(2800,3001,1) # Tropics
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -51,6 +50,7 @@ dyF = ds1.dyF.isel(face=face,i=i,j=j)
 # Coordinate
 lat = ds1.YC.isel(face=face,i=1,j=j)
 lon = ds1.XC.isel(face=face,i=i,j=1)
+depth = ds1.Z
 
 # Convert lat/lon from xarray to NumPy arrays
 lat_vals = lat.values  # shape (j,)
@@ -75,19 +75,55 @@ time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
 # print(time_local[:5])
 
 # Set temporal indices:
-indices_15 = [i for i, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+indices_14 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 14]  # 2pm local time
+indices_15 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
+indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]  # 4pm local time
+
 # print(indices_15)
 # print(len(indices_15))
 
-time_inst = indices_15[0]                
+time_inst = indices_15[0]   
+
+nday_avg = 7                 # 7-day average
+# time_avg = slice(0,24*nday_avg,1)  
+time_avg = []
+for time_idx in range(nday_avg):
+    time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
+              
 
 
 
 ######### Load data #########
 
 # Load surface T, S 
-tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (k, j, i)
-ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (k, j, i)
+################ If use instantaneous output
+tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (j, i)
+ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (j, i)
+################ End if use instantaneous output
+
+# ################ If use time averages
+# # Read temperature and salinity data of the top 1000 m 
+# tt_surf = ds1.Theta.isel(time=time_avg,face=face,i=i,j=j,k=k_surf) # Potential temperature
+# ss_surf = ds1.Salt.isel(time=time_avg,face=face,i=i,j=j,k=k_surf)  # Practical salinity
+# print(tt_surf.chunks) 
+
+# # # Re-chunk time dimension for efficient averaging
+# # tt_surf = tt_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# # ss_surf = ss_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# tt_surf = tt_surf.chunk({'time': -1})  # Re-chunk to include all data points
+# ss_surf = ss_surf.chunk({'time': -1})  # Re-chunk to include all data points
+# print(tt_surf.chunks) 
+
+# # Compute time averages
+# # Build a lazy Dask graph — nothing is computed yet
+# tt_mean_surf = tt_surf.mean(dim='time')
+# ss_mean_surf = ss_surf.mean(dim='time')
+
+# # Trigger computation
+# tt_surf = tt_mean_surf.compute()
+# ss_surf = ss_mean_surf.compute()
+# ################ End if use time averages
+
 
 # Compute the surface potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
 p_ref = 0                                            # Reference pressure 
@@ -233,8 +269,8 @@ plt.savefig(f"{figdir}/surface_t_s_gradients_cross.png", dpi=150)
 plt.close()
 
 # 5). Horizontal Turner Angle
-denominator= alpha_surf * dt_cross - beta_surf * ds_cross
 numerator = alpha_surf * dt_cross + beta_surf * ds_cross
+denominator = alpha_surf * dt_cross - beta_surf * ds_cross
 
 Tu_H_rad = np.arctan2(numerator, denominator)
 Tu_H_deg = np.degrees(Tu_H_rad)
@@ -287,8 +323,8 @@ plt.close()
 # 3). Create a Gaussian Kernel Density Estimator
 kde_h = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
-# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 1000 points
-x_grid_h = np.linspace(-180, 180, 1000)
+# 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 300 points
+x_grid_h = np.linspace(-180, 180, 300)
 
 # 5). Compute the PDF values at the specified points
 pdf_values_h = kde_h(x_grid_h)
