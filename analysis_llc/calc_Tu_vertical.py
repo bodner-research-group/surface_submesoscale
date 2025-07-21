@@ -35,7 +35,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test3_month1_2pm-4pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -45,8 +45,10 @@ face = 1
 k_surf = 0
 # i = slice(0,100,1) # Southern Ocean
 # j = slice(0,101,1) # Southern Ocean
-i = slice(1000,1200,1) # Tropics
-j = slice(2800,3001,1) # Tropics
+# i = slice(1000,1200,1) # Tropics
+# j = slice(2800,3001,1) # Tropics
+i=slice(450,760,1)
+j=slice(450,761,1)
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -63,6 +65,60 @@ lon_vals = lon.values  # shape (i,)
 
 # Create 2D lat/lon meshgrid
 lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+
+# ################### IF USING LAT/LON TO FIND J, I INDICES
+# # Define lat/lon bounds
+# lat_min, lat_max = 48, 52
+# lon_min, lon_max = -147, -143  # 147W to 143W
+
+# # Create mask
+# region_mask = (lat2d >= lat_min) & (lat2d <= lat_max) & \
+#               (lon2d >= lon_min) & (lon2d <= lon_max)
+
+# # Find bounding box indices
+# j_indices, i_indices = np.where(region_mask)
+# j_start, j_end = j_indices.min(), j_indices.max() + 1
+# i_start, i_end = i_indices.min(), i_indices.max() + 1
+
+# # Define new slices
+# i = slice(i_start, i_end)
+# j = slice(j_start, j_end)
+
+# # Grid spacings in m
+# dxF = ds1.dxF.isel(face=face,i=i,j=j)
+# dyF = ds1.dyF.isel(face=face,i=i,j=j)
+
+# # Coordinate
+# lat = ds1.YC.isel(face=face,i=1,j=j)
+# lon = ds1.XC.isel(face=face,i=i,j=1)
+# depth = ds1.Z
+
+# # Convert lat/lon from xarray to NumPy arrays
+# lat_vals = lat.values  # shape (j,)
+# lon_vals = lon.values  # shape (i,)
+
+# # Create 2D lat/lon meshgrid
+# lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
+# ################### END IF USING LAT/LON TO FIND J, I INDICES
+
+
+# ### Fix the warning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
+# def compute_edges(arr):
+#     edges = np.zeros(len(arr) + 1)
+#     edges[1:-1] = 0.5 * (arr[:-1] + arr[1:])
+#     edges[0] = arr[0] - (arr[1] - arr[0]) / 2
+#     edges[-1] = arr[-1] + (arr[-1] - arr[-2]) / 2
+#     return edges
+
+# lon_edges = compute_edges(lon_vals)
+# lat_edges = compute_edges(lat_vals)
+
+# lon2d_edges, lat2d_edges = np.meshgrid(lon_edges, lat_edges, indexing='xy')
+
+# lon2d = lon2d_edges
+# lat2d = lat2d_edges
+# ### End 
+
 
 # Find the center location of selected region
 lat_c = float(lat.mean().values)
@@ -89,7 +145,7 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 7                 # 7-day average
+nday_avg = 30                 # 30-day average
 # time_avg = slice(0,24*nday_avg,1)  
 time_avg = []
 for time_idx in range(nday_avg):
@@ -100,35 +156,35 @@ for time_idx in range(nday_avg):
 ### 0. Load instantaneous output or compute time averages  ###
 ##############################################################
 
-################ If use instantaneous output
-tt = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j) # Potential temperature, shape (k, j, i)
-ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shape (k, j, i)
-################ End if use instantaneous output
+# ################ If use instantaneous output
+# tt = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j) # Potential temperature, shape (k, j, i)
+# ss = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j)  # Practical salinity, shape (k, j, i)
+# ################ End if use instantaneous output
 
 
-# ################ If use time averages
-# # Read temperature and salinity data of the top 1000 m 
-# tt = ds1.Theta.isel(time=time_avg,face=face,i=i,j=j) # Potential temperature
-# ss = ds1.Salt.isel(time=time_avg,face=face,i=i,j=j)  # Practical salinity
-# # eta = ds1.Eta.isel(time=time,face=face,i=i,j=j)  # Surface Height Anomaly
-# print(tt.chunks) 
+################ If use time averages
+# Read temperature and salinity data of the top 1000 m 
+tt = ds1.Theta.isel(time=time_avg,face=face,i=i,j=j) # Potential temperature
+ss = ds1.Salt.isel(time=time_avg,face=face,i=i,j=j)  # Practical salinity
+# eta = ds1.Eta.isel(time=time,face=face,i=i,j=j)  # Surface Height Anomaly
+print(tt.chunks) 
 
-# # # Re-chunk time dimension for efficient averaging
-# # tt = tt.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-# # ss = ss.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-# tt = tt.chunk({'time': -1})  # Re-chunk to include all data points
-# ss = ss.chunk({'time': -1})  # Re-chunk to include all data points
-# print(tt.chunks) 
+# # Re-chunk time dimension for efficient averaging
+# tt = tt.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# ss = ss.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+tt = tt.chunk({'time': -1})  # Re-chunk to include all data points
+ss = ss.chunk({'time': -1})  # Re-chunk to include all data points
+print(tt.chunks) 
 
-# # Compute time averages
-# # Build a lazy Dask graph — nothing is computed yet
-# tt_mean = tt.mean(dim='time')
-# ss_mean = ss.mean(dim='time')
+# Compute time averages
+# Build a lazy Dask graph — nothing is computed yet
+tt_mean = tt.mean(dim='time')
+ss_mean = ss.mean(dim='time')
 
-# # Trigger computation
-# tt = tt_mean.compute()
-# ss = ss_mean.compute()
-# ################ End if use time averages
+# Trigger computation
+tt = tt_mean.compute()
+ss = ss_mean.compute()
+################ End if use time averages
 
 
 ###############################

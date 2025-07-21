@@ -1,8 +1,10 @@
-clear all;
-% close all;
-% figdir = "figs/face01_day1_3pm";
-figdir = "figs/face01_test2_week1_2pm-4pm";
-ncfile = fullfile(figdir, "Tu_difference.nc");
+clear all;% close all;
+addpath colormap/
+load_colors;
+
+figdir = 'figs/face01_test3_day1_3pm';
+% figdir = 'figs/face01_test3_week1_2pm-4pm';
+ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);
 vars = {info.Variables.Name};  
@@ -21,19 +23,19 @@ clear vars info i ncfile varname
 % Create figure
 fontsize = 20;
 
-figure(2);clf;set(gcf,'Color','w')
+figure(2);clf;set(gcf,'Color','w','Position',[111 221 759 511])
 hold on;
 box on;
 % grid on;
 xlabel('\partial S (psu/m)');
 ylabel('\partial \theta (^oC/m)');
-title('Surface Horizontal Turner Angle');
+title('Kernel PDF of Turner Angle');
 
 % % 1. Plot dt_cross vs ds_cross as scatter
 % scatter(ds_cross(:), dt_cross(:), 10, 'filled', 'MarkerFaceAlpha', 0.2);
 
 % 2. Overlay constant density lines using linear EOS
-S_line = linspace(min(ds_cross(:),[],'omitnan'), max(ds_cross(:),[],'omitnan'), 100);
+S_line = linspace(min(ds_cross(:),[],'omitnan')*7, max(ds_cross(:),[],'omitnan')*7, 400);
 slope_rho = mean(beta_surf,"all")/ mean(alpha_surf,"all");
 
 min_ds = min(ds_cross(:),[],'omitnan');
@@ -41,7 +43,7 @@ max_ds = max(ds_cross(:),[],'omitnan');
 
 min_dt = min(dt_cross(:),[],'omitnan');
 max_dt = max(dt_cross(:),[],'omitnan');
-c_values = linspace(min_dt*4, max_dt*4, 30);  
+c_values = linspace(min_dt*10, max_dt*10, 100);  
 
 for c = c_values  % adjust for a few density anomaly lines
     T_line = slope_rho * S_line + c; % iso-density lines
@@ -53,18 +55,18 @@ xlim([min_ds max_ds])
 
 
 
-% 3. Custom dotted grid
-ax = gca; grid off;
-xticks_vals = xticks; yticks_vals = yticks;
-xlim_vals = xlim; ylim_vals = ylim;
-
-for x = xticks_vals
-    line([x x], ylim_vals, 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
-end
-for y = yticks_vals
-    line(xlim_vals, [y y], 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
-end
-
+% % 3. Custom dotted grid
+% ax = gca; grid off;
+% xticks_vals = xticks; yticks_vals = yticks;
+% xlim_vals = xlim*2; ylim_vals = ylim*2;
+% 
+% for x = xticks_vals
+%     line([x x], ylim_vals, 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
+% end
+% for y = yticks_vals
+%     line(xlim_vals, [y y], 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
+% end
+% 
 set(gca,'Fontsize',fontsize)
 
 
@@ -76,23 +78,62 @@ v_iso = [1/slope_rho; 1];     % isopycnal
 v_iso = v_iso / norm(v_iso);
 
 x_grid = x_grid_h;
+% x_grid = x_grid_h_1000;
+% pdf_values_h = pdf_values_h_1000;
+% pdf_values_v = pdf_values_v_1000;
 
-% 5. Plot Turner angle PDF as red direction lines
+
+% 5. Plot Turner angle PDF as direction lines
+h_pdf_hori = [];  % for legend
+h_pdf_vert = [];
+
+x_all = []; y_all = [];
+
 for n = 1:length(x_grid)
-    angle_deg = x_grid(n);         % angle in dgrees
-    dir_vec = cosd(angle_deg)*v_cross + sind(angle_deg)*v_iso;  % rotate from cross-isopycnal
-   
-    mag = pdf_values_h(n) * 0.01;         % scaled length for visibility
+    angle_deg = x_grid(n);
+    dir_vec = cosd(angle_deg)*v_cross + sind(angle_deg)*v_iso;
+
+    % Horizontal Turner angle PDF
+    mag = pdf_values_h(n) * 0.005;
     x = [0, mag * dir_vec(1)];
     y = [0, mag * dir_vec(2)];
-    plot(x, y, 'r', 'LineWidth', 0.7);
+    h = plot(x, y, 'Color',blue, 'LineWidth', 0.7);
+    if isempty(h_pdf_hori)
+        h_pdf_hori = h;
+    end
+    x_all(end+1) = x(2);  % collect endpoint
+    y_all(end+1) = y(2);
 
-    mag = pdf_values_v(n) * 0.001;         % scaled length for visibility
+    % Vertical Turner angle PDF
+    mag = pdf_values_v(n) * 0.0008;
     x = [0, mag * dir_vec(1)];
     y = [0, mag * dir_vec(2)];
-    plot(x, y, 'g', 'LineWidth', 0.7);
-
+    h = plot(x, y, 'Color',green, 'LineWidth', 0.7);
+    if isempty(h_pdf_vert)
+        h_pdf_vert = h;
+    end
+    x_all(end+1) = x(2);
+    y_all(end+1) = y(2);
 end
 
-% Optional legend
-% legend({'Cross-isopycnal gradients', 'Constant density lines', 'Turner angle PDF'}, 'Location', 'best');
+padding = 0.02;  % add 2% margin
+x_min = min(x_all); x_max = max(x_all);
+y_min = min(y_all); y_max = max(y_all);
+
+x_range = x_max - x_min;
+y_range = y_max - y_min;
+
+xlim([x_min - padding*x_range, x_max + padding*x_range]);
+ylim([y_min - padding*y_range, y_max + padding*y_range]);
+
+% Add horizontal and vertical zero lines
+plot(get(gca, 'XLim'), [0 0], 'k--', 'LineWidth', 1);  % horizontal zero line
+plot([0 0], get(gca, 'YLim'), 'k--', 'LineWidth', 1);  % vertical zero line
+
+
+% Optional legend (cleaner)
+legend([h_pdf_hori, h_pdf_vert], ...
+       {'Horizontal Turner angle PDF', 'Vertical Turner angle PDF'}, ...
+       'Location', 'northeast', 'FontSize', fontsize - 4);
+
+print('-dpng','-r180',[figdir '/Tu_TS.png']);

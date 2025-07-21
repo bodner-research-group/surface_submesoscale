@@ -30,7 +30,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test2_day1_3pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test3_month1_2pm-4pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -38,10 +38,13 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 1
 k_surf = 0
-# i = slice(0,100,1) # Southern Ocean
-# j = slice(0,101,1) # Southern Ocean
-i = slice(1000,1200,1) # Tropics
-j = slice(2800,3001,1) # Tropics
+i = slice(0,100,1) # Southern Ocean
+j = slice(0,101,1) # Southern Ocean
+# i = slice(1000,1200,1) # Tropics
+# j = slice(2800,3001,1) # Tropics
+i=slice(450,760,1)
+j=slice(450,761,1)
+
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -84,7 +87,7 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 7                 # 7-day average
+nday_avg = 30                 # 30-day average
 # time_avg = slice(0,24*nday_avg,1)  
 time_avg = []
 for time_idx in range(nday_avg):
@@ -96,33 +99,33 @@ for time_idx in range(nday_avg):
 ######### Load data #########
 
 # Load surface T, S 
-################ If use instantaneous output
-tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (j, i)
-ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (j, i)
-################ End if use instantaneous output
+# ################ If use instantaneous output
+# tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (j, i)
+# ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (j, i)
+# ################ End if use instantaneous output
 
-# ################ If use time averages
-# # Read temperature and salinity data of the top 1000 m 
-# tt_surf = ds1.Theta.isel(time=time_avg,face=face,i=i,j=j,k=k_surf) # Potential temperature
-# ss_surf = ds1.Salt.isel(time=time_avg,face=face,i=i,j=j,k=k_surf)  # Practical salinity
-# print(tt_surf.chunks) 
+################ If use time averages
+# Read temperature and salinity data of the top 1000 m 
+tt_surf = ds1.Theta.isel(time=time_avg,face=face,i=i,j=j,k=k_surf) # Potential temperature
+ss_surf = ds1.Salt.isel(time=time_avg,face=face,i=i,j=j,k=k_surf)  # Practical salinity
+print(tt_surf.chunks) 
 
-# # # Re-chunk time dimension for efficient averaging
-# # tt_surf = tt_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-# # ss_surf = ss_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-# tt_surf = tt_surf.chunk({'time': -1})  # Re-chunk to include all data points
-# ss_surf = ss_surf.chunk({'time': -1})  # Re-chunk to include all data points
-# print(tt_surf.chunks) 
+# # Re-chunk time dimension for efficient averaging
+# tt_surf = tt_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+# ss_surf = ss_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
+tt_surf = tt_surf.chunk({'time': -1})  # Re-chunk to include all data points
+ss_surf = ss_surf.chunk({'time': -1})  # Re-chunk to include all data points
+print(tt_surf.chunks) 
 
-# # Compute time averages
-# # Build a lazy Dask graph — nothing is computed yet
-# tt_mean_surf = tt_surf.mean(dim='time')
-# ss_mean_surf = ss_surf.mean(dim='time')
+# Compute time averages
+# Build a lazy Dask graph — nothing is computed yet
+tt_mean_surf = tt_surf.mean(dim='time')
+ss_mean_surf = ss_surf.mean(dim='time')
 
-# # Trigger computation
-# tt_surf = tt_mean_surf.compute()
-# ss_surf = ss_mean_surf.compute()
-# ################ End if use time averages
+# Trigger computation
+tt_surf = tt_mean_surf.compute()
+ss_surf = ss_mean_surf.compute()
+################ End if use time averages
 
 
 # Compute the surface potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
