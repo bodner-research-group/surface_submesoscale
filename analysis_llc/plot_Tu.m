@@ -2,8 +2,7 @@ clear all;% close all;
 addpath colormap/
 load_colors;
 
-figdir = 'figs/face01_test3_day1_3pm';
-% figdir = 'figs/face01_test3_week1_2pm-4pm';
+figdir = 'figs/face01_test3_month1_2pm-4pm';
 ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);

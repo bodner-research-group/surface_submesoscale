@@ -30,7 +30,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test3_month1_2pm-4pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1_month1_2pm-4pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -42,8 +42,8 @@ i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
-i=slice(450,760,1)
-j=slice(450,761,1)
+# i=slice(450,760,1)
+# j=slice(450,761,1)
 
 
 # Grid spacings in m
@@ -87,13 +87,11 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 30                 # 30-day average
-# time_avg = slice(0,24*nday_avg,1)  
+nday_avg = 30                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
-              
-
+# time_avg = slice(0,24*nday_avg,1)  
 
 
 ######### Load data #########
@@ -135,6 +133,33 @@ CT_surf = gsw.conversions.CT_from_pt(SA_surf, tt_surf)              # Conservati
 rho_surf = gsw.density.rho(SA_surf, CT_surf, p_ref)                 # Potential density, shape (k, j, i)
 alpha_surf = gsw.density.alpha(SA_surf, CT_surf, p_ref)             # Thermal expansion coefficient with respect to Conservative Temperature, shape (k, j, i)
 beta_surf = gsw.density.beta(SA_surf, CT_surf, p_ref)               # Saline (i.e. haline) contraction coefficient of seawater at constant Conservative Temperature, shape (k, j, i)
+
+plt.figure(figsize=(9, 6))
+pcm = plt.pcolormesh(lon2d, lat2d, rho_surf, cmap='twilight_shifted', shading='auto')
+plt.colorbar(pcm, label=r"(kg/m^3))")
+plt.title(r"Surface potential density")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle=':')
+plt.tight_layout()
+plt.savefig(f"{figdir}/rho_surf.png", dpi=150)
+plt.close()
+
+fig, axs = plt.subplots(1,2,figsize=(15,5))
+pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
+axs[0].set_title('Surface Temperature')
+axs[0].set_xlabel('Longitude')
+axs[0].set_ylabel('Latitude')
+fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
+pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
+axs[1].set_title('Surface Salinity')
+axs[1].set_xlabel('Longitude')
+axs[1].set_ylabel('Latitude')
+fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
+plt.tight_layout()
+plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=150)
+plt.close()
+
 
 
 #############################################################
@@ -275,7 +300,70 @@ plt.close()
 numerator = alpha_surf * dt_cross + beta_surf * ds_cross
 denominator = alpha_surf * dt_cross - beta_surf * ds_cross
 
-Tu_H_rad = np.arctan2(numerator, denominator)
+
+# plt.figure(figsize=(9, 6))
+# pcm = plt.pcolormesh(lon2d, lat2d, alpha_surf * dt_cross, cmap='twilight_shifted', shading='auto',vmin=-5e-9,vmax=5e-9)
+# plt.colorbar(pcm, label=r"")
+# plt.title(r"alpha_surf * dt_cross")
+# plt.xlabel("Longitude")
+# plt.ylabel("Latitude")
+# plt.grid(True, linestyle=':')
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/alpha_dt_cross.png", dpi=150)
+# plt.close()
+
+# plt.figure(figsize=(9, 6))
+# pcm = plt.pcolormesh(lon2d, lat2d, beta_surf * ds_cross, cmap='twilight_shifted', shading='auto',vmin=-5e-9,vmax=5e-9)
+# plt.colorbar(pcm, label=r"")
+# plt.title(r"beta_surf * ds_cross")
+# plt.xlabel("Longitude")
+# plt.ylabel("Latitude")
+# plt.grid(True, linestyle=':')
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/bet_ds_cross.png", dpi=150)
+# plt.close()
+
+
+# plt.figure(figsize=(9, 6))
+# pcm = plt.pcolormesh(lon2d, lat2d, numerator, cmap='twilight_shifted', shading='auto',vmin=-5e-9,vmax=5e-9)
+# plt.colorbar(pcm, label=r"denominator")
+# plt.title(r"alpha_surf * dt_cross + beta_surf * ds_cross")
+# plt.xlabel("Longitude")
+# plt.ylabel("Latitude")
+# plt.grid(True, linestyle=':')
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/numerator.png", dpi=150)
+# plt.close()
+
+# plt.figure(figsize=(9, 6))
+# pcm = plt.pcolormesh(lon2d, lat2d, denominator, cmap='twilight_shifted', shading='auto',vmin=-5e-9,vmax=5e-9)
+# plt.colorbar(pcm, label=r"denominator")
+# plt.title(r"alpha_surf * dt_cross - beta_surf * ds_cross")
+# plt.xlabel("Longitude")
+# plt.ylabel("Latitude")
+# plt.grid(True, linestyle=':')
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/denominator.png", dpi=150)
+# plt.close()
+
+
+# plt.figure(figsize=(9, 6))
+# pcm = plt.pcolormesh(lon2d, lat2d, numerator/denominator, cmap='twilight_shifted', shading='auto')
+# plt.colorbar(pcm, label=r"numerator/denominator")
+# plt.title(r"numerator/denominator")
+# plt.xlabel("Longitude")
+# plt.ylabel("Latitude")
+# plt.grid(True, linestyle=':')
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/ratio.png", dpi=150)
+# plt.close()
+
+
+
+Tu_H_rad_tan2 = np.arctan2(numerator, denominator)
+Tu_H_deg_tan2 = np.degrees(Tu_H_rad_tan2)
+
+Tu_H_rad = np.arctan(numerator/denominator)
 Tu_H_deg = np.degrees(Tu_H_rad)
 
 # print("Max Turner Angle (deg):", np.nanmax(Tu_H_deg.values))
@@ -291,6 +379,17 @@ plt.ylabel("Latitude")
 plt.grid(True, linestyle=':')
 plt.tight_layout()
 plt.savefig(f"{figdir}/hori_turner_angle_map.png", dpi=150)
+plt.close()
+
+plt.figure(figsize=(9, 6))
+pcm = plt.pcolormesh(lon2d, lat2d, Tu_H_rad_tan2, cmap='twilight_shifted', shading='auto', vmin=-180, vmax=180)
+plt.colorbar(pcm, label=r"$Tu_H$ (°)")
+plt.title(r"Four-Quadrant Horizontal Turner Angle ($Tu_H$)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle=':')
+plt.tight_layout()
+plt.savefig(f"{figdir}/hori_turner_angle_map_tan2.png", dpi=150)
 plt.close()
 
 
@@ -346,6 +445,7 @@ ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")
 
 # Add to the dataset
 ds_out["Tu_H_deg"] = (["lat", "lon"], Tu_H_deg.values)
+ds_out["Tu_H_deg_tan2"] = (["lat", "lon"], Tu_H_deg_tan2.values)
 ds_out["Tu_abs_diff"] = np.abs(ds_out["Tu_deg"] - Tu_H_deg.values)
 ds_out["dt_dx"] = (["lat", "lon"], dt_dx)
 ds_out["dt_dy"] = (["lat", "lon"], dt_dy)

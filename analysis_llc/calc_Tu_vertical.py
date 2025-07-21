@@ -35,7 +35,7 @@ import pandas as pd
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test3_month1_2pm-4pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1_month1_2pm-4pm"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -43,12 +43,12 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 1
 k_surf = 0
-# i = slice(0,100,1) # Southern Ocean
-# j = slice(0,101,1) # Southern Ocean
+i = slice(0,100,1) # Southern Ocean
+j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
-i=slice(450,760,1)
-j=slice(450,761,1)
+# i=slice(450,760,1)
+# j=slice(450,761,1)
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -146,10 +146,10 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 time_inst = indices_15[0]   
 
 nday_avg = 30                 # 30-day average
-# time_avg = slice(0,24*nday_avg,1)  
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
+# time_avg = slice(0,24*nday_avg,1)  
 
 
 ##############################################################
@@ -187,34 +187,34 @@ ss = ss_mean.compute()
 ################ End if use time averages
 
 
-###############################
-### 1. Plot surface T and S ###
-###############################
+# ###############################
+# ### 1. Plot surface T and S ###
+# ###############################
 
-tt_surf = tt.isel(k=k_surf)
-ss_surf = ss.isel(k=k_surf)
+# tt_surf = tt.isel(k=k_surf)
+# ss_surf = ss.isel(k=k_surf)
 
-fig, axs = plt.subplots(1,2,figsize=(15,5))
+# fig, axs = plt.subplots(1,2,figsize=(15,5))
 
-pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
-axs[0].set_title('Surface Temperature')
-axs[0].set_xlabel('Longitude')
-axs[0].set_ylabel('Latitude')
-fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
-# cbar_t = fig.colorbar(pcm_t, ax=axs[0])
-# cbar_t.ax.set_title('(\u00B0C)')  # Label on top
+# pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
+# axs[0].set_title('Surface Temperature')
+# axs[0].set_xlabel('Longitude')
+# axs[0].set_ylabel('Latitude')
+# fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
+# # cbar_t = fig.colorbar(pcm_t, ax=axs[0])
+# # cbar_t.ax.set_title('(\u00B0C)')  # Label on top
 
-pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
-axs[1].set_title('Surface Salinity')
-axs[1].set_xlabel('Longitude')
-axs[1].set_ylabel('Latitude')
-fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
-# cbar_s = fig.colorbar(pcm_s, ax=axs[1])
-# cbar_s.ax.set_title('(psu)')      # Label on top
+# pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
+# axs[1].set_title('Surface Salinity')
+# axs[1].set_xlabel('Longitude')
+# axs[1].set_ylabel('Latitude')
+# fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
+# # cbar_s = fig.colorbar(pcm_s, ax=axs[1])
+# # cbar_s.ax.set_title('(psu)')      # Label on top
 
-plt.tight_layout()
-plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=150)
-plt.close()
+# plt.tight_layout()
+# plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=150)
+# plt.close()
 
 
 #####################################################
@@ -248,15 +248,17 @@ beta = gsw.density.beta(SA, CT, depth)               # Saline (i.e. haline) cont
 #################################################
 
 # Compute the mixed layer depth, using the delta_rho = 0.03 kg/m^2 criterion
-rho_surface = rho.isel(k=0)
-drho = rho - rho_surface.expand_dims({'k': rho.k})
+rho_10m = rho.isel(k=6)
+drho = rho - rho_10m.expand_dims({'k': rho.k})
 
 # thresh = xr.where(np.abs(drho) > 0.03, drho.k, np.nan) # thresh = xr.where((np.abs(drho) > 0.03) & (N2 > 1e-5), drho.depth, np.nan)
 # mld_idx = thresh.min("k")  # vertical indices of mixed layer depth 
 # mld_idx.name = "Vertical indices of mixed layer base"
 
 drho = drho.assign_coords(k=depth) # replace coordinate k with depth
-thresh = xr.where(np.abs(drho) > 0.03, drho.k, np.nan)
+drho_deep = drho.where(drho.k > 10) # exclude surface 10m
+
+thresh = xr.where(np.abs(drho_deep) > 0.03, drho_deep.k, np.nan)
 mld = thresh.max("k")      # mixed layer depth, shape (j, i)
 mld.name = "MLD"
 
@@ -374,7 +376,10 @@ plt.close()
 ### 6. Compute the Turner angle for vertical gradients ###
 ##########################################################
 
-Tu_rad = np.arctan2(y+x, y-x)  # arctan2 handles 4-quadrant correctly
+Tu_rad_tan2 = np.arctan2(y+x, y-x)  # arctan2 handles 4-quadrant correctly
+Tu_deg_tan2 = np.degrees(Tu_rad_tan2)
+
+Tu_rad = np.arctan((y+x)/(y-x))
 Tu_deg = np.degrees(Tu_rad)
 
 ### 6.1 Plot Histogram of Turner Angle (Tu)
@@ -417,6 +422,17 @@ plt.tight_layout()
 plt.savefig(f"{figdir}/turner_angle_map.png", dpi=150)
 plt.close()
 
+# Plot
+plt.figure(figsize=(10, 6))
+pcm = plt.pcolormesh(lon2d, lat2d, Tu_deg_tan2, cmap='twilight', shading='auto', vmin=-90, vmax=90)
+plt.colorbar(pcm, label="Turner angle (°)")
+plt.title("Four-Quadrant Vertical Turner Angle (Tu)")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle=':')
+plt.tight_layout()
+plt.savefig(f"{figdir}/turner_angle_map_tan2.png", dpi=150)
+plt.close()
 
 
 ### 6.3 Plot a map of the unstable regimes based on the Turner Angle (Tu)
@@ -520,7 +536,7 @@ Tu_V_clean = Tu_V_flat[~np.isnan(Tu_V_flat)]  # remove NaNs
 
 # 2). Plot Kernel PDF
 plt.figure(figsize=(8, 5))
-sns.kdeplot(Tu_V_clean, bw_adjust=0.5, fill=True, color="darkblue", label=r'$Tu_H$ Kernel density estimation')
+sns.kdeplot(Tu_V_clean, bw_adjust=0.5, fill=True, color="darkblue", label=r'$Tu_V$ Kernel density estimation')
 plt.xlabel(r'$Tu_V$ (°)')
 plt.ylabel("Density")
 plt.title("Kernel PDF of Vertical Turner Angle")
@@ -554,6 +570,7 @@ pdf_values_v = kde_v(x_grid_v)
 ds_out = xr.Dataset(
     {
         "Tu_deg": (["lat", "lon"], Tu_deg),
+        "Tu_deg_tan2": (["lat", "lon"], Tu_deg_tan2),
         "lon2d": (["lat", "lon"], lon2d),
         "lat2d": (["lat", "lon"], lat2d),
         "pdf_values_v": (["x_grid_v"], pdf_values_v),   # PDF values
