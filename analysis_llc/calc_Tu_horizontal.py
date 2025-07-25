@@ -32,7 +32,6 @@ client = Client(cluster)
 from dask import delayed, compute
 from numpy.linalg import lstsq
 
-
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
@@ -53,7 +52,6 @@ k_surf = 0
 # j=slice(450,761,1)
 i=slice(671,864,1)   # icelandic_basin
 j=slice(2982,3419,1) # icelandic_basin
-
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -91,19 +89,16 @@ indices_14 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 14]
 indices_15 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
 indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]  # 4pm local time
 
-# print(indices_15)
-# print(len(indices_15))
-
 time_inst = indices_15[0]   
 
-nday_avg = 7                 # multiple-day average
+nday_avg = 30                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
 
-start_hours = 194*24
-time_avg = slice(start_hours,start_hours+24*nday_avg,2) 
+start_hours = 132*24
+time_avg = slice(start_hours,start_hours+24*nday_avg,1) 
 
 
 ######### Load data #########
@@ -186,7 +181,7 @@ ss_surf_np = ss_surf.values       # shape (j, i)
 ny, nx = tt_surf_np.shape
 
 # ------------------------------
-# Parallel a Dask-delayed function
+# Define a Dask-delayed function
 # ------------------------------
 # Define a Dask-delayed function to compute horizontal gradients of temperature and salinity
 # within a subregion (tile) of the domain.
@@ -275,9 +270,9 @@ for j0 in range(1, ny-1, tile_size):
         idx += 1
 
 
-# ------------------------------
-# Old code (non-parallel)
-# ------------------------------
+# # ------------------------------
+# # Old code (non-parallel) --- very slow
+# # ------------------------------
 # # 2). Initialize arrays to hold temperature and salinity gradients, filled with NaNs
 # dt_dx = np.full_like(tt_surf_np, np.nan)
 # dt_dy = np.full_like(tt_surf_np, np.nan)
@@ -291,6 +286,7 @@ for j0 in range(1, ny-1, tile_size):
 
 # # 4). Loop through interior points of the grid (excluding edges)
 # for j in range(1, ny - 1):
+#     print(f"Processing row j={j}")
 #     for i in range(1, nx - 1):
 #         # 4.1 Extract local 3×3 temperature block （inclusive on the left, exclusive on the right）
 #         local_tt = tt_surf_np[j-1:j+2, i-1:i+2].flatten()
@@ -531,10 +527,10 @@ plt.close()
 
 
 # 3). Create a Gaussian Kernel Density Estimator
-kde_h = gaussian_kde(Tu_H_clean, bw_method=0.5)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
+kde_h = gaussian_kde(Tu_H_clean, bw_method=0.05)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
 # 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 300 points
-x_grid_h = np.linspace(-180, 180, 300)
+x_grid_h = np.linspace(-180, 180, 1000)
 
 # 5). Compute the PDF values at the specified points
 pdf_values_h = kde_h(x_grid_h)

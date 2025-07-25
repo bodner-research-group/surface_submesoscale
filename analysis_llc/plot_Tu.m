@@ -22,7 +22,7 @@ clear vars info i ncfile varname
 % Create figure
 fontsize = 20;
 
-figure(2);clf;set(gcf,'Color','w','Position',[111 221 759 511])
+figure(1);clf;set(gcf,'Color','w','Position',[111 221 759 511])
 hold on;
 box on;
 % grid on;
@@ -49,8 +49,8 @@ for c = c_values  % adjust for a few density anomaly lines
     plot(S_line, T_line, '-', 'Color', [0.5 0.5 0.5]);
 end
 
-ylim([min_dt max_dt])
-xlim([min_ds max_ds])
+% ylim([min_dt max_dt])
+% xlim([min_ds max_ds])
 
 
 
@@ -71,9 +71,15 @@ set(gca,'Fontsize',fontsize)
 
 %%
 % 4. Define isopycnal and cross-isopycnal unit vectors
-v_cross = [1; -1/slope_rho];  % cross-isopycnal 
+% v_cross = [1; -1/slope_rho];  % cross-isopycnal 
+ % v_cross = [-1; 1/slope_rho];  % cross-isopycnal 
+v_cross = [-slope_rho; 1];  % cross-isopycnal 
+
+% v_iso = [1/slope_rho; 1];     % isopycnal
+v_iso = [1;slope_rho];     % isopycnal
+
+
 v_cross = v_cross / norm(v_cross);
-v_iso = [1/slope_rho; 1];     % isopycnal
 v_iso = v_iso / norm(v_iso);
 
 x_grid = x_grid_h;
@@ -88,13 +94,15 @@ h_pdf_hori = [];  % for legend
 h_pdf_vert = [];
 
 x_all = []; y_all = [];
+scale = 0.0002;   
+
 
 for n = 1:length(x_grid)
     angle_deg = x_grid(n);
     dir_vec = cosd(angle_deg)*v_cross + sind(angle_deg)*v_iso;
 
     % Horizontal Turner angle PDF
-    mag = pdf_values_h(n) * 0.005;
+    mag = pdf_values_h(n) * scale*3;
     x = [0, mag * dir_vec(1)];
     y = [0, mag * dir_vec(2)];
     h = plot(x, y, 'Color',blue, 'LineWidth', 0.7);
@@ -105,7 +113,7 @@ for n = 1:length(x_grid)
     y_all(end+1) = y(2);
 
     % Vertical Turner angle PDF
-    mag = pdf_values_v(n) * 0.0008;
+    mag = pdf_values_v(n) * scale;
     x = [0, mag * dir_vec(1)];
     y = [0, mag * dir_vec(2)];
     h = plot(x, y, 'Color',green, 'LineWidth', 0.7);
@@ -136,4 +144,22 @@ legend([h_pdf_hori, h_pdf_vert], ...
        {'Horizontal Turner angle PDF', 'Vertical Turner angle PDF'}, ...
        'Location', 'northeast', 'FontSize', fontsize - 4);
 
-print('-dpng','-r180',[figdir '/Tu_TS.png']);
+
+% ========== plot cross-isopycnal vector and isopycnal vector ==========
+origin = [0, 0]; 
+
+% cross-isopycnal vector
+quiver(origin(1), origin(2), v_cross(1)*scale/50, v_cross(2)*scale/50, 0, ...
+    'r', 'LineWidth', 2, 'MaxHeadSize', 0.4, 'DisplayName', '⊥ isopycnal');
+
+% isopycnal vector
+quiver(origin(1), origin(2), v_iso(1)*scale/50, v_iso(2)*scale/50, 0, ...
+    'b', 'LineWidth', 2, 'MaxHeadSize', 0.4, 'DisplayName', '∥ isopycnal');
+
+legend('show')
+
+print('-dpng','-r200',[figdir '/Tu_TS.png']);
+
+axis equal
+
+print('-dpng','-r200',[figdir '/Tu_TS-equal.png']);

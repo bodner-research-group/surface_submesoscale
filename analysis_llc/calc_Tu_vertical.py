@@ -146,19 +146,16 @@ indices_14 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 14]
 indices_15 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 15]  # 3pm local time
 indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]  # 4pm local time
 
-# print(indices_15)
-# print(len(indices_15))
-
 time_inst = indices_15[0]   
 
-nday_avg = 7                 # multiple-day average
+nday_avg = 30                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
 
-start_hours = 194*24
-time_avg = slice(start_hours,start_hours+24*nday_avg,2) 
+start_hours = 132*24
+time_avg = slice(start_hours,start_hours+24*nday_avg,1) 
 
 
 ##############################################################
@@ -269,6 +266,9 @@ drho = drho.assign_coords(k=depth) # replace coordinate k with depth
 thresh = xr.where(drho > 0.03, drho.k, np.nan)
 mld = thresh.max("k")      # mixed layer depth, shape (j, i)
 mld.name = "MLD"
+
+# Replace NaNs (where no threshold was crossed) with the max available depth
+mld = mld.fillna(depth.max())
 
 # Plot the mixed layer depth indices
 plt.figure(figsize=(10, 6))
@@ -502,7 +502,7 @@ uu_surf = ds1.U.isel(time=time_inst,k=k_surf,face=face,i_g=i,j=j)
 vv_surf = ds1.V.isel(time=time_inst,k=k_surf,face=face,i=i,j_g=j)
 ww_surf = ds1.W.isel(time=time_inst,k_p1=k_surf,face=face,i=i,j=j)
 
-fig, axs = plt.subplots(1, 3, figsize=(18, 5))
+fig, axs = plt.subplots(1, 3, figsize=(20, 5))
 
 # u component
 pcm_u = axs[0].pcolormesh(lon2d, lat2d, uu_surf, shading='auto', cmap='RdBu_r')
@@ -567,7 +567,7 @@ plt.close()
 kde_v = gaussian_kde(Tu_V_clean, bw_method=0.05)  # bw_method corresponds to seaborn's bw_adjust, controls the smoothing bandwidth
 
 # 4). Define the range and number of points where the PDF will be evaluated, e.g., from -180° to 180° with 300 points
-x_grid_v = np.linspace(-180, 180, 300)
+x_grid_v = np.linspace(-180, 180, 1000)
 
 # 5). Compute the PDF values at the specified points
 pdf_values_v = kde_v(x_grid_v)
