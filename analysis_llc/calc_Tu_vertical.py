@@ -18,7 +18,6 @@ import matplotlib.ticker as ticker
 import numpy as np
 import xarray as xr
 import zarr 
-import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
 
 from numpy.linalg import lstsq
@@ -30,18 +29,22 @@ from datetime import datetime
 import pytz
 import pandas as pd
 
+import dask 
+# from dask.distributed import Client, LocalCluster
+# cluster = LocalCluster(n_workers=64, threads_per_worker=1)
+# client = Client(cluster)
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1_month1_2pm-4pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
 # Set spatial indices
-face = 1
+face = 2
 k_surf = 0
 i = slice(0,100,1) # Southern Ocean
 j = slice(0,101,1) # Southern Ocean
@@ -49,6 +52,9 @@ j = slice(0,101,1) # Southern Ocean
 # j = slice(2800,3001,1) # Tropics
 # i=slice(450,760,1)
 # j=slice(450,761,1)
+i=slice(671,864,1)   # icelandic_basin
+j=slice(2982,3419,1) # icelandic_basin
+
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -145,11 +151,14 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 30                 # 30-day average
+nday_avg = 7                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
+
+start_hours = 194*24
+time_avg = slice(start_hours,start_hours+24*nday_avg,2) 
 
 
 ##############################################################
@@ -187,9 +196,9 @@ ss = ss_mean.compute()
 ################ End if use time averages
 
 
-# ###############################
-# ### 1. Plot surface T and S ###
-# ###############################
+###############################
+### 1. Plot surface T and S ###
+###############################
 
 # tt_surf = tt.isel(k=k_surf)
 # ss_surf = ss.isel(k=k_surf)
@@ -213,7 +222,7 @@ ss = ss_mean.compute()
 # # cbar_s.ax.set_title('(psu)')      # Label on top
 
 # plt.tight_layout()
-# plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=150)
+# plt.savefig(f"{figdir}/surface_t_s.png", dpi=150)
 # plt.close()
 
 
@@ -256,9 +265,8 @@ drho = rho - rho_10m.expand_dims({'k': rho.k})
 # mld_idx.name = "Vertical indices of mixed layer base"
 
 drho = drho.assign_coords(k=depth) # replace coordinate k with depth
-drho_deep = drho.where(drho.k > 10) # exclude surface 10m
 
-thresh = xr.where(np.abs(drho_deep) > 0.03, drho_deep.k, np.nan)
+thresh = xr.where(drho > 0.03, drho.k, np.nan)
 mld = thresh.max("k")      # mixed layer depth, shape (j, i)
 mld.name = "MLD"
 

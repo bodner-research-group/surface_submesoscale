@@ -12,13 +12,13 @@ import multiprocessing as mp
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 list(ds1.data_vars)
 
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/faces"
 
 face = 1
 k = 0
 # time = slice(0,10311,20)
-i = slice(0,4320,2)
-j = slice(0,4320,2)
+i = slice(0,4320,5)
+j = slice(0,4320,5)
 
 # tt = ds1.Theta.isel(time=time,k=k,face=face,i=i,j=j)
 # ss = ds1.Salt.isel(time=time,k=k,face=face,i=i,j=j)
@@ -32,23 +32,29 @@ j = slice(0,4320,2)
 # lat_g = ds1.YG.isel(face=face,i_g=i,j_g=j).transpose('j_g', 'i_g')
 
 # Plots
-for time in range(0,5000,5):
-    plt.figure(figsize=(20,12),dpi=300)
-    ds1.Theta.isel(time=time,k=k,face=face,j=j,i=i).plot(cmap="Spectral_r",vmin=-2,vmax=30)
-    plt.title(f"time={ds1.Theta.time[time].values.astype('datetime64[m]')}, face={face}, Depth={np.around(ds1.Z.values[k])}m")
-    plt.savefig(f"{figdir}/face01_time_k0/tt_face{str(face).zfill(2)}_time{str(time).zfill(6)}_k{k}.png")
-    plt.show()
-    plt.close()
+
+time_range = [0]
+# time_range = range(0,5000,5)
+
+for face in range(0,13,1):
+    print(face)
+    for time in time_range:
+        plt.figure(figsize=(20,12),dpi=300)
+        ds1.Theta.isel(time=time,k=k,face=face,j=j,i=i).plot(cmap="Spectral_r",vmin=-2,vmax=30)
+        plt.title(f"time={ds1.Theta.time[time].values.astype('datetime64[m]')}, face={face}, Depth={np.around(ds1.Z.values[k])}m")
+        plt.savefig(f"{figdir}/tt_face{str(face).zfill(2)}_time{str(time).zfill(6)}_k{k}.png")
+        plt.show()
+        plt.close()
 
 
-# Plots
-for time in range(0,5000,5):
-    plt.figure(figsize=(20,12),dpi=300)
-    ds1.U.isel(time=time,k=k,face=face,i_g=i,j=j).plot(cmap="coolwarm",vmin=-1,vmax=2)
-    plt.title(f"time={ds1.U.time[time].values.astype('datetime64[m]')}, face={face}, Depth={np.around(ds1.Z.values[k])}m")
-    plt.savefig(f"{figdir}/face01_time_k0/uu_face{str(face).zfill(2)}_time{str(time).zfill(6)}_k{k}.png")
-    plt.show()
-    plt.close()
+# # Plots
+# for time in time_range:
+#     plt.figure(figsize=(20,12),dpi=300)
+#     ds1.U.isel(time=time,k=k,face=face,i_g=i,j=j).plot(cmap="coolwarm",vmin=-1,vmax=2)
+#     plt.title(f"time={ds1.U.time[time].values.astype('datetime64[m]')}, face={face}, Depth={np.around(ds1.Z.values[k])}m")
+#     plt.savefig(f"{figdir}/uu_face{str(face).zfill(2)}_time{str(time).zfill(6)}_k{k}.png")
+#     plt.show()
+#     plt.close()
 
 
 # # Plot surface velocity

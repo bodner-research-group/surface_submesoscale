@@ -2,7 +2,7 @@ clear all;% close all;
 addpath colormap/
 load_colors;
 
-figdir = 'figs/face01_test3_month1_2pm-4pm';
+figdir = 'figs/icelandic_basin';
 ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);
@@ -77,6 +77,7 @@ v_iso = [1/slope_rho; 1];     % isopycnal
 v_iso = v_iso / norm(v_iso);
 
 x_grid = x_grid_h;
+
 % x_grid = x_grid_h_1000;
 % pdf_values_h = pdf_values_h_1000;
 % pdf_values_v = pdf_values_v_1000;

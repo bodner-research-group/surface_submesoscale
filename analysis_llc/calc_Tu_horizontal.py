@@ -13,7 +13,6 @@ import matplotlib.ticker as ticker
 import numpy as np
 import xarray as xr
 import zarr 
-import dask 
 import gsw  # (Gibbs Seawater Oceanography Toolkit) https://teos-10.github.io/GSW-Python/gsw.html
 
 from numpy.linalg import lstsq
@@ -25,25 +24,35 @@ from datetime import datetime
 import pytz
 import pandas as pd
 
+import dask 
+from dask.distributed import Client, LocalCluster
+cluster = LocalCluster(n_workers=64, threads_per_worker=1)
+client = Client(cluster)
+
+from dask import delayed, compute
+from numpy.linalg import lstsq
+
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/face01_test1_month1_2pm-4pm"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
 
 # Set spatial indices
-face = 1
+face = 2
 k_surf = 0
-i = slice(0,100,1) # Southern Ocean
-j = slice(0,101,1) # Southern Ocean
+# i = slice(0,100,1) # Southern Ocean
+# j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
 # i=slice(450,760,1)
 # j=slice(450,761,1)
+i=slice(671,864,1)   # icelandic_basin
+j=slice(2982,3419,1) # icelandic_basin
 
 
 # Grid spacings in m
@@ -87,16 +96,19 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 30                 # multiple-day average
+nday_avg = 7                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
 
+start_hours = 194*24
+time_avg = slice(start_hours,start_hours+24*nday_avg,2) 
+
 
 ######### Load data #########
 
-# Load surface T, S 
+# # Load surface T, S 
 # ################ If use instantaneous output
 # tt_surf = ds1.Theta.isel(time=time_inst,face=face,i=i,j=j,k=k_surf) # Potential temperature, shape (j, i)
 # ss_surf = ds1.Salt.isel(time=time_inst,face=face,i=i,j=j,k=k_surf)  # Practical salinity, shape (j, i)
@@ -126,6 +138,23 @@ ss_surf = ss_mean_surf.compute()
 ################ End if use time averages
 
 
+###  Plot surface T and S ###
+fig, axs = plt.subplots(1,2,figsize=(15,5))
+pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
+axs[0].set_title('Surface Temperature')
+axs[0].set_xlabel('Longitude')
+axs[0].set_ylabel('Latitude')
+fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
+pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
+axs[1].set_title('Surface Salinity')
+axs[1].set_xlabel('Longitude')
+axs[1].set_ylabel('Latitude')
+fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
+plt.tight_layout()
+plt.savefig(f"{figdir}/surface_t_s.png", dpi=150)
+plt.close()
+
+
 # Compute the surface potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
 p_ref = 0                                            # Reference pressure 
 SA_surf = gsw.conversions.SA_from_SP(ss_surf, p_ref, lon, lat) # Absolute salinity, shape (k, j, i)
@@ -145,21 +174,6 @@ plt.tight_layout()
 plt.savefig(f"{figdir}/rho_surf.png", dpi=150)
 plt.close()
 
-fig, axs = plt.subplots(1,2,figsize=(15,5))
-pcm_t = axs[0].pcolormesh(lon2d, lat2d, tt_surf, shading='auto', cmap='gist_ncar')
-axs[0].set_title('Surface Temperature')
-axs[0].set_xlabel('Longitude')
-axs[0].set_ylabel('Latitude')
-fig.colorbar(pcm_t, ax=axs[0], label='(\u00B0C)')
-pcm_s = axs[1].pcolormesh(lon2d, lat2d, ss_surf, shading='auto', cmap='terrain')
-axs[1].set_title('Surface Salinity')
-axs[1].set_xlabel('Longitude')
-axs[1].set_ylabel('Latitude')
-fig.colorbar(pcm_s, ax=axs[1], label='(psu)')
-plt.tight_layout()
-plt.savefig(f"{figdir}/surface_t_s_200.png", dpi=150)
-plt.close()
-
 
 
 #############################################################
@@ -171,41 +185,135 @@ tt_surf_np = tt_surf.values       # shape (j, i)
 ss_surf_np = ss_surf.values       # shape (j, i)
 ny, nx = tt_surf_np.shape
 
-# 2). Initialize arrays to hold temperature and salinity gradients, filled with NaNs
-dt_dx = np.full_like(tt_surf_np, np.nan)
-dt_dy = np.full_like(tt_surf_np, np.nan)
-ds_dx = np.full_like(ss_surf_np, np.nan)
-ds_dy = np.full_like(ss_surf_np, np.nan)
+# ------------------------------
+# Parallel a Dask-delayed function
+# ------------------------------
+# Define a Dask-delayed function to compute horizontal gradients of temperature and salinity
+# within a subregion (tile) of the domain.
+@delayed
+def process_tile(j0, j1, i0, i1, tt_np, ss_np, dxF, dyF):
+    # Initialize local output arrays for gradients, filled with NaNs
+    dt_dx = np.full_like(tt_np[j0:j1, i0:i1], np.nan)
+    dt_dy = np.full_like(tt_np[j0:j1, i0:i1], np.nan)
+    ds_dx = np.full_like(ss_np[j0:j1, i0:i1], np.nan)
+    ds_dy = np.full_like(ss_np[j0:j1, i0:i1], np.nan)
 
-# 3). Create relative coordinates for the window
-x = np.tile([-1, 0, 1], 3)            # shape (9,)  x = [-1, 0, 1, -1, 0, 1, -1, 0, 1]
-y = np.repeat([-1, 0, 1], 3)          # shape (9,)  y = [-1, -1, -1, 0, 0, 0, 1, 1, 1]
-A = np.vstack([x, y, np.ones(9)]).T   # shape (9, 3)
+    # Define relative coordinates for a 3x3 stencil centered at (0, 0)
+    x = np.tile([-1, 0, 1], 3)
+    y = np.repeat([-1, 0, 1], 3)
+    A = np.vstack([x, y, np.ones(9)]).T
 
-# 4). Loop through interior points of the grid (excluding edges)
-for j in range(1, ny - 1):
-    for i in range(1, nx - 1):
-        # 4.1 Extract local 3×3 temperature block （inclusive on the left, exclusive on the right）
-        local_tt = tt_surf_np[j-1:j+2, i-1:i+2].flatten()
-        local_ss = ss_surf_np[j-1:j+2, i-1:i+2].flatten()
+    # Loop over each grid cell within the tile
+    for jj, j in enumerate(range(j0, j1)):
+        for ii, i in enumerate(range(i0, i1)):
+            # Skip edge cells that cannot support a full 3x3 window
+            if j <= 0 or j >= tt_np.shape[0] - 1:
+                continue
+            if i <= 0 or i >= tt_np.shape[1] - 1:
+                continue
+
+            # Extract local 3x3 window of temperature and salinity
+            local_tt = tt_np[j-1:j+2, i-1:i+2].flatten()
+            local_ss = ss_np[j-1:j+2, i-1:i+2].flatten()
+
+            # Skip if any value is NaN
+            if np.any(np.isnan(local_tt)) or np.any(np.isnan(local_ss)):
+                continue
+
+            # Fit a plane to the 3x3 temperature and salinity data
+            coeffs_tt, _, _, _ = lstsq(A, local_tt, rcond=None)
+            a_tt, b_tt, _ = coeffs_tt
+            coeffs_ss, _, _, _ = lstsq(A, local_ss, rcond=None)
+            a_ss, b_ss, _ = coeffs_ss
+
+            # Store normalized gradients using physical grid spacing
+            dt_dx[jj, ii] = a_tt / dxF[j, i]
+            dt_dy[jj, ii] = b_tt / dyF[j, i]
+            ds_dx[jj, ii] = a_ss / dxF[j, i]
+            ds_dy[jj, ii] = b_ss / dyF[j, i]
+
+    return dt_dx, dt_dy, ds_dx, ds_dy
+
+
+# ------------------------------
+# Parallel computation over tiles
+# ------------------------------
+tile_size = 64
+tasks = []
+
+# Divide the domain (excluding edges) into tiles and schedule them for parallel computation
+for j0 in range(1, ny-1, tile_size):
+    for i0 in range(1, nx-1, tile_size):
+        j1 = min(j0 + tile_size, ny-1)
+        i1 = min(i0 + tile_size, nx-1)
+        tasks.append(process_tile(j0, j1, i0, i1, tt_surf_np, ss_surf_np, dxF, dyF))
+
+# Execute all tasks in parallel using 64 processes
+results = compute(*tasks, scheduler='processes', num_workers=64)
+
+# ------------------------------
+# Assemble full gradient fields
+# ------------------------------
+# Initialize full-size arrays for all gradient components
+dt_dx = np.full((ny, nx), np.nan)
+dt_dy = np.full((ny, nx), np.nan)
+ds_dx = np.full((ny, nx), np.nan)
+ds_dy = np.full((ny, nx), np.nan)
+
+# Stitch tile results back into the full arrays
+idx = 0
+for j0 in range(1, ny-1, tile_size):
+    for i0 in range(1, nx-1, tile_size):
+        j1 = min(j0 + tile_size, ny - 1)
+        i1 = min(i0 + tile_size, nx - 1)
         
-        # 4.2 Skip window if any value is missing
-        if np.any(np.isnan(local_tt)):
-            continue
-        if np.any(np.isnan(local_ss)):
-            continue
+        dt_tile, dy_tile, dsx_tile, dsy_tile = results[idx]
+        dt_dx[j0:j1, i0:i1] = dt_tile
+        dt_dy[j0:j1, i0:i1] = dy_tile
+        ds_dx[j0:j1, i0:i1] = dsx_tile
+        ds_dy[j0:j1, i0:i1] = dsy_tile
+        idx += 1
 
-        # 4.3 Fit the plane to temperature using least-squares
-        coeffs_tt, _, _, _ = lstsq(A, local_tt, rcond=None)
-        a_tt, b_tt, _ = coeffs_tt  # dT/dx = a_tt, dT/dy = b_tt
-        coeffs_ss, _, _, _ = lstsq(A, local_ss, rcond=None)
-        a_ss, b_ss, _ = coeffs_ss
 
-        # 4.4 Store the gradients, normalized by physical grid spacing
-        dt_dx[j, i] = a_tt / dxF[j, i]
-        dt_dy[j, i] = b_tt / dyF[j, i]
-        ds_dx[j, i] = a_ss / dxF[j, i]
-        ds_dy[j, i] = b_ss / dyF[j, i]
+# ------------------------------
+# Old code (non-parallel)
+# ------------------------------
+# # 2). Initialize arrays to hold temperature and salinity gradients, filled with NaNs
+# dt_dx = np.full_like(tt_surf_np, np.nan)
+# dt_dy = np.full_like(tt_surf_np, np.nan)
+# ds_dx = np.full_like(ss_surf_np, np.nan)
+# ds_dy = np.full_like(ss_surf_np, np.nan)
+
+# # 3). Create relative coordinates for the window
+# x = np.tile([-1, 0, 1], 3)            # shape (9,)  x = [-1, 0, 1, -1, 0, 1, -1, 0, 1]
+# y = np.repeat([-1, 0, 1], 3)          # shape (9,)  y = [-1, -1, -1, 0, 0, 0, 1, 1, 1]
+# A = np.vstack([x, y, np.ones(9)]).T   # shape (9, 3)
+
+# # 4). Loop through interior points of the grid (excluding edges)
+# for j in range(1, ny - 1):
+#     for i in range(1, nx - 1):
+#         # 4.1 Extract local 3×3 temperature block （inclusive on the left, exclusive on the right）
+#         local_tt = tt_surf_np[j-1:j+2, i-1:i+2].flatten()
+#         local_ss = ss_surf_np[j-1:j+2, i-1:i+2].flatten()
+        
+#         # 4.2 Skip window if any value is missing
+#         if np.any(np.isnan(local_tt)):
+#             continue
+#         if np.any(np.isnan(local_ss)):
+#             continue
+
+#         # 4.3 Fit the plane to temperature using least-squares
+#         coeffs_tt, _, _, _ = lstsq(A, local_tt, rcond=None)
+#         a_tt, b_tt, _ = coeffs_tt  # dT/dx = a_tt, dT/dy = b_tt
+#         coeffs_ss, _, _, _ = lstsq(A, local_ss, rcond=None)
+#         a_ss, b_ss, _ = coeffs_ss
+
+#         # 4.4 Store the gradients, normalized by physical grid spacing
+#         dt_dx[j, i] = a_tt / dxF[j, i]
+#         dt_dy[j, i] = b_tt / dyF[j, i]
+#         ds_dx[j, i] = a_ss / dxF[j, i]
+#         ds_dy[j, i] = b_ss / dyF[j, i]
+
 
 # 5). Plot the horizontal gradients
 vmax_t = np.nanmax(np.abs([dt_dx, dt_dy]))  # symmetric range for temperature gradients
@@ -382,7 +490,7 @@ plt.savefig(f"{figdir}/hori_turner_angle_map.png", dpi=150)
 plt.close()
 
 plt.figure(figsize=(9, 6))
-pcm = plt.pcolormesh(lon2d, lat2d, Tu_H_rad_tan2, cmap='twilight_shifted', shading='auto', vmin=-180, vmax=180)
+pcm = plt.pcolormesh(lon2d, lat2d, Tu_H_deg_tan2, cmap='twilight_shifted', shading='auto', vmin=-180, vmax=180)
 plt.colorbar(pcm, label=r"$Tu_H$ (°)")
 plt.title(r"Four-Quadrant Horizontal Turner Angle ($Tu_H$)")
 plt.xlabel("Longitude")
