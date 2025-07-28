@@ -25,9 +25,11 @@ import pytz
 import pandas as pd
 
 import dask 
-# from dask.distributed import Client, LocalCluster
-# cluster = LocalCluster(n_workers=64, threads_per_worker=1)
-# client = Client(cluster)
+from dask.distributed import Client, LocalCluster
+cluster = LocalCluster(n_workers=64, threads_per_worker=1)
+client = Client(cluster)
+
+print(client.dashboard_link)
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
@@ -89,7 +91,7 @@ time_avg = slice(start_hours,start_hours+24*nday_avg,1)
 ######### Load data #########
 oceQnet = ds1.oceQnet.isel(time=time_avg,face=face,i=i,j=j)   # net surface heat flux into the ocean (+=down), >0 increases theta
 
-oceQnet = oceQnet.chunk({'time': -1})  # Re-chunk to include all data points
+oceQnet = oceQnet.chunk({'time': 1})  
 print(oceQnet.chunks) 
 
 # Compute spatial averages
