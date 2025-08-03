@@ -36,6 +36,10 @@ k_surf = 0
 # j = slice(0,101,1) # Southern Ocean
 # i = slice(1000,1200,1) # Tropics
 # j = slice(2800,3001,1) # Tropics
+
+# i = slice(900,1300,1) # Tropics
+# j = slice(2700,3101,1) # Tropics
+
 # i=slice(450,760,1)
 # j=slice(450,761,1)
 # i=slice(671,864,1)   # icelandic_basin
@@ -83,13 +87,15 @@ indices_16 = [time_idx for time_idx, t in enumerate(time_local) if t.hour == 16]
 
 time_inst = indices_15[0]   
 
-nday_avg = 30                 # multiple-day average
+nday_avg = 364                 # multiple-day average
 time_avg = []
 for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
 
 start_hours = 132*24
+# start_hours = 132*24 + 20*24
+# start_hours = 1
 time_avg = slice(start_hours,start_hours+24*nday_avg,1) 
 
 
@@ -112,7 +118,6 @@ ww_12h = ww.coarsen(time=12, boundary='trim').mean()
 tt_12h = tt_12h.compute()
 ss_12h = ss_12h.compute()
 ww_12h = ww_12h.compute()
-
 
 ############ Compute Buoyancy ############
 # Compute the potential density using GSW (Gibbs Seawater Oceanography Toolkit), with surface reference pressure 
@@ -147,24 +152,31 @@ WB_cross_spectra = xrft.isotropic_cross_spectrum(ww_12h_interp, buoy_12h, dim=['
 
 
 ############ Make plots and save data ############
-freq_r = WB_cross_spectra.freq_r
-spec_vp = WB_cross_spectra * freq_r
+# freq_r = WB_cross_spectra.freq_r
+# spec_vp = WB_cross_spectra * freq_r
+
+dx = dxF.mean()
+dy = dyF.mean()
+dr = np.sqrt(dx**2/2 + dy**2/2)
+
+k_r = WB_cross_spectra.freq_r/dr/1e-3
+spec_vp = WB_cross_spectra * k_r
+
 
 # Filter out large-scale (low wavenumber) components
-freq_r_filtered = freq_r.where(freq_r >= 2/500, drop=True)
-spec_vp_filtered = spec_vp.sel(freq_r=freq_r_filtered)
+k_r_filtered = k_r.where((k_r >= 2/500).compute(), drop=True)
+spec_vp_filtered = spec_vp.where((k_r >= 2/500).compute(), drop=True)
 
 from matplotlib.colors import TwoSlopeNorm
 
 plt.figure(figsize=(8, 6))
-vmax = np.abs(spec_vp_filtered.real).max()
-norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)  # 0为中心，范围对称
+vmax = np.abs(spec_vp_filtered.real).max().compute()
+norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)  
 
-# pc = plt.pcolormesh(freq_r, WB_cross_spectra['Z'], spec_vp.real, shading='auto', cmap='viridis')
-pc = plt.pcolormesh(freq_r_filtered, WB_cross_spectra['Z'], spec_vp_filtered.real, shading='auto', cmap='RdBu',norm=norm)
+pc = plt.pcolormesh(k_r_filtered, WB_cross_spectra['Z'], spec_vp_filtered.real, shading='auto', cmap='RdBu',norm=norm)
 plt.gca().invert_yaxis()  # Flip y-axis so depth increases downward
 plt.xscale('log')
-plt.xlabel('Wavenumber (cpkm)')
+plt.xlabel(r'Wavenumber $k_r$ (cpkm)')
 plt.ylabel('Depth (m)')
 plt.title(r'$w,\ b$ Cross-Spectrum (VP)')
 plt.colorbar(pc, label=r'Spectral density (m$^{2}$s$^{-3}$)')
@@ -176,11 +188,6 @@ plt.close()
 
 
 #### TO DO: COMPUTE MIXED LAYER AVERAGE
-# dx = dxF.mean()
-# dy = dyF.mean()
-# dr = np.sqrt(dx**2/2 + dy**2/2)
-
-# k_r = WB_cross_spectra.freq_r/dr/1e-3
 # k_r_max = WB_spectra_mld.freq_r.where(WB_spectra_mld*k_r == (WB_spectra_mld*k_r).max(),drop=True)/dx/1e-3
 # L_max = 1/k_r_max
 
@@ -267,10 +274,6 @@ plt.close()
 
 
 ############ Compute cross-spectra of w' and b' ############
-
-
-
-
 
 
 

@@ -36,7 +36,7 @@ from numpy.linalg import lstsq
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin-summer"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -50,8 +50,11 @@ k_surf = 0
 # j = slice(2800,3001,1) # Tropics
 # i=slice(450,760,1)
 # j=slice(450,761,1)
-i=slice(671,864,1)   # icelandic_basin
-j=slice(2982,3419,1) # icelandic_basin
+# i=slice(671,864,1)   # icelandic_basin
+# j=slice(2982,3419,1) # icelandic_basin
+
+i=slice(527,1007,1)   # icelandic_basin -- larger domain
+j=slice(2960,3441,1) # icelandic_basin -- larger domain
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)

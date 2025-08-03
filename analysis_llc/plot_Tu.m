@@ -2,7 +2,7 @@ clear all;% close all;
 addpath colormap/
 load_colors;
 
-figdir = 'figs/icelandic_basin';
+figdir = 'figs/icelandic_basin-summer';
 ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);
