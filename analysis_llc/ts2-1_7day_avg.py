@@ -31,8 +31,8 @@ client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin"
-output_dir = os.path.join(input_dir, "rho_7d_results")
+input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_12h_avg"
+output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/rho_weekly"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Open LLC4320 Dataset ==========

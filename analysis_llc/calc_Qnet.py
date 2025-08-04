@@ -26,7 +26,7 @@ import pandas as pd
 
 import dask 
 from dask.distributed import Client, LocalCluster
-cluster = LocalCluster(n_workers=64, threads_per_worker=1)
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 
 print(client.dashboard_link)
@@ -36,6 +36,7 @@ ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
 figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
+output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -43,14 +44,8 @@ plt.rcParams.update({'font.size': 16})
 # Set spatial indices
 face = 2
 k_surf = 0
-# i = slice(0,100,1) # Southern Ocean
-# j = slice(0,101,1) # Southern Ocean
-# i = slice(1000,1200,1) # Tropics
-# j = slice(2800,3001,1) # Tropics
-# i=slice(450,760,1)
-# j=slice(450,761,1)
-i=slice(671,864,2)   # icelandic_basin
-j=slice(2982,3419,2) # icelandic_basin
+i = slice(527, 1007, 60)
+j = slice(2960, 3441, 60)
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -84,9 +79,12 @@ time_local = time_utc.tz_localize('UTC').tz_convert(timezone_str)
 # print(time_local[:5])
  
 
-nday_avg = 200                 # multiple-day average
-start_hours = 100*24
-time_avg = slice(start_hours,start_hours+24*nday_avg,1) 
+# Time selection 
+nday_avg = 364
+start_hours = 49 * 24
+end_hours = start_hours + 24 * nday_avg
+time_avg = slice(start_hours, end_hours, 1)
+
 
 ######### Load data #########
 oceQnet = ds1.oceQnet.isel(time=time_avg,face=face,i=i,j=j)   # net surface heat flux into the ocean (+=down), >0 increases theta
@@ -149,3 +147,25 @@ plt.close()
 
 
 
+# ===== Convert DataFrame to xarray Dataset =====
+ds_qnet = xr.Dataset(
+    {
+        "qnet_hourly_mean": (("time_hourly",), oceQnet_timeseries.values),
+        "qnet_daily_mean": (("time_daily",), df_daily['qnet'].values),
+        "qnet_7day_smooth": (("time_daily",), df_daily['qnet_smooth'].values)
+    },
+    coords={
+        "time_hourly": ("time_hourly", time_local_avg_full),
+        "time_daily": ("time_daily", pd.to_datetime(df_daily.index))
+    },
+    attrs={
+        "description": "Time series of surface net heat flux (Qnet): hourly, daily, and 7-day smoothed.",
+        "source": "LLC4320 model data",
+        "processing_note": "Daily average and 7-day smoothing applied after spatial averaging."
+    }
+)
+
+# ===== Save to NetCDF =====
+output_path = f"{output_dir}/oceQnet_timeseries_hourly_daily_7day.nc"
+ds_qnet.to_netcdf(output_path)
+print(f"Saved Qnet time series to: {output_path}")

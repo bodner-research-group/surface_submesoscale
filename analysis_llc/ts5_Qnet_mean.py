@@ -60,8 +60,8 @@ plt.rcParams.update({'font.size': 16})
 # Grid selections
 face = 2
 k_surf = 0
-i = slice(527, 1007)
-j = slice(2960, 3441)
+i = slice(527, 1007, 60)
+j = slice(2960, 3441, 60)
 
 # Coordinates
 lat = ds1.YC.isel(face=face, i=1, j=j)
@@ -75,10 +75,12 @@ lon_c = float(lon.mean().values)
 tf = TimezoneFinder()
 timezone_str = tf.timezone_at(lng=lon_c, lat=lat_c)
 
-# Time selection (200-day window)
-nday_avg = 200
-start_hours = 100 * 24
-time_avg = slice(start_hours, start_hours + 24 * nday_avg, 1)
+# Time selection 
+# nday_avg = 364
+nday_avg = 7
+start_hours = 49 * 24
+end_hours = start_hours + 24 * nday_avg
+time_avg = slice(start_hours, end_hours, 1)
 
 # Load and chunk Qnet (use larger time chunks for averaging)
 oceQnet = ds1.oceQnet.isel(time=time_avg, face=face, i=i, j=j).chunk({'time': 24, 'i': -1, 'j': -1})
