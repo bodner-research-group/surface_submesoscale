@@ -4,13 +4,18 @@
 ##### Hml (mixed-layer depth), 
 ##### TuH (horizontal Turner angle), 
 ##### TuV (vertical Turner angle),
-##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy), 
-##### Lmax (the horizontal length scale corresponds to wb_cros minimum), 
-##### Dmax (the depth corresponds to wb_cros minimum), 
+##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy)
+##### wbmin (the minimum of wb_cros)
+##### Lmax (the horizontal length scale corresponds to wbmin), 
+##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
 ##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
+##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
+##### Step 5: compute 7-day movmean of Qnet
+##### Step 6: compute TuH and TuV
 
 # ========== Imports ==========
 import xarray as xr
@@ -21,11 +26,7 @@ from glob import glob
 from dask.distributed import Client, LocalCluster
 
 # ========== Dask cluster setup ==========
-cluster = LocalCluster(
-    n_workers=64,             # 1 worker per CPU core
-    threads_per_worker=1,     # avoid Python GIL
-    memory_limit="5GB"        # total = 320 GB < 386 GB limit
-)
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
@@ -63,7 +64,7 @@ def compute_Hml(rho_profile, depth_profile, threshold=0.03):
     return float(depth_profile[mask].max())
 
 # ========== Main loop ==========
-tt_files = sorted(glob(os.path.join(input_dir, "tt_12h_*.nc")))
+tt_files = sorted(glob(os.path.join(input_dir, "TSW_12h_avg/tt_12h_*.nc")))
 
 for tt_file in tt_files:
     date_tag = os.path.basename(tt_file).replace("tt_12h_", "").replace(".nc", "")

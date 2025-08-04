@@ -146,3 +146,6 @@ plt.legend()
 plt.xticks(rotation=45)
 plt.savefig(f"{figdir}/oceQnet_daily_7day_smooth.png", dpi=150)
 plt.close()
+
+
+

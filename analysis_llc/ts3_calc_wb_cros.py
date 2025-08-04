@@ -4,14 +4,15 @@
 ##### Hml (mixed-layer depth), 
 ##### TuH (horizontal Turner angle), 
 ##### TuV (vertical Turner angle),
-##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy), 
-##### Lmax (the horizontal length scale corresponds to wb_cros minimum), 
-##### Dmax (the depth corresponds to wb_cros minimum), 
+##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy)
+##### wbmin (the minimum of wb_cros)
+##### Lmax (the horizontal length scale corresponds to wbmin), 
+##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
 ##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros using a sliding window
+##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
 
 
 # ========== Imports ==========
@@ -23,6 +24,8 @@ from dask.distributed import Client, LocalCluster
 from glob import glob
 import time
 import xrft
+from dask import delayed, compute
+from numpy.linalg import lstsq
 
 # ========== Setup Dask distributed cluster ==========
 cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
@@ -60,7 +63,7 @@ dx = ds1.dxF.isel(face=face,i=i,j=j).mean().values
 dy = ds1.dyF.isel(face=face,i=i,j=j).mean().values
 dr = np.sqrt(dx**2/2 + dy**2/2)
 
-def compute_wb_cross_spectrum(tt, ss, ww):
+def compute_one_spec(tt, ss, ww):
     """
     Compute the isotropic cross-spectrum between vertical velocity (w) and buoyancy (b).
 
@@ -96,7 +99,7 @@ def compute_wb_cross_spectrum(tt, ss, ww):
     ww_interp = ww_interp.fillna(0).chunk({'j': -1, 'i': -1})
 
     # Compute isotropic cross-spectrum between vertical velocity and buoyancy
-    wb_cross_spec = xrft.isotropic_cross_spectrum(
+    spec = xrft.isotropic_cross_spectrum(
         ww_interp, buoy,
         dim=['i', 'j'],
         detrend='linear',
@@ -104,38 +107,51 @@ def compute_wb_cross_spectrum(tt, ss, ww):
         truncate=True
     ).compute()
 
-    return wb_cross_spec
+    return spec
 
 # ========== Loop through weekly 12-hour average files and compute cross-spectra ==========
 for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
-    start_time = time.time()
-    # Load 12-hour averaged data for temperature, salinity, and vertical velocity
-    tt_ds = xr.open_dataset(tt_file)['Theta']
-    ss_ds = xr.open_dataset(ss_file)['Salt']
-    ww_ds = xr.open_dataset(ww_file)['W']
+    date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
+    out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_{date_str}.nc")
+    if os.path.exists(out_file):
+        print(f"Skipping {date_str}, already exists.")
+        continue
 
-    # Compute the w-b cross-spectrum for the week
-    wb_cross_spec = compute_wb_cross_spectrum(tt_ds, ss_ds, ww_ds)
+    print(f"Processing {date_str}...")
 
-    # Calculate radial wavenumber in cycles per kilometer (cpkm)
-    k_r = wb_cross_spec.freq_r / dr / 1e-3  
-    # Calculate variance-preserving spectrum by multiplying by wavenumber
-    spec_vp = wb_cross_spec * k_r
+    # Load datasets
+    tt = xr.open_dataset(tt_file)['Theta']
+    ss = xr.open_dataset(ss_file)['Salt']
+    ww = xr.open_dataset(ww_file)['W']
 
-    # Prepare output dataset
-    out_ds = xr.Dataset({
-        'wb_cross_spec': wb_cross_spec,
-        'spec_vp': spec_vp,
+    # Chunk time dimension
+    tt = tt.chunk({'time': 1})
+    ss = ss.chunk({'time': 1})
+    ww = ww.chunk({'time': 1})
+
+    # Create lists for delayed computation
+    tasks = []
+    for t in range(tt.sizes['time']):
+        t_tt = tt.isel(time=t)
+        t_ss = ss.isel(time=t)
+        t_ww = ww.isel(time=t)
+        task = delayed(compute_one_spec)(t_tt, t_ss, t_ww)
+        tasks.append(task)
+
+    # Run all and average
+    results = compute(*tasks)
+    WB_cross_spectra = xr.concat(results, dim='time').mean('time')
+
+    # Compute radial wavenumber (cpkm) and variance-preserving spectrum
+    k_r = WB_cross_spectra.freq_r / dr / 1e-3
+    spec_vp = WB_cross_spectra * k_r
+
+    # Save real part only
+    ds_out = xr.Dataset({
+        'spec_vp_real': spec_vp.real,
         'k_r': k_r,
-        'depth': wb_cross_spec.Z
+        'depth': WB_cross_spectra.Z
     })
 
-    # Define output file name based on input file date string
-    date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
-    out_file = os.path.join(output_dir, f"wb_cross_spec_weekly_{date_str}.nc")
-
-    # Save the cross-spectrum dataset to NetCDF
-    out_ds.to_netcdf(out_file)
-    print(f"Processed {date_str} in {(time.time() - start_time)/60:.2f} min, saved to {out_file}")
-
-print("All weekly wb_cross_spectrum computed and saved.")
+    ds_out.to_netcdf(out_file)
+    print(f"Saved to {out_file}")

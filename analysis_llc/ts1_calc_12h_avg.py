@@ -4,13 +4,18 @@
 ##### Hml (mixed-layer depth), 
 ##### TuH (horizontal Turner angle), 
 ##### TuV (vertical Turner angle),
-##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy), 
-##### Lmax (the horizontal length scale corresponds to wb_cros minimum), 
-##### Dmax (the depth corresponds to wb_cros minimum), 
+##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy)
+##### wbmin (the minimum of wb_cros)
+##### Lmax (the horizontal length scale corresponds to wbmin), 
+##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
 ##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
-
+##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
+##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
+##### Step 5: compute 7-day movmean of Qnet
+##### Step 6: compute TuH and TuV
 
 # Imports
 import xarray as xr
@@ -20,13 +25,13 @@ import time
 from dask.distributed import Client, LocalCluster
 
 # ========== Dask cluster setup ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5GB")
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
 ds_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin"
+output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_12h_avg"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Domain and chunking ==========
