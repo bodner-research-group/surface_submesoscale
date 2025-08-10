@@ -5,6 +5,9 @@ from matplotlib.colors import TwoSlopeNorm
 import os
 from glob import glob
 import pandas as pd
+from my_colormaps import WhiteBlueGreenYellowRed
+
+cmap = WhiteBlueGreenYellowRed()
 
 # Input/output
 input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/wb_cross_spectra_weekly"
@@ -21,6 +24,7 @@ times = []
 max_values = []
 max_depths = []
 max_krs = []
+max_Lr = []
 
 def plot_wb_spectrum(nc_path):
     fname = os.path.basename(nc_path)
@@ -49,22 +53,25 @@ def plot_wb_spectrum(nc_path):
 
     max_depth = depth[max_k_idx].item()
     max_k_r = k_r_filtered[max_f_idx].item()
+    max_L_r = 1/max_k_r
 
     # Append results for NetCDF
     times.append(time_val)
     max_values.append(max_val.item())
     max_depths.append(max_depth)
     max_krs.append(max_k_r)
+    max_Lr.append(max_L_r)
 
     # Plot
     plt.figure(figsize=(8, 6))
     # vmax = np.abs(spec_vp_filtered).max().item()
-    vmax = 4e-10
-    norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+    vmax = 5e-10
+    # norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+    norm = TwoSlopeNorm(vcenter=vmax/2, vmin=0, vmax=vmax)
 
     pc = plt.pcolormesh(
         k_r_filtered, depth, spec_vp_filtered,
-        shading='auto', cmap='RdBu', norm=norm
+        shading='auto', cmap=cmap, norm=norm
     )
     plt.gca().invert_yaxis()
     plt.xscale('log')
@@ -90,6 +97,7 @@ result_ds = xr.Dataset(
         "max_spec_vp": (["time"], max_values),
         "depth_at_max": (["time"], max_depths),
         "kr_at_max": (["time"], max_krs),
+        "Lr_at_max": (["time"], max_Lr),
     },
     coords={
         "time": pd.to_datetime(times)
@@ -125,3 +133,4 @@ def plot_timeseries(var, values, ylabel, save_name, yscale='linear'):
 plot_timeseries("max_spec_vp", max_values, "Max spec_vp (m²/s³)", "max_spec_vp_timeseries.png", yscale='log')
 plot_timeseries("depth_at_max", max_depths, "Depth at Max (m)", "depth_at_max_timeseries.png")
 plot_timeseries("kr_at_max", max_krs, "k_r at Max (cpkm)", "kr_at_max_timeseries.png")
+plot_timeseries("Lr_at_max", max_Lr, "Wavelength at peak spec (cpkm)", "Lr_at_max_timeseries.png")
