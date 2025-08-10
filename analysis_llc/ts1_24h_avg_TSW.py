@@ -10,9 +10,9 @@
 ##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
-##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
+##### Step 1: compute 24-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 3: compute wb_cros using the 24-hour averages, and then compute the 7-day averaged wb_cros 
 ##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
 ##### Step 5: compute 7-day movmean of Qnet
 ##### Step 6: compute TuH and TuV
@@ -31,14 +31,15 @@ print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
 ds_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_12h_avg"
+output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_24h_avg"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Domain and chunking ==========
 face = 2
 i = slice(527, 1007)
 j = slice(2960, 3441)
-chunk_dict = {'time': 12, 'i': 120, 'j': 120}
+# chunk_dict = {'time': 24, 'i': 120, 'j': 120}
+chunk_dict = {'time': 24}
 
 # ========== Time settings ==========
 nday_avg = 364
@@ -65,19 +66,19 @@ def compute_and_save_weekly(var_name, label):
         # Slice & chunk
         da = ds1[var_name].isel(time=slice(t0, t1), face=face, i=i, j=j).chunk(chunk_dict)
 
-        # Compute 12h mean
-        da_12h = da.coarsen(time=12, boundary='trim').mean()
-        da_12h = da_12h.compute()
+        # Compute 24h mean
+        da_24h = da.coarsen(time=24, boundary='trim').mean()
+        da_24h = da_24h.compute()
 
         # File name with datetime
         date_str = str(ds1.time.isel(time=t0).values)[:10]
-        outname = os.path.join(output_dir, f"{label}_12h_{date_str}.nc")
-        da_12h.to_netcdf(outname)
+        outname = os.path.join(output_dir, f"{label}_24h_{date_str}.nc")
+        da_24h.to_netcdf(outname)
 
         print(f"   Week {n+1}/{total_segments} done in {(time.time() - t_start_wall)/60:.2f} min → {outname}")
 
         # Cleanup
-        del da, da_12h
+        del da, da_24h
 
 # ========== Main ==========
 if __name__ == "__main__":

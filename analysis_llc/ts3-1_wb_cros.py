@@ -10,10 +10,12 @@
 ##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
-##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
+##### Step 1: compute 24-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
-
+##### Step 3: compute wb_cros using the 24-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
+##### Step 5: compute 7-day movmean of Qnet
+##### Step 6: compute TuH and TuV
 
 # ========== Imports ==========
 import xarray as xr
@@ -42,10 +44,10 @@ face = 2
 i = slice(527, 1007)
 j = slice(2960, 3441)
 
-# ========== Get all weekly 12-hour average files, sorted by date ==========
-tt_files = sorted(glob(os.path.join(input_dir, "tt_12h_*.nc")))
-ss_files = sorted(glob(os.path.join(input_dir, "ss_12h_*.nc")))
-ww_files = sorted(glob(os.path.join(input_dir, "ww_12h_*.nc")))
+# ========== Get all weekly 24-hour average files, sorted by date ==========
+tt_files = sorted(glob(os.path.join(input_dir, "tt_24h_*.nc")))
+ss_files = sorted(glob(os.path.join(input_dir, "ss_24h_*.nc")))
+ww_files = sorted(glob(os.path.join(input_dir, "ww_24h_*.nc")))
 
 # ========== Load lat, lon, and depth coordinates once from the full dataset ==========
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
@@ -109,7 +111,7 @@ def compute_one_spec(tt, ss, ww):
 
     return spec
 
-# ========== Loop through weekly 12-hour average files and compute cross-spectra ==========
+# ========== Loop through weekly 24-hour average files and compute cross-spectra ==========
 for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
     date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
     out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_{date_str}.nc")

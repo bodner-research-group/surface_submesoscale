@@ -10,9 +10,9 @@
 ##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
-##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
+##### Step 1: compute 24-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 3: compute wb_cros using the 24-hour averages, and then compute the 7-day averaged wb_cros 
 ##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
 ##### Step 5: compute 7-day movmean of Qnet
 ##### Step 6: compute TuH and TuV
@@ -31,7 +31,7 @@ client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_12h_avg"
+input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_24h_avg"
 output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/rho_weekly"
 os.makedirs(output_dir, exist_ok=True)
 
@@ -58,16 +58,16 @@ depth3d, _, _ = xr.broadcast(depth, lon_b, lat_b)
 # ========== Hml computation function ==========
 def compute_Hml(rho_profile, depth_profile, threshold=0.03):
     rho_10m = rho_profile[6]  # density at ~10m depth
-    mask = rho_profile <= rho_10m + threshold
+    mask = rho_profile > rho_10m + threshold
     if not np.any(mask):
         return 0.0
     return float(depth_profile[mask].max())
 
 # ========== Main loop ==========
-tt_files = sorted(glob(os.path.join(input_dir, "TSW_12h_avg/tt_12h_*.nc")))
+tt_files = sorted(glob(os.path.join(input_dir, "tt_24h_*.nc")))
 
 for tt_file in tt_files:
-    date_tag = os.path.basename(tt_file).replace("tt_12h_", "").replace(".nc", "")
+    date_tag = os.path.basename(tt_file).replace("tt_24h_", "").replace(".nc", "")
     ss_file = tt_file.replace("tt", "ss")
     
     print(f"\nProcessing {date_tag}...")

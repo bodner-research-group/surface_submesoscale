@@ -10,9 +10,9 @@
 ##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
-##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
+##### Step 1: compute 24-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 3: compute wb_cros using the 24-hour averages, and then compute the 7-day averaged wb_cros 
 ##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
 ##### Step 5: compute 7-day movmean of Qnet
 ##### Step 6: compute TuH and TuV
@@ -60,8 +60,8 @@ plt.rcParams.update({'font.size': 16})
 # Grid selections
 face = 2
 k_surf = 0
-i = slice(527, 1007, 60)
-j = slice(2960, 3441, 60)
+i = slice(527, 1007, 2)
+j = slice(2960, 3441, 2)
 
 # Coordinates
 lat = ds1.YC.isel(face=face, i=1, j=j)
@@ -76,8 +76,7 @@ tf = TimezoneFinder()
 timezone_str = tf.timezone_at(lng=lon_c, lat=lat_c)
 
 # Time selection 
-# nday_avg = 364
-nday_avg = 7
+nday_avg = 364
 start_hours = 49 * 24
 end_hours = start_hours + 24 * nday_avg
 time_avg = slice(start_hours, end_hours, 1)

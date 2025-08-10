@@ -10,9 +10,9 @@
 ##### Dmax (the depth corresponds to wbmin), 
 ##### gradSSH (absolute gradient of sea surface height anomaly), etc.
 #####
-##### Step 1: compute 12-hour averages of temperature, salinity, and vertical velocity, save as .nc files
+##### Step 1: compute 24-hour averages of temperature, salinity, and vertical velocity, save as .nc files
 ##### Step 2: compute 7-day averages of potential density, alpha, beta, Hml, save as .nc files
-##### Step 3: compute wb_cros using the 12-hour averages, and then compute the 7-day averaged wb_cros 
+##### Step 3: compute wb_cros using the 24-hour averages, and then compute the 7-day averaged wb_cros 
 ##### Step 4: plot wb_cros of each week, compute wbmin, Lmax, Dmax
 ##### Step 5: compute 7-day movmean of Qnet
 ##### Step 6: compute TuH and TuV
@@ -59,3 +59,24 @@ ds_out.to_netcdf(output_file)
 print(f"Saved weekly Hml means to: {output_file}")
 
 
+import matplotlib.dates as mdates
+
+def plot_timeseries(var, values, ylabel, save_name, yscale='linear'):
+    plt.figure(figsize=(10, 4))
+    plt.plot(times, values, marker='o', linestyle='-', label=ylabel)
+    plt.xlabel("Time")
+    plt.ylabel(ylabel)
+    plt.yscale(yscale)
+    plt.grid(True, linestyle='--')
+    plt.title(f"{ylabel} over Time")
+    plt.gcf().autofmt_xdate()
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.tight_layout()
+    plt.savefig(os.path.join(timeseries_figdir, save_name), dpi=150)
+    plt.close()
+    print(f"Saved time series plot: {save_name}")
+
+# plot
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly"
+timeseries_figdir = os.path.join(figdir, "summary_timeseries")
+plot_timeseries("Hml_mean", Hml_mean, "Mean ML Depth (m²/s³)", "Hml_mean_timeseries.png", yscale='log')
