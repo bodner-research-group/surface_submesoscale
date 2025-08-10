@@ -129,13 +129,21 @@ plt.close()
 
 
 # Compute and plot net surface buoyancy flux
-#### To do: Get local surface tAlpha, sBeta (using GSW) and S0 (surface salinity)
+import gsw
 gravity = 9.81
-tAlpha = 2e-4
-sBeta = 1e-3
-S0 = 36
-Bflux_daily_avg = -gravity*tAlpha*(ds_combined.qnet_daily_avg) + gravity*sBeta*(ds_combined.fwflx_daily_avg)*S0
-Bflux_7day_smooth = -gravity*tAlpha*(ds_combined.qnet_7day_smooth) + gravity*sBeta*(ds_combined.fwflx_7day_smooth)*S0
+
+SA = 35.2
+CT = 6
+p=0
+beta = gsw.beta(SA, CT, p)
+alpha = gsw.alpha(SA, CT, p)
+print(alpha)  # in 1/K
+print(beta)  # in 1/PSU
+rho0 = 999.8 # kg/m^3
+Cp = 3975 # J/kg/K
+
+Bflux_daily_avg = gravity*alpha*(ds_combined.qnet_daily_avg)/rho0/Cp + gravity*beta*(ds_combined.fwflx_daily_avg)*SA/rho0
+Bflux_7day_smooth = gravity*alpha*(ds_combined.qnet_7day_smooth)/rho0/Cp + gravity*beta*(ds_combined.fwflx_7day_smooth)*SA/rho0
 
 # Plot Bflux
 plt.figure(figsize=(10, 4))
@@ -143,7 +151,7 @@ plt.plot(ds_combined.time, Bflux_daily_avg, label='Daily Avg Bflx', color='tab:r
 plt.plot(ds_combined.time, Bflux_7day_smooth, label='7-day Smoothed Bflx', color='tab:blue')
 plt.axhline(0, color='k', linestyle='--', linewidth=1)
 plt.xlabel('Date')
-plt.ylabel('Bflx [m²/s]')
+plt.ylabel('Bflx [m²/s³]')
 plt.title('Net Surface Buoycnay Flux')
 plt.grid(True)
 plt.legend()
