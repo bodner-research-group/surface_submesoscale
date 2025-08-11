@@ -97,65 +97,72 @@ output_nc_path = f"{output_dir}/qnet_fwflx_daily_7day.nc"
 ds_combined.to_netcdf(output_nc_path)
 print(f"Saved NetCDF to: {output_nc_path}")
 
-# Plot Qnet
-plt.figure(figsize=(10, 4))
-plt.plot(ds_combined.time, ds_combined.qnet_daily_avg, label='Daily Avg Qnet', color='tab:red', alpha=0.4)
-plt.plot(ds_combined.time, ds_combined.qnet_7day_smooth, label='7-day Smoothed Qnet', color='tab:blue')
-plt.axhline(0, color='k', linestyle='--', linewidth=1)
-plt.xlabel('Date')
-plt.ylabel('Qnet [W/m²]')
-plt.title('Net Surface Heat Flux into the Ocean')
-plt.grid(True)
-plt.legend()
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.savefig(f"{figdir}/oceQnet_daily_7day_smooth.png", dpi=150)
-plt.close()
-
-# Plot FWflx
-plt.figure(figsize=(10, 4))
-plt.plot(ds_combined.time, ds_combined.fwflx_daily_avg, label='Daily Avg FWflx', color='tab:red', alpha=0.4)
-plt.plot(ds_combined.time, ds_combined.fwflx_7day_smooth, label='7-day Smoothed FWflx', color='tab:blue')
-plt.axhline(0, color='k', linestyle='--', linewidth=1)
-plt.xlabel('Date')
-plt.ylabel('FWflx [kg/m²/s]')
-plt.title('Net Surface Fresh Water Flux')
-plt.grid(True)
-plt.legend()
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.savefig(f"{figdir}/oceFWflx_daily_7day_smooth.png", dpi=150)
-plt.close()
 
 
-# Compute and plot net surface buoyancy flux
+
+
+
+
+import xarray as xr
+import matplotlib.pyplot as plt
 import gsw
-gravity = 9.81
 
+# Load dataset
+ds_combined = xr.open_dataset("/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/qnet_fwflx_daily_7day.nc")
+
+# Figure output path
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
+
+# Global plot style
+plt.rcParams.update({'font.size': 16})
+
+# Constants for buoyancy flux calculation
+gravity = 9.81
 SA = 35.2
 CT = 6
-p=0
+p = 0
+rho0 = 999.8  # kg/m^3
+Cp = 3975     # J/kg/K
+
 beta = gsw.beta(SA, CT, p)
 alpha = gsw.alpha(SA, CT, p)
-print(alpha)  # in 1/K
-print(beta)  # in 1/PSU
-rho0 = 999.8 # kg/m^3
-Cp = 3975 # J/kg/K
 
-Bflux_daily_avg = gravity*alpha*(ds_combined.qnet_daily_avg)/rho0/Cp + gravity*beta*(ds_combined.fwflx_daily_avg)*SA/rho0
-Bflux_7day_smooth = gravity*alpha*(ds_combined.qnet_7day_smooth)/rho0/Cp + gravity*beta*(ds_combined.fwflx_7day_smooth)*SA/rho0
+# Compute buoyancy flux
+Bflux_daily_avg = gravity * alpha * ds_combined.qnet_daily_avg / (rho0 * Cp) + gravity * beta * ds_combined.fwflx_daily_avg * SA / rho0
+Bflux_7day_smooth = gravity * alpha * ds_combined.qnet_7day_smooth / (rho0 * Cp) + gravity * beta * ds_combined.fwflx_7day_smooth * SA / rho0
 
-# Plot Bflux
-plt.figure(figsize=(10, 4))
-plt.plot(ds_combined.time, Bflux_daily_avg, label='Daily Avg Bflx', color='tab:red', alpha=0.4)
-plt.plot(ds_combined.time, Bflux_7day_smooth, label='7-day Smoothed Bflx', color='tab:blue')
-plt.axhline(0, color='k', linestyle='--', linewidth=1)
-plt.xlabel('Date')
-plt.ylabel('Bflx [m²/s³]')
-plt.title('Net Surface Buoycnay Flux')
-plt.grid(True)
-plt.legend()
-plt.xticks(rotation=45)
+# Create combined figure with 3 panels
+fig, axs = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+
+# Panel (a): Qnet
+axs[0].plot(ds_combined.time, ds_combined.qnet_daily_avg, label='Daily Avg Qnet', color='tab:red', alpha=0.4)
+axs[0].plot(ds_combined.time, ds_combined.qnet_7day_smooth, label='7-day Smoothed Qnet', color='tab:blue')
+axs[0].axhline(0, color='k', linestyle='--', linewidth=1)
+axs[0].set_ylabel('Qnet [W/m²]')
+axs[0].set_title('(a) Net Surface Heat Flux into the Ocean')
+axs[0].grid(True)
+axs[0].legend()
+
+# Panel (b): FWflx
+axs[1].plot(ds_combined.time, ds_combined.fwflx_daily_avg, label='Daily Avg FWflx', color='tab:red', alpha=0.4)
+axs[1].plot(ds_combined.time, ds_combined.fwflx_7day_smooth, label='7-day Smoothed FWflx', color='tab:blue')
+axs[1].axhline(0, color='k', linestyle='--', linewidth=1)
+axs[1].set_ylabel('FWflx [kg/m²/s]')
+axs[1].set_title('(b) Net Surface Fresh Water Flux')
+axs[1].grid(True)
+axs[1].legend()
+
+# Panel (c): Bflux
+axs[2].plot(ds_combined.time, Bflux_daily_avg, label='Daily Avg Bflx', color='tab:red', alpha=0.4)
+axs[2].plot(ds_combined.time, Bflux_7day_smooth, label='7-day Smoothed Bflx', color='tab:blue')
+axs[2].axhline(0, color='k', linestyle='--', linewidth=1)
+axs[2].set_ylabel('Bflx [m²/s³]')
+axs[2].set_title('(c) Net Surface Buoyancy Flux')
+axs[2].grid(True)
+axs[2].legend()
+
+# Final adjustments
+# plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(f"{figdir}/Bflx_daily_7day_smooth.png", dpi=150)
+plt.savefig(f"{figdir}/combined_surface_fluxes.png", dpi=150)
 plt.close()

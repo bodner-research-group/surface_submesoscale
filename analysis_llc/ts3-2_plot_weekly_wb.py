@@ -11,9 +11,12 @@ cmap = WhiteBlueGreenYellowRed()
 
 # Input/output
 input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/wb_cross_spectra_weekly"
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly_24hfilter"
 out_nc_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/wb_max_spec_vp_filtered.nc"
 os.makedirs(figdir, exist_ok=True)
+
+# Global font size setting for figures
+plt.rcParams.update({'font.size': 15})
 
 # Filtering threshold (1/500 cpkm)
 # kr_cutoff = 2 / 500  # cycles per km
@@ -78,7 +81,7 @@ def plot_wb_spectrum(nc_path):
     plt.gca().invert_yaxis()  # Flip y-axis so depth increases downward
     plt.xlabel(r'Wavenumber $k_r$ (cpkm)')
     plt.ylabel('Depth (m)')
-    plt.title(f'$w$-$b$ Cross-Spectrum (VP) — {date_str}')
+    plt.title(f'$w$-$b$ Cross-Spectrum (VP), {date_str}')
     plt.colorbar(pc, label=r'Spectral density (m$^2$s$^{-3}$)')
     plt.grid(True, which='both', ls='--')
     plt.tight_layout()
@@ -87,7 +90,7 @@ def plot_wb_spectrum(nc_path):
     print(f"Saved figure for {date_str}")
 
 # ===== Loop through all .nc files and plot =====
-all_spec_files = sorted(glob(os.path.join(input_dir, "wb_cross_spec_vp_real_*.nc")))
+all_spec_files = sorted(glob(os.path.join(input_dir, "wb_cross_spec_vp_real_24hfilter_*.nc")))
 for f in all_spec_files:
     plot_wb_spectrum(f)
 
@@ -109,28 +112,41 @@ print(f"\nSaved summary NetCDF to: {out_nc_path}")
 
 
 import matplotlib.dates as mdates
+plt.rcParams.update({'font.size': 16})
 
-# figure dir
-timeseries_figdir = os.path.join(figdir, "summary_timeseries")
-os.makedirs(timeseries_figdir, exist_ok=True)
+fig, axs = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
-def plot_timeseries(var, values, ylabel, save_name, yscale='linear'):
-    plt.figure(figsize=(10, 4))
-    plt.plot(times, values, marker='o', linestyle='-', label=ylabel)
-    plt.xlabel("Time")
-    plt.ylabel(ylabel)
-    plt.yscale(yscale)
-    plt.grid(True, linestyle='--')
-    plt.title(f"{ylabel} over Time")
-    plt.gcf().autofmt_xdate()
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    plt.tight_layout()
-    plt.savefig(os.path.join(timeseries_figdir, save_name), dpi=150)
-    plt.close()
-    print(f"Saved time series plot: {save_name}")
+# (a) Max spec_vp
+axs[0].plot(times, max_values, marker='o', linestyle='-', color='tab:blue', label='Max spec_vp')
+axs[0].set_yscale('log')
+axs[0].set_ylabel('Max spec_vp (m²/s³)')
+axs[0].set_title('(a) Peak Spectral Value over Time')
+axs[0].grid(True, linestyle='--', which='major')  
+axs[0].minorticks_on()  
+axs[0].grid(True, linestyle=':', linewidth=0.5, which='minor')  
+axs[0].legend()
 
-# plot
-plot_timeseries("max_spec_vp", max_values, "Max spec_vp (m²/s³)", "max_spec_vp_timeseries.png", yscale='log')
-plot_timeseries("depth_at_max", max_depths, "Depth at Max (m)", "depth_at_max_timeseries.png")
-plot_timeseries("kr_at_max", max_krs, "k_r at Max (cpkm)", "kr_at_max_timeseries.png")
-plot_timeseries("Lr_at_max", max_Lr, "Wavelength at peak spec (cpkm)", "Lr_at_max_timeseries.png")
+# (b) Wavelength at Max
+axs[1].plot(times, max_Lr, marker='o', linestyle='-', color='tab:orange', label='Wavelength at Max')
+axs[1].set_ylabel('Wavelength (km)')
+axs[1].set_title('(b) Wavelength at Spectral Peak')
+axs[1].set_yticks([10, 20, 30, 40, 50])  
+axs[1].grid(True, linestyle='--')
+axs[1].legend()
+
+
+# (c) Depth at Max
+axs[2].plot(times, max_depths, marker='o', linestyle='-', color='tab:green', label='Depth at Max')
+axs[2].set_ylabel('Depth (m)')
+axs[2].set_title('(c) Depth at Spectral Peak')
+axs[2].grid(True, linestyle='--')
+axs[2].legend()
+axs[2].set_xlabel('Time')
+
+axs[2].xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+# plt.xticks(rotation=45)
+
+plt.tight_layout()
+plt.savefig(os.path.join(figdir, "combined_spec_timeseries.png"), dpi=150)
+plt.close()
+print("Saved: combined_spec_timeseries.png")

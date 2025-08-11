@@ -35,8 +35,8 @@ client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Define input and output directories ==========
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin"
-output_dir = os.path.join(input_dir, "wb_cross_spectra_weekly")
+input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_24h_avg"
+output_dir = os.path.join("/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin", "wb_cross_spectra_weekly")
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Define spatial domain slices ==========
@@ -111,10 +111,17 @@ def compute_one_spec(tt, ss, ww):
 
     return spec
 
+
+# start_week = 31  # start from the 32th week
+# tt_files_subset = tt_files[start_week:]
+# ss_files_subset = ss_files[start_week:]
+# ww_files_subset = ww_files[start_week:]
+# for tt_file, ss_file, ww_file in zip(tt_files_subset, ss_files_subset, ww_files_subset):
+
 # ========== Loop through weekly 24-hour average files and compute cross-spectra ==========
 for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
     date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
-    out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_{date_str}.nc")
+    out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_24hfilter_{date_str}.nc")
     if os.path.exists(out_file):
         print(f"Skipping {date_str}, already exists.")
         continue
