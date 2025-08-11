@@ -16,10 +16,12 @@ from my_colormaps import WhiteBlueGreenYellowRed
 
 cmap = WhiteBlueGreenYellowRed()
 
+import set_constant
+
 # Input/output
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/wb_cross_spectra_weekly"
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly_24hfilter"
-out_nc_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/wb_max_spec_vp_filtered.nc"
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_cross_spectra_weekly"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly_24hfilter"
+out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
 os.makedirs(figdir, exist_ok=True)
 
 # Global font size setting for figures

@@ -17,14 +17,16 @@ import xrft
 from dask import delayed, compute
 from numpy.linalg import lstsq
 
+import set_constant
+
 # ========== Setup Dask distributed cluster ==========
 cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Define input and output directories ==========
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_24h_avg"
-output_dir = os.path.join("/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin", "wb_cross_spectra_weekly")
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
+output_dir = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}", "wb_cross_spectra_weekly")
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Define spatial domain slices ==========
@@ -152,3 +154,8 @@ for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
 
     ds_out.to_netcdf(out_file)
     print(f"Saved to {out_file}")
+
+
+client.close()
+cluster.close()
+

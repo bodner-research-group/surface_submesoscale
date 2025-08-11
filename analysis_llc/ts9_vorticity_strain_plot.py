@@ -5,6 +5,8 @@ import os
 import matplotlib.colors as colors
 from my_colormaps import WhiteBlueGreenYellowRed
 
+import set_constant
+
 cmap = WhiteBlueGreenYellowRed()
 
 # ==== Constants ====
@@ -14,8 +16,8 @@ omega = 7.2921e-5  # [rad/s]
 plt.rcParams.update({'font.size': 16})
 
 # ==== Paths ====
-data_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/strain_vorticity/strain_vorticity_daily.nc"
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/strain_vorticity"
+data_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/strain_vorticity/strain_vorticity_daily.nc"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/strain_vorticity"
 os.makedirs(figdir, exist_ok=True)
 
 # ==== Domain ====
@@ -25,14 +27,6 @@ j = slice(2960, 3441)
 
 # ==== Load data ====
 ds = xr.open_dataset(data_path)
-
-# grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-# ds_grid = xr.open_zarr(grid_path, consolidated=False)
-# lat = ds_grid["YC"].isel(face=face,i=i, j=j)
-# lat_g = ds_grid["YG"].isel(face=face,i_g=i, j_g=j)
-# lon = ds_grid["XC"].isel(face=face,i=i, j=j)
-# lon_g = ds_grid["XG"].isel(face=face,i_g=i, j_g=j)
-
 
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
@@ -52,7 +46,6 @@ lon_g_vals = lon_g.values  # shape (i,)
 # Create 2D lat/lon meshgrid
 lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')  # shape (j, i)
 lon_g_2d, lat_g_2d = np.meshgrid(lon_g_vals, lat_g_vals, indexing='xy')  # shape (j, i)
-
 
 # ==== Compute Coriolis parameter (mean) ====
 lat_rad = np.deg2rad(lat)

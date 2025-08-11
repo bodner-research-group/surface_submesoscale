@@ -7,10 +7,15 @@ from glob import glob
 import numpy as np
 import pandas as pd
 
+import set_constant
+
 # ========= Paths ==========
-hml_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/rho_weekly"
-output_file = os.path.join("/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/", "Hml_weekly_mean.nc")
+hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_weekly"
+output_file = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/", "Hml_weekly_mean.nc")
 hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_7d_*.nc")))
+
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly"
+
 
 weekly_hml_means = []
 time_list = []
@@ -60,6 +65,5 @@ def plot_timeseries(var, values, ylabel, save_name, yscale='linear'):
     print(f"Saved time series plot: {save_name}")
 
 # plot
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly"
 timeseries_figdir = os.path.join(figdir, "summary_timeseries")
 plot_timeseries("Hml_mean", Hml_mean, "Mean ML Depth (m²/s³)", "Hml_mean_timeseries.png", yscale='log')

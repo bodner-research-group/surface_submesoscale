@@ -12,26 +12,14 @@ cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
+import set_constant
+
 # ========== Paths ==========
-ds_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/surfaceUV_24h_avg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surfaceUV_24h_avg"
 os.makedirs(output_dir, exist_ok=True)
 
-# ========== Domain ==========
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
-
-# ========== Time settings ==========
-nday_avg = 364
-delta_days = 7
-start_hours = 49 * 24
-end_hours = start_hours + 24 * nday_avg
-step_hours = delta_days * 24
-
 # ========== Open dataset without forcing chunk misalignment ==========
-print("Opening dataset...")
-ds1 = xr.open_zarr(ds_path, consolidated=False)
+ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
 
 # ========== Function to process and save ==========
 def compute_and_save_weekly(var_name, label, i_name, j_name):
@@ -137,6 +125,8 @@ if __name__ == "__main__":
 #     print(f"\nDispatching {len(all_tasks)} tasks to Dask...")
 #     results = compute(*all_tasks)  # trigger all
 #     print("\n All tasks completed.")
+
+
 
 client.close()
 cluster.close()

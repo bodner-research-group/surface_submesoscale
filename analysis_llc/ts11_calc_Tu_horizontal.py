@@ -32,29 +32,18 @@ client = Client(cluster)
 from dask import delayed, compute
 from numpy.linalg import lstsq
 
+import os
+import set_constant
+
 # Load the model
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin-lateSummer"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}-Aug"
+os.makedirs(figdir, exist_ok=True)
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
-
-# Set spatial indices
-face = 2
-k_surf = 0
-# i = slice(0,100,1) # Southern Ocean
-# j = slice(0,101,1) # Southern Ocean
-# i = slice(1000,1200,1) # Tropics
-# j = slice(2800,3001,1) # Tropics
-# i=slice(450,760,1)
-# j=slice(450,761,1)
-i=slice(671,864,1)   # icelandic_basin
-j=slice(2982,3419,1) # icelandic_basin
-
-# i=slice(527,1007,1)   # icelandic_basin -- larger domain
-# j=slice(2960,3441,1) # icelandic_basin -- larger domain
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -577,3 +566,7 @@ ds_out["pdf_values_h"] = (["x_grid_h"], pdf_values_h)
 ds_out.to_netcdf(f"{figdir}/Tu_difference.nc")
 
 print("Saved variables to figdir/Tu_difference.nc")
+
+client.close()
+cluster.close()
+

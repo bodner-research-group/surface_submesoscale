@@ -13,6 +13,8 @@ import pandas as pd
 from dask.distributed import Client, LocalCluster
 from dask import compute
 
+import set_constant
+
 # ========== Dask cluster setup ==========
 cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
@@ -23,8 +25,8 @@ print("Dask dashboard:", client.dashboard_link)
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Output folder
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
 
 # Plot font
 plt.rcParams.update({'font.size': 16})
@@ -109,10 +111,10 @@ import matplotlib.pyplot as plt
 import gsw
 
 # Load dataset
-ds_combined = xr.open_dataset("/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/qnet_fwflx_daily_7day.nc")
+ds_combined = xr.open_dataset(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/qnet_fwflx_daily_7day.nc")
 
 # Figure output path
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}"
 
 # Global plot style
 plt.rcParams.update({'font.size': 16})

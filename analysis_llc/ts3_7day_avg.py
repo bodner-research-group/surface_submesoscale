@@ -8,29 +8,25 @@ import os
 from glob import glob
 from dask.distributed import Client, LocalCluster
 
+import set_constant
+
 # ========== Dask cluster setup ==========
 cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
-input_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/TSW_24h_avg"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/rho_weekly"
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_weekly"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Open LLC4320 Dataset ==========
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
 
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
+
 lat = ds1.YC.isel(face=face,i=1,j=j)
 lon = ds1.XC.isel(face=face,i=i,j=1)
-print(lat.chunks)
-print(lon.chunks)
-
 lon = lon.chunk({'i': -1})  # Re-chunk to include all data points
-print(lon.chunks)
 
 depth = ds1.Z
 

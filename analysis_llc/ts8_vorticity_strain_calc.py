@@ -7,16 +7,13 @@ import numpy as np
 import os
 from xgcm import Grid
 
+import set_constant
+
 # ========= Paths =========
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-uv_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/surfaceUV_24h_avg"
-output_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/strain_vorticity"
+uv_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surfaceUV_24h_avg"
+output_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/strain_vorticity"
 os.makedirs(output_path, exist_ok=True)
-
-# ========= Domain =========
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
 
 # ========= Load grid data =========
 print("Loading grid...")
