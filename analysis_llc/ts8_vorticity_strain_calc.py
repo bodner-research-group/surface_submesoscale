@@ -7,7 +7,7 @@ import numpy as np
 import os
 from xgcm import Grid
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========= Paths =========
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"

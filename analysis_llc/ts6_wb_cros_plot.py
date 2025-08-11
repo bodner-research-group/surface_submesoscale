@@ -16,7 +16,7 @@ from my_colormaps import WhiteBlueGreenYellowRed
 
 cmap = WhiteBlueGreenYellowRed()
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # Input/output
 input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_cross_spectra_weekly"

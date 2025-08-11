@@ -7,12 +7,7 @@ import os
 import time
 from dask.distributed import Client, LocalCluster
 
-# ========== Dask cluster setup ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-client = Client(cluster)
-print("Dask dashboard:", client.dashboard_link)
-
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========== Paths ==========
 output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surfaceUV_24h_avg"
@@ -58,6 +53,12 @@ def compute_and_save_weekly(var_name, label, i_name, j_name):
 # ========== Main ==========
 if __name__ == "__main__":
     # var_name, label, i_coord, j_coord
+
+    # ========== Dask cluster setup ==========
+    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+    client = Client(cluster)
+    print("Dask dashboard:", client.dashboard_link)
+
     variable_map = [
         ("U", "uu_s", "i_g", "j"),
         ("V", "vv_s", "i", "j_g"),
@@ -68,6 +69,8 @@ if __name__ == "__main__":
 
     print("\n All variables processed and saved.")
 
+    client.close()
+    cluster.close()
 
 
 
@@ -128,5 +131,4 @@ if __name__ == "__main__":
 
 
 
-client.close()
-cluster.close()
+

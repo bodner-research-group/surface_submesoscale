@@ -1,7 +1,5 @@
 ###### Set constants for all python scripts
 
-k_surf = 0
-
 # # ========== Domain ==========
 # domain_name = "icelandic_basin"
 # face = 2

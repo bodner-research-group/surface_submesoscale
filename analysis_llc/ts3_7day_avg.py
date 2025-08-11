@@ -8,12 +8,8 @@ import os
 from glob import glob
 from dask.distributed import Client, LocalCluster
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
-# ========== Dask cluster setup ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-client = Client(cluster)
-print("Dask dashboard:", client.dashboard_link)
 
 # ========== Paths ==========
 input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
@@ -46,6 +42,11 @@ def compute_Hml(rho_profile, depth_profile, threshold=0.03):
 tt_files = sorted(glob(os.path.join(input_dir, "tt_24h_*.nc")))
 
 for tt_file in tt_files:
+    # ========== Dask cluster setup ==========
+    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+    client = Client(cluster)
+    print("Dask dashboard:", client.dashboard_link)
+
     date_tag = os.path.basename(tt_file).replace("tt_24h_", "").replace(".nc", "")
     ss_file = tt_file.replace("tt", "ss")
     
@@ -140,6 +141,7 @@ for tt_file in tt_files:
     ds_ss.close()
     out_ds.close()
 
+    client.close()
+    cluster.close()
 
-client.close()
-cluster.close()
+

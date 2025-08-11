@@ -29,8 +29,8 @@ echo "Complete: ts5_wb_cros_calc"
 python3 ts6_wb_cros_plot.py
 echo "Complete: ts6_wb_cros_plot"
 
-python3 ts7_Qnet_mean.py
-echo "Complete: ts7_Qnet_mean"
+python3 ts7_Qnet_mean_dask.py
+echo "Complete: ts7_Qnet_mean_dask"
 
 python3 ts8_vorticity_strain_calc.py
 echo "Complete: ts8_vorticity_strain_calc"

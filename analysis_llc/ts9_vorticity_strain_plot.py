@@ -5,7 +5,7 @@ import os
 import matplotlib.colors as colors
 from my_colormaps import WhiteBlueGreenYellowRed
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 cmap = WhiteBlueGreenYellowRed()
 

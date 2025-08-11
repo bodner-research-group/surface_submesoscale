@@ -7,7 +7,7 @@ from glob import glob
 import numpy as np
 import pandas as pd
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========= Paths ==========
 hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_weekly"

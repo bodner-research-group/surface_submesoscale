@@ -7,12 +7,7 @@ import os
 import time
 from dask.distributed import Client, LocalCluster
 
-import set_constant
-
-# ========== Dask cluster setup ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-client = Client(cluster)
-print("Dask dashboard:", client.dashboard_link)
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========== Paths ==========
 output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
@@ -56,6 +51,11 @@ def compute_and_save_weekly(var_name, label):
 
 # ========== Main ==========
 if __name__ == "__main__":
+    # ========== Dask cluster setup ==========
+    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+    client = Client(cluster)
+    print("Dask dashboard:", client.dashboard_link)
+
     variable_map = {
         "Theta": "tt",
         "Salt": "ss",
@@ -67,6 +67,8 @@ if __name__ == "__main__":
 
     print("\n All variables processed and saved weekly.")
 
+    client.close()
+    cluster.close()
 
-client.close()
-cluster.close()
+
+

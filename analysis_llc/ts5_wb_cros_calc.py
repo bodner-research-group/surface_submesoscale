@@ -17,12 +17,8 @@ import xrft
 from dask import delayed, compute
 from numpy.linalg import lstsq
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
-# ========== Setup Dask distributed cluster ==========
-cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
-client = Client(cluster)
-print("Dask dashboard:", client.dashboard_link)
 
 # ========== Define input and output directories ==========
 input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
@@ -110,6 +106,12 @@ def compute_one_spec(tt, ss, ww):
 
 # ========== Loop through weekly 24-hour average files and compute cross-spectra ==========
 for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
+
+    # ========== Setup Dask distributed cluster ==========
+    cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
+    client = Client(cluster)
+    print("Dask dashboard:", client.dashboard_link)
+
     date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
     out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_24hfilter_{date_str}.nc")
     if os.path.exists(out_file):
@@ -156,6 +158,6 @@ for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
     print(f"Saved to {out_file}")
 
 
-client.close()
-cluster.close()
+    client.close()
+    cluster.close()
 

@@ -13,7 +13,7 @@ import pandas as pd
 from dask.distributed import Client, LocalCluster
 from dask import compute
 
-import set_constant
+from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========== Dask cluster setup ==========
 cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
