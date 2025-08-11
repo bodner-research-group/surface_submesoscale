@@ -2,7 +2,8 @@ clear all;% close all;
 addpath colormap/
 load_colors;
 
-figdir = 'figs/icelandic_basin-summer';
+% figdir = 'figs/icelandic_basin-summer';
+figdir = 'figs/icelandic_basin';
 ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);
@@ -14,29 +15,28 @@ for i = 1:length(vars)
 end
 
 clear vars info i ncfile varname
-%%
-% figure(20)
-% pcolor(lon2d,lat2d,Tu_abs_diff)
-% colorbar;shading flat;
 
-% Create figure
+
+
+%%%%%%%
+beta = mean(beta_surf,"all");
+alpha = mean(alpha_surf,"all");
+ds_cross = ds_cross*beta;
+dt_cross = dt_cross*alpha;
+
+%%%%%%%
 fontsize = 20;
 
 figure(1);clf;set(gcf,'Color','w','Position',[111 221 759 511])
 hold on;
 box on;
-% grid on;
-xlabel('\partial S (psu/m)');
-ylabel('\partial \theta (^oC/m)');
+xlabel('\beta\partial S ');
+ylabel('\alpha\partial \theta ');
 title('Kernel PDF of Turner Angle');
 
-% % 1. Plot dt_cross vs ds_cross as scatter
-% scatter(ds_cross(:), dt_cross(:), 10, 'filled', 'MarkerFaceAlpha', 0.2);
-
-% 2. Overlay constant density lines using linear EOS
 S_line = linspace(min(ds_cross(:),[],'omitnan')*7, max(ds_cross(:),[],'omitnan')*7, 400);
-slope_rho = mean(beta_surf,"all")/ mean(alpha_surf,"all");
-
+% slope_rho = mean(beta_surf,"all")/ mean(alpha_surf,"all");
+slope_rho = 1;
 min_ds = min(ds_cross(:),[],'omitnan');
 max_ds = max(ds_cross(:),[],'omitnan');
 
@@ -49,33 +49,12 @@ for c = c_values  % adjust for a few density anomaly lines
     plot(S_line, T_line, '-', 'Color', [0.5 0.5 0.5]);
 end
 
-% ylim([min_dt max_dt])
-% xlim([min_ds max_ds])
-
-
-
-% % 3. Custom dotted grid
-% ax = gca; grid off;
-% xticks_vals = xticks; yticks_vals = yticks;
-% xlim_vals = xlim*2; ylim_vals = ylim*2;
-% 
-% for x = xticks_vals
-%     line([x x], ylim_vals, 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
-% end
-% for y = yticks_vals
-%     line(xlim_vals, [y y], 'Color', [0.7 0.7 0.7], 'LineStyle', ':', 'HandleVisibility','off');
-% end
-% 
 set(gca,'Fontsize',fontsize)
 
 
 %%
 % 4. Define isopycnal and cross-isopycnal unit vectors
-% v_cross = [1; -1/slope_rho];  % cross-isopycnal 
- % v_cross = [-1; 1/slope_rho];  % cross-isopycnal 
 v_cross = [-slope_rho; 1];  % cross-isopycnal 
-
-% v_iso = [1/slope_rho; 1];     % isopycnal
 v_iso = [1;slope_rho];     % isopycnal
 
 
@@ -84,17 +63,12 @@ v_iso = v_iso / norm(v_iso);
 
 x_grid = x_grid_h;
 
-% x_grid = x_grid_h_1000;
-% pdf_values_h = pdf_values_h_1000;
-% pdf_values_v = pdf_values_v_1000;
-
-
 % 5. Plot Turner angle PDF as direction lines
 h_pdf_hori = [];  % for legend
 h_pdf_vert = [];
 
 x_all = []; y_all = [];
-scale = 0.0002;   
+scale = 7e-8;   
 
 
 for n = 1:length(x_grid)
@@ -158,8 +132,8 @@ quiver(origin(1), origin(2), v_iso(1)*scale/50, v_iso(2)*scale/50, 0, ...
 
 legend('show')
 
-% print('-dpng','-r200',[figdir '/Tu_TS.png']);
+% print('-dpng','-r200',[figdir '/Tu_TS_newAxes.png']);
 
-% axis equal
+% % axis equal
 
 % print('-dpng','-r200',[figdir '/Tu_TS-equal.png']);

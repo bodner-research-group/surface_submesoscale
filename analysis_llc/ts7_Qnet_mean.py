@@ -1,3 +1,5 @@
+###### Compute and plot daily and weekly-smoothed surface net heat flux, net fresh water flux, and net buoyancy flux
+
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
@@ -102,7 +104,6 @@ print(f"Saved NetCDF to: {output_nc_path}")
 
 
 
-
 import xarray as xr
 import matplotlib.pyplot as plt
 import gsw
@@ -166,3 +167,7 @@ axs[2].legend()
 plt.tight_layout()
 plt.savefig(f"{figdir}/combined_surface_fluxes.png", dpi=150)
 plt.close()
+
+
+client.close()
+cluster.close()

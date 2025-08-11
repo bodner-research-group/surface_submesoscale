@@ -30,3 +30,10 @@ figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icel
 output_movie = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/movie-jointPDF.mp4"
 os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/joint_pdf_sigma_zeta_week*.png' -vf scale=iw/2:ih/2  -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 
+
+##### Convert images to video
+import os
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/wb_spectra_weekly_12hfilter"
+# high-resolution
+output_movie = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin/movie-wb_spectra_weekly_12hfilter.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_cross-spectrum_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")

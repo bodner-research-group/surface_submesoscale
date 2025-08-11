@@ -1,3 +1,5 @@
+##### Compute 24-hour averages of surface U and V. Save as .nc files
+
 # Imports
 import xarray as xr
 import numpy as np
@@ -135,3 +137,6 @@ if __name__ == "__main__":
 #     print(f"\nDispatching {len(all_tasks)} tasks to Dask...")
 #     results = compute(*all_tasks)  # trigger all
 #     print("\n All tasks completed.")
+
+client.close()
+cluster.close()

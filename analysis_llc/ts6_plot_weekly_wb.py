@@ -1,3 +1,10 @@
+##### Plot wb_cros of each week, compute wbmin, Lmax, Dmax
+#####
+##### wb_cros (variance-perserving cross-spectrum of vertical velocity and buoyancy)
+##### wbmin (the minimum of wb_cros)
+##### Lmax (the horizontal length scale corresponds to wbmin)
+##### Dmax (the depth corresponds to wbmin)
+
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt

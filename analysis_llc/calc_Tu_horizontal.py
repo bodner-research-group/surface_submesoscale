@@ -36,7 +36,7 @@ from numpy.linalg import lstsq
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320',consolidated=False)
 
 # Folder to store the figures
-figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin-summer"
+figdir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/icelandic_basin-lateSummer"
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -50,11 +50,11 @@ k_surf = 0
 # j = slice(2800,3001,1) # Tropics
 # i=slice(450,760,1)
 # j=slice(450,761,1)
-# i=slice(671,864,1)   # icelandic_basin
-# j=slice(2982,3419,1) # icelandic_basin
+i=slice(671,864,1)   # icelandic_basin
+j=slice(2982,3419,1) # icelandic_basin
 
-i=slice(527,1007,1)   # icelandic_basin -- larger domain
-j=slice(2960,3441,1) # icelandic_basin -- larger domain
+# i=slice(527,1007,1)   # icelandic_basin -- larger domain
+# j=slice(2960,3441,1) # icelandic_basin -- larger domain
 
 # Grid spacings in m
 dxF = ds1.dxF.isel(face=face,i=i,j=j)
@@ -100,7 +100,8 @@ for time_idx in range(nday_avg):
     time_avg.extend([indices_14[time_idx], indices_15[time_idx], indices_16[time_idx]])
 # time_avg = slice(0,24*nday_avg,1)  
 
-start_hours = 132*24
+# start_hours = 132*24 ### Summer
+start_hours = 192*24 ### Late Summer
 time_avg = slice(start_hours,start_hours+24*nday_avg,1) 
 
 
@@ -548,7 +549,7 @@ plt.close()
 
 
 # Open the NETCDF file
-ds_out = xr.open_dataset(f"{figdir}/Tu_difference.nc")
+ds_out = xr.open_dataset(f"{figdir}/Tu_TuV.nc")
 
 # Add to the dataset
 ds_out["Tu_H_deg"] = (["lat", "lon"], Tu_H_deg.values)
