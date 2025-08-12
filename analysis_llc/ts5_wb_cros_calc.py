@@ -104,13 +104,13 @@ def compute_one_spec(tt, ss, ww):
 # ww_files_subset = ww_files[start_week:]
 # for tt_file, ss_file, ww_file in zip(tt_files_subset, ss_files_subset, ww_files_subset):
 
+# ========== Setup Dask distributed cluster ==========
+cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
+client = Client(cluster)
+print("Dask dashboard:", client.dashboard_link)
+
 # ========== Loop through weekly 24-hour average files and compute cross-spectra ==========
 for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
-
-    # ========== Setup Dask distributed cluster ==========
-    cluster = LocalCluster(n_workers=16, threads_per_worker=1, memory_limit="20GB")
-    client = Client(cluster)
-    print("Dask dashboard:", client.dashboard_link)
 
     date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc','')
     out_file = os.path.join(output_dir, f"wb_cross_spec_vp_real_24hfilter_{date_str}.nc")
@@ -158,6 +158,6 @@ for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
     print(f"Saved to {out_file}")
 
 
-    client.close()
-    cluster.close()
+client.close()
+cluster.close()
 

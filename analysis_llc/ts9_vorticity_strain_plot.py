@@ -20,11 +20,6 @@ data_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/strain_vorticity"
 os.makedirs(figdir, exist_ok=True)
 
-# ==== Domain ====
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
-
 # ==== Load data ====
 ds = xr.open_dataset(data_path)
 
@@ -172,3 +167,29 @@ for w in range(n_weeks):
 
 print("\nAll plots saved.")
 
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/strain_vorticity"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-strain_vorticity-hires.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/combined_norm_map_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+# low-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-strain_vorticity-lores.mp4"
+cmd = (
+    f"ffmpeg -y -r 10 -pattern_type glob -i '{figdir}/combined_norm_map_*.png' "
+    f"-vf scale=iw/2:ih/2 "
+    f"-vcodec mpeg4 "
+    f"-q:v 1 "
+    f"-pix_fmt yuv420p "
+    f"{output_movie}"
+)
+os.system(cmd)
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/strain_vorticity"
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-jointPDF.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/joint_pdf_sigma_zeta_week*.png' -vf scale=iw/2:ih/2  -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
