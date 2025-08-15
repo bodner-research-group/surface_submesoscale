@@ -11,7 +11,7 @@ from set_constant import domain_name, face, i, j, start_hours, end_hours, step_h
 
 # ========= Paths =========
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-uv_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surfaceUV_24h_avg"
+uv_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
 output_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/strain_vorticity"
 os.makedirs(output_path, exist_ok=True)
 

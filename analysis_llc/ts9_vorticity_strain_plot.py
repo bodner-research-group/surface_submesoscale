@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import matplotlib.colors as colors
-from my_colormaps import WhiteBlueGreenYellowRed
+from set_colormaps import WhiteBlueGreenYellowRed
 
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 

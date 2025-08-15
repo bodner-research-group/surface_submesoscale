@@ -30,6 +30,14 @@ def compute_and_save_weekly(var_name, label):
         t0 = start_hours + n * step_hours
         t1 = t0 + step_hours
 
+        # File name with datetime
+        date_str = str(ds1.time.isel(time=t0).values)[:10]
+        outname = os.path.join(output_dir, f"{label}_24h_{date_str}.nc")
+        # Skip if file already exists
+        if os.path.exists(outname):
+            print(f"   Skipping week {n+1}/{total_segments} → already exists: {outname}")
+            continue
+
         t_start_wall = time.time()
 
         # Slice & chunk

@@ -12,7 +12,7 @@ from matplotlib.colors import TwoSlopeNorm
 import os
 from glob import glob
 import pandas as pd
-from my_colormaps import WhiteBlueGreenYellowRed
+from set_colormaps import WhiteBlueGreenYellowRed
 
 cmap = WhiteBlueGreenYellowRed()
 
@@ -159,3 +159,11 @@ plt.tight_layout()
 plt.savefig(os.path.join(figdir, "combined_spec_timeseries.png"), dpi=150)
 plt.close()
 print("Saved: combined_spec_timeseries.png")
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly_24hfilter"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-wb_spectra_weekly_24hfilter.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_cross-spectrum_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
