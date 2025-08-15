@@ -172,8 +172,8 @@ print(tt.chunks)
 # # Re-chunk time dimension for efficient averaging
 # tt = tt.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
 # ss = ss.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-tt = tt.chunk({'time': -1}, {'i':-1}, {'j':-1})  # Re-chunk to include all data points
-ss = ss.chunk({'time': -1}, {'i':-1}, {'j':-1})  # Re-chunk to include all data points
+tt = tt.chunk({'time': -1})  # Re-chunk to include all data points
+ss = ss.chunk({'time': -1})  # Re-chunk to include all data points
 print(tt.chunks) 
 
 # Compute time averages

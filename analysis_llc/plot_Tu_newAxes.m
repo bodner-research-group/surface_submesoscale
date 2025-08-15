@@ -3,7 +3,9 @@ addpath colormap/
 load_colors;
 
 % figdir = 'figs/icelandic_basin-summer';
-figdir = 'figs/icelandic_basin';
+% figdir = 'figs/icelandic_basin';
+% figdir = 'figs/Southern_Ocean/TurnerAngle_Aug';
+figdir = 'figs/Tropics/TurnerAngle_Aug';
 ncfile = fullfile(figdir, 'Tu_difference.nc');
 
 info = ncinfo(ncfile);
@@ -68,7 +70,9 @@ h_pdf_hori = [];  % for legend
 h_pdf_vert = [];
 
 x_all = []; y_all = [];
-scale = 7e-8;   
+% scale = 7e-8;  % Icelandic Basin 
+% scale = 1e-6;  % Southern Ocean
+scale = 3e-7;  % Tropics
 
 
 for n = 1:length(x_grid)

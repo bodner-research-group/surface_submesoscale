@@ -113,8 +113,8 @@ print(tt_surf.chunks)
 # # Re-chunk time dimension for efficient averaging
 # tt_surf = tt_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
 # ss_surf = ss_surf.chunk({'time': 24*nday_avg})   # Re-chunk to 7-day blocks
-tt_surf = tt_surf.chunk({'time': -1}, {'i':-1}, {'j':-1})  # Re-chunk to include all data points
-ss_surf = ss_surf.chunk({'time': -1}, {'i':-1}, {'j':-1})  # Re-chunk to include all data points
+tt_surf = tt_surf.chunk({'time': -1})  # Re-chunk to include all data points
+ss_surf = ss_surf.chunk({'time': -1})  # Re-chunk to include all data points
 print(tt_surf.chunks) 
 
 # Compute time averages
