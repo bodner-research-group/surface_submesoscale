@@ -7,7 +7,7 @@ import numpy as np
 import os
 from xgcm import Grid
 
-from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
+from set_constant import domain_name, face, i, j
 
 # ========= Paths =========
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
@@ -17,8 +17,8 @@ os.makedirs(output_path, exist_ok=True)
 
 # ========= Load grid data =========
 print("Loading grid...")
-ds_grid = xr.open_zarr(grid_path, consolidated=False)
-ds_grid_face = ds_grid.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
+ds1 = xr.open_zarr(grid_path, consolidated=False)
+ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
 
 # Drop time dimension if exists
 if 'time' in ds_grid_face.dims:
@@ -35,8 +35,8 @@ metrics = {
 }
 grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
-# ========= Load daily U and V =========
-print("Loading daily U and V...")
+# ========= Load daily averaged U and V =========
+print("Loading daily averaged U and V...")
 u_path = os.path.join(uv_dir, "uu_s_24h_*.nc")
 v_path = os.path.join(uv_dir, "vv_s_24h_*.nc")
 
