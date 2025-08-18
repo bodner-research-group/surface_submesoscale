@@ -200,8 +200,8 @@ for rho_file in rho_files:
     # =============
     Tu_diff = np.abs(TuV_deg - TuH_deg)
 
-    TuH_clean = TuH_deg.values.ravel()[~np.isnan(TuH_deg.values.ravel())]
-    TuV_clean = TuV_deg.values.ravel()[~np.isnan(TuV_deg.values.ravel())]
+    TuV_clean = TuV_deg.ravel()[~np.isnan(TuV_deg.ravel())]
+    TuH_clean = TuH_deg.data.ravel()[~np.isnan(TuH_deg.data.ravel())]
 
     if TuV_clean.size < 100 or TuH_clean.size < 100:
         print(f"Insufficient data for KDE, skipping week: {date_tag}")
@@ -215,27 +215,26 @@ for rho_file in rho_files:
     # =============
     # Save to NetCDF
     # =============
-    ds_out = xr.Dataset({
-        "TuV_deg": (["lat", "lon"], TuV_deg),
-        "TuH_deg": (["lat", "lon"], TuH_deg),
-        "Tu_diff": (["lat", "lon"], Tu_diff),
-        "dt_dx": (["lat", "lon"], dt_dx),
-        "dt_dy": (["lat", "lon"], dt_dy),
-        "ds_dx": (["lat", "lon"], ds_dx),
-        "ds_dy": (["lat", "lon"], ds_dy),
-        "dt_cross": (["lat", "lon"], dt_cross),
-        "ds_cross": (["lat", "lon"], ds_cross),
-        "norm_x": (["lat", "lon"], norm_x),
-        "norm_y": (["lat", "lon"], norm_y),
-        "alpha_surf": (["lat", "lon"], alpha_surf),
-        "beta_surf": (["lat", "lon"], beta_surf),
-        "lon2d": (["lat", "lon"], lon2d),
-        "lat2d": (["lat", "lon"], lat2d),
-        "x_grid": (["x_grid"], x_grid),
-        "pdf_values_v": (["x_grid"], pdf_v),
-        "pdf_values_h": (["x_grid"], pdf_h),
-    },
-    coords={"lat": lat, "lon": lon})
+    ds_out = xr.Dataset(
+        {
+            "TuV_deg": (["j", "i"], TuV_deg),
+            "TuH_deg": (["j", "i"], TuH_deg.data),
+            "Tu_diff": (["j", "i"], Tu_diff.data),
+            "alpha_surf": (["j", "i"], alpha_surf.data),
+            "beta_surf": (["j", "i"], beta_surf.data),
+            "lon2d": (["i", "j"], lon2d.data),
+            "lat2d": (["i", "j"], lat2d.data),
+            "pdf_values_v": (["x_grid"], pdf_v),
+            "pdf_values_h": (["x_grid"], pdf_h),
+        },
+        coords={
+            "j": TuH_deg.coords["j"],
+            "i": TuH_deg.coords["i"],
+            "x_grid": x_grid,
+            "face": TuH_deg.coords["face"],
+            "k": TuH_deg.coords["k"],
+        },
+    )
 
     out_path = os.path.join(out_dir, f"TuVH_7d_{date_tag}.nc")
     ds_out.to_netcdf(out_path)
