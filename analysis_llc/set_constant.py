@@ -1,18 +1,18 @@
 ###### Set constants for all python scripts
 
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
-# # i=slice(671,864,1)   # icelandic_basin -- small domain, same as Johnson et al. (2016)
-# # j=slice(2982,3419,1) # icelandic_basin -- small domain, same as Johnson et al. (2016)
-
 # ========== Domain ==========
-domain_name = "Southern_Ocean"
-face = 1
-i = slice(600,1080,1) # Southern Ocean
-j = slice(0,481,1)    # Southern Ocean
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# i=slice(671,864,1)   # icelandic_basin -- small domain, same as Johnson et al. (2016)
+# j=slice(2982,3419,1) # icelandic_basin -- small domain, same as Johnson et al. (2016)
+
+# # ========== Domain ==========
+# domain_name = "Southern_Ocean"
+# face = 1
+# i = slice(600,1080,1) # Southern Ocean
+# j = slice(0,481,1)    # Southern Ocean
 
 # # ========== Domain ==========
 # domain_name = "Tropics"
