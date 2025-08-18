@@ -27,7 +27,7 @@ def main():
 
     # ========== Paths ==========
     input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
-    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_weekly"
+    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_weekly"
     os.makedirs(output_dir, exist_ok=True)
 
     # ========== Open LLC4320 Dataset ==========
@@ -126,13 +126,15 @@ def main():
 
         # ========== Save results ==========
         out_ds = xr.Dataset({
+            "T_7d": T_7d,
+            "S_7d": S_7d,
             "rho_7d": rho,
             "alpha_7d": alpha,
             "beta_7d": beta,
             "Hml_7d": Hml
         })
 
-        out_path = os.path.join(output_dir, f"rho_Hml_7d_{date_tag}.nc")
+        out_path = os.path.join(output_dir, f"rho_Hml_TS_7d_{date_tag}.nc")
         out_ds.to_netcdf(out_path)
         print(f"Saved: {out_path}")
 

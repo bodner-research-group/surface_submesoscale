@@ -44,5 +44,5 @@ source ~/.bashrc-conda
 # python3 ts11_Tu_horizontal_weekly.py
 # echo "Complete: ts11_Tu_horizontal_weekly"
 
-python3 ts12_SSH_gradient.py
-echo "Complete: ts12_SSH_gradient"
+# python3 ts12_SSH_gradient.py
+# echo "Complete: ts12_SSH_gradient"
