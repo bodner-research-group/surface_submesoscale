@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # ========= Paths ==========
-hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_weekly"
+hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_weekly"
 output_file = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/", "Hml_weekly_mean.nc")
-hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_7d_*.nc")))
+hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/"
 
@@ -62,11 +62,11 @@ import matplotlib.dates as mdates
 def plot_timeseries(times, values, ylabel, save_name, yscale='linear'):
     plt.figure(figsize=(10, 4))
     plt.plot(times, values, marker='o', linestyle='-', label=ylabel)
-    plt.xlabel("Time")
-    plt.ylabel(ylabel)
+    # plt.xlabel("Time")
+    plt.ylabel("MLD (m)")
     plt.yscale(yscale)
     plt.grid(True, linestyle='--')
-    plt.title(f"{ylabel} over Time")
+    plt.title("Weekly mean Mixed-Layer Depth (m)")
     plt.gcf().autofmt_xdate()
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
     plt.tight_layout()
@@ -75,4 +75,4 @@ def plot_timeseries(times, values, ylabel, save_name, yscale='linear'):
     print(f"Saved time series plot: {save_name}")
 
 # plot
-plot_timeseries(Hml_mean.time.values, Hml_mean.values, "Mean ML Depth (m²/s³)", "Hml_mean_timeseries.png")
+plot_timeseries(Hml_mean.time.values, -Hml_mean.values, "Mean ML Depth (m)", "Hml_mean_timeseries.png")
