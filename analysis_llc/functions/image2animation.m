@@ -10,8 +10,8 @@ clear all
 
 [file_name2 file_path2]=uiputfile('*.gif','Save as animated GIF',file_path);
 loops=1;
-delay=0.4;
-delay1=1;
+delay=0.2;
+delay1=0.7;
 delay2=1;
 
 h = waitbar(0,['0% done'],'name','Progress') ;

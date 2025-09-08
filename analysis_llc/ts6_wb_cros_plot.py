@@ -4,6 +4,7 @@
 ##### wbmin (the minimum of wb_cros)
 ##### Lmax (the horizontal length scale corresponds to wbmin)
 ##### Dmax (the depth corresponds to wbmin)
+##### Compute and plot the mixed-layer averaged wb cross-spatral power
 
 import xarray as xr
 import numpy as np
@@ -19,6 +20,16 @@ cmap = WhiteBlueGreenYellowRed()
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
 # Input/output
+# Load mixed layer depth
+f_Hml = f'/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Hml_weekly_mean.nc'
+ds_hml = xr.open_dataset(f_Hml)
+Hml_mean = ds_hml.Hml_mean  # shape (time: 52)
+ds_hml.close()
+
+# Collect average spec_vp within MLD
+mean_spec_in_mld = []
+
+
 input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_cross_spectra_weekly"
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly_24hfilter"
 out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
@@ -43,7 +54,16 @@ def plot_wb_spectrum(nc_path):
     date_str = fname.split("_")[-1].replace(".nc", "")
     time_val = pd.to_datetime(date_str)
 
-    # Load data
+    # Match current week index
+    try:
+        week_idx = np.where(Hml_mean.time.values == np.datetime64(time_val))[0][0]
+    except IndexError:
+        print(f"Warning: No matching Hml_mean time for {time_val}. Skipping MLD mean.")
+        Hml_this_week = np.nan
+    else:
+        Hml_this_week = Hml_mean.isel(time=week_idx).item()
+
+    # Load spectrum
     ds = xr.open_dataset(nc_path)
     k_r = ds.k_r
     depth = ds.depth
@@ -53,11 +73,21 @@ def plot_wb_spectrum(nc_path):
     k_r_filtered = k_r.where(k_r >= kr_cutoff, drop=True)
     spec_vp_filtered = spec_vp_real.where(k_r >= kr_cutoff, drop=True)
 
-    # Filter depth: -500m~0 (broadcast to 2D mask)
-    valid_depth_mask = (depth >= -500) & (depth <= 0)
+    # Filter depth: Maximum mixed layer depth~0 (broadcast to 2D mask)
+    valid_depth_mask = (depth >= Hml_mean.min().values) & (depth <= 0)
     spec_sel = spec_vp_filtered.where(valid_depth_mask, drop=True)
     
-    # Find max value and its location
+    # --- Compute mean spectrum in MLD
+    if not np.isnan(Hml_this_week):
+        mld_mask = depth >= Hml_this_week  # depths shallower than Hml (less negative)
+        spec_in_mld = spec_sel.where(mld_mask, drop=True)
+        mld_mean_val = spec_in_mld.mean().item()
+    else:
+        mld_mean_val = np.nan
+
+    mean_spec_in_mld.append(mld_mean_val)
+
+    # --- Find spectral peak info
     max_val = spec_sel.max()
     idx = spec_sel.argmax(dim=["k", "freq_r"])
     max_k_idx = idx["k"].item()
@@ -110,6 +140,7 @@ result_ds = xr.Dataset(
         "depth_at_max": (["time"], max_depths),
         "kr_at_max": (["time"], max_krs),
         "Lr_at_max": (["time"], max_Lr),
+        "mean_spec_in_MLD": (["time"], mean_spec_in_mld),
     },
     coords={
         "time": pd.to_datetime(times)
@@ -167,3 +198,17 @@ figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{do
 # high-resolution
 output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-wb_spectra_weekly_24hfilter.mp4"
 os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_cross-spectrum_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+
+# New plot: MLD-averaged spec_vp
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(times, mean_spec_in_mld, marker='o', linestyle='-', color='tab:purple')
+ax.set_title('Mean $w$-$b$ Spectrum in Mixed Layer')
+ax.set_ylabel('Mean spec_vp (m²/s³)')
+ax.set_xlabel('Time')
+ax.grid(True, linestyle='--')
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+plt.tight_layout()
+plt.savefig(os.path.join(figdir, "mean_spec_in_MLD_timeseries.png"), dpi=150)
+plt.close()
+print("Saved: mean_spec_in_MLD_timeseries.png")

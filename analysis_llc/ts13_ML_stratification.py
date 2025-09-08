@@ -14,7 +14,7 @@ g = 9.81
 rho0 = 1025
 
 # ========== Setup Dask ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5GB")
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
@@ -23,7 +23,6 @@ input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 output_file = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/", "N2ml_weekly.nc")
 zarr_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_7d_*.nc")))
-# files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_7d_2012-01-24.nc")))
 
 # ========== Load grid ==========
 print("Loading vertical grid from Zarr...")
@@ -32,11 +31,10 @@ depth_1d = ds_grid.Z.values
 ds_grid.close()
 
 # ========== Compute N² function ==========
-def compute_N2(rho, depth):
-    drho = np.gradient(rho, axis=0)
-    dz = -np.gradient(depth, axis=0)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        N2 = - (g / rho0) * (drho / dz)
+def compute_N2_xr(rho, depth):
+    drho = - rho.differentiate("k")
+    dz = - depth.differentiate("k")
+    N2 = - (g / rho0) * (drho / dz)
     return N2
 
 # ========== Loop through weekly files ==========
@@ -47,7 +45,6 @@ for f in files:
     date_tag = os.path.basename(f).split("_")[-1].replace(".nc", "")
     print(f"\nProcessing: {os.path.basename(f)}")
 
-    # ds = xr.open_dataset(f, chunks={"k": 10, "j": 100, "i": 100})
     ds = xr.open_dataset(f)
 
     if "rho_7d" not in ds or "Hml_7d" not in ds:
@@ -57,9 +54,6 @@ for f in files:
 
     rho = ds["rho_7d"]
     Hml = ds["Hml_7d"]
-
-    # Assign depth as coordinate
-    rho = rho.assign_coords(k=depth_1d)
 
     # Rechunk so that 'k' is not split (required for vertical gradient)
     rho = rho.chunk({'k': -1, 'j': -1, 'i': -1})
@@ -73,17 +67,7 @@ for f in files:
 
     depth_broadcasted = depth_broadcasted.chunk({'k': -1, 'j': -1, 'i': -1})
 
-    N2 = xr.apply_ufunc(
-        compute_N2,
-        rho,
-        depth_broadcasted,
-        input_core_dims=[["k", "j", "i"], ["k", "j", "i"]],
-        output_core_dims=[["k", "j", "i"]],
-        vectorize=True,
-        dask="parallelized",
-        output_dtypes=[float],
-    )
-    N2 = N2.assign_coords(k=depth_1d)
+    N2 = compute_N2_xr(rho, depth_broadcasted)
 
     # Compute depth bounds (50%-90%) of mixed layer
     Hml_50 = Hml * 0.5
@@ -93,27 +77,26 @@ for f in files:
     k_50 = np.abs(depth_1d[:, None, None] - Hml_50.values[None, :, :]).argmin(axis=0)
     k_90 = np.abs(depth_1d[:, None, None] - Hml_90.values[None, :, :]).argmin(axis=0)
 
-    j_idx, i_idx = np.meshgrid(np.arange(k_50.shape[0]), np.arange(k_50.shape[1]), indexing='ij')
+    # Convert to xarray DataArrays
+    k_50_da = xr.DataArray(k_50, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    k_90_da = xr.DataArray(k_90, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
 
-    # Mask N² between k_90 and k_50
-    N2_selected = []
-    for j in range(N2.j.size):
-        for i in range(N2.i.size):
-            k90 = k_90[j, i]
-            k50 = k_50[j, i]
-            if k90 <= k50 or k90 >= len(depth_1d):
-                continue
-            subset = N2.isel(j=j, i=i).isel(k=slice(k50, k90+1)).values
-            if np.all(np.isnan(subset)):
-                continue
-            N2_selected.append(np.nanmean(subset))
+    # Create k indices aligned with N2
+    k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
+    k_indices = k_indices.astype(int)
 
-    if len(N2_selected) < 100:
-        print(f"Too few valid N2 values in {date_tag}, skipping.")
-        ds.close()
-        continue
+    # Mask for k within 50%-90% of Hml
+    in_range_mask = (k_indices >= k_50_da) & (k_indices <= k_90_da)
 
-    mean_N2 = np.nanmean(N2_selected)
+    # Apply mask
+    N2_masked = N2.where(in_range_mask)
+
+    # Mean over vertical dimension (k)
+    N2ml_mean = N2_masked.mean(dim="k", skipna=True)
+
+    # Spatial mean
+    mean_N2 = N2ml_mean.mean(dim=["j", "i"], skipna=True).compute()
+
     N2ml_list.append(mean_N2)
     time_list.append(np.datetime64(date_tag))
     ds.close()
