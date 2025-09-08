@@ -18,7 +18,7 @@ j = slice(2960, 3441)  # icelandic_basin -- larger domain
 # domain_name = "Tropics"
 # face = 1
 # i = slice(520,1000,1) # Tropics
-# j = slice(2800,3201,1) # Tropics
+# j = slice(2800,3201,1) # Tropics. --- only 401 grid points, need to change to 481
 
 # i=slice(450,760,1)
 # j=slice(450,761,1)
