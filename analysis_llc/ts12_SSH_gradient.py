@@ -64,18 +64,15 @@ eta_grad_mag_daily = eta_grad_mag.mean(dim=["i","j"])
 eta_grad_mag_weekly = eta_grad_mag_daily.rolling(time=7, center=True).mean()
 
 # ========= Save results =========
-# print("Saving results...")
-
 ds_out = xr.Dataset({
     "eta_grad_mag_daily": eta_grad_mag_daily,
-    "eta_grad_mag_weekly": eta_grad_mag_weekly
+    "eta_grad_mag_weekly": eta_grad_mag_weekly,
 })
 
+output_file = os.path.join(output_path, "SSH_gradient_magnitude.nc")
+ds_out.to_netcdf(output_file)
 
-ds_out.to_netcdf(os.path.join(output_path, "SSH_gradient_magnitude.nc"))
-
-print("Done: daily and weekly averaged magnitude of SSH gradient saved.")
-
+print(f"Done: daily/weekly SSH gradient magnitude saved to {output_file}")
 
 
 
@@ -141,6 +138,8 @@ plt.tight_layout()
 plt.savefig(f"{figdir}/SSH_gradient_timeseries.png", dpi=200)
 plt.close()
 
+
+###### Plot SSH gradient of each week and make an animation
 
 # lon = ds_grid_face['XC']
 # lat = ds_grid_face['YC']
@@ -224,3 +223,82 @@ cmd = (
     f"{output_movie}"
 )
 os.system(cmd)
+
+
+
+
+
+
+# ========================================
+# Compute Non-Overlapping Weekly PDFs
+# ========================================
+weekly_pdf_dir = f"{figdir}/SSH_gradient_weekly_PDFs"
+os.makedirs(weekly_pdf_dir, exist_ok=True)
+
+pdf_data_dir = f"{output_path}/weekly_PDF_data"
+os.makedirs(pdf_data_dir, exist_ok=True)
+
+n_days = eta_grad_mag.sizes['time']
+week_length = 7
+n_weeks = n_days // week_length
+
+for week_idx in range(n_weeks):
+    start = week_idx * week_length
+    end = start + week_length
+
+    eta_week = eta_grad_mag.isel(time=slice(start, end))
+    date_str = str(eta_week.time[0].values)[:10]  # First day of the week
+
+    # Flatten all values from 7 days and spatial dims
+    grad_flat = eta_week.values.reshape(-1)
+    grad_flat = grad_flat[~np.isnan(grad_flat)]
+
+    if grad_flat.size == 0:
+        print(f"Week {date_str} has no valid data. Skipping.")
+        continue
+
+    # Define log-spaced bins
+    min_val = grad_flat.min()
+    max_val = grad_flat.max()
+    bins = np.logspace(np.log10(min_val), np.log10(max_val), 100)
+    
+    # Compute PDF
+    pdf_vals, bin_edges = np.histogram(grad_flat, bins=bins, density=True)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    # Save data
+    np.savez(os.path.join(pdf_data_dir, f"PDF_week_{date_str}.npz"),
+             bin_centers=bin_centers,
+             pdf_vals=pdf_vals)
+
+    # Plot linear PDF
+    plt.figure(figsize=(8, 6))
+    plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
+    plt.title(f"PDF of SSH Gradient Magnitude\nWeek Starting: {date_str}")
+    plt.xlabel("|∇η| (m/m)")
+    plt.ylabel("Probability Density")
+    plt.grid(True)
+    plt.xscale('linear')  # Linear x-axis
+    plt.yscale('log')
+    plt.xlim(1e-8, 1e-4)
+    plt.ylim(3, 1e6)
+    plt.tight_layout()
+    plt.savefig(os.path.join(weekly_pdf_dir, f"SSH_grad_PDF_week_{date_str}.png"), dpi=150)
+    plt.close()
+
+    # Plot log-log PDF
+    plt.figure(figsize=(8, 6))
+    plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
+    plt.title(f"PDF of SSH Gradient Magnitude (Log-Log)\nWeek Starting: {date_str}")
+    plt.xlabel("|∇η| (m/m)")
+    plt.ylabel("Probability Density")
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlim(1e-8, 1e-3)
+    plt.ylim(3, 1e6)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    plt.savefig(os.path.join(weekly_pdf_dir, f"SSH_grad_PDF_loglog_week_{date_str}.png"), dpi=150)
+    plt.close()
+
+    print(f"Saved log-binned weekly PDF and plots for week starting {date_str}")
