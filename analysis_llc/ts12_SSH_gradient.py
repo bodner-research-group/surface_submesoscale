@@ -302,3 +302,11 @@ for week_idx in range(n_weeks):
     plt.close()
 
     print(f"Saved log-binned weekly PDF and plots for week starting {date_str}")
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_gradient_weekly_PDFs"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-SSH_grad_PDF_loglog.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/SSH_grad_PDF_loglog_week_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")

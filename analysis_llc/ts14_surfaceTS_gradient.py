@@ -244,25 +244,27 @@ for week_idx in range(n_weeks):
     pdf_vals, bin_edges = np.histogram(grad_flat, bins=bins, density=True)
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-    # Save data
-    np.savez(os.path.join(pdf_data_dir, f"PDF_week_{date_str}.npz"),
-             bin_centers=bin_centers,
-             pdf_vals=pdf_vals)
+    # # Save data
+    # np.savez(os.path.join(pdf_data_dir, f"PDF_week_{date_str}.npz"),
+    #          bin_centers=bin_centers,
+    #          pdf_vals=pdf_vals)
+    
+    pdf_vals = pdf_vals+1e-10;
 
-    # Plot linear PDF
-    plt.figure(figsize=(8, 6))
-    plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
-    plt.title(f"PDF of SST Gradient Magnitude\nWeek Starting: {date_str}")
-    plt.xlabel("|∇SST| (m/m)")
-    plt.ylabel("Probability Density")
-    plt.grid(True)
-    plt.xscale('linear')  # Linear x-axis
-    plt.yscale('log')
-    plt.xlim(1e-8, 1e-2)
-    plt.ylim(3, 1e6)
-    plt.tight_layout()
-    plt.savefig(os.path.join(weekly_pdf_dir, f"SST_grad_PDF_week_{date_str}.png"), dpi=150)
-    plt.close()
+    # # Plot linear PDF
+    # plt.figure(figsize=(8, 6))
+    # plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
+    # plt.title(f"PDF of SST Gradient Magnitude\nWeek Starting: {date_str}")
+    # plt.xlabel("|∇SST| (m/m)")
+    # plt.ylabel("Probability Density")
+    # plt.grid(True)
+    # plt.xscale('linear')  # Linear x-axis
+    # plt.yscale('log')
+    # plt.xlim(1e-8, 1e-2)
+    # plt.ylim(0.1, 1e5)
+    # plt.tight_layout()
+    # plt.savefig(os.path.join(weekly_pdf_dir, f"SST_grad_PDF_week_{date_str}.png"), dpi=150)
+    # plt.close()
 
     # Plot log-log PDF
     plt.figure(figsize=(8, 6))
@@ -273,14 +275,13 @@ for week_idx in range(n_weeks):
     plt.xscale('log')
     plt.yscale('log')
     plt.xlim(1e-8, 1e-2)
-    plt.ylim(3, 1e6)
+    plt.ylim(0.1, 1e5)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.tight_layout()
     plt.savefig(os.path.join(weekly_pdf_dir, f"SST_grad_PDF_loglog_week_{date_str}.png"), dpi=150)
     plt.close()
 
     print(f"Saved log-binned weekly PDF and plots for week starting {date_str}")
-
 
 
 
@@ -324,25 +325,27 @@ for week_idx in range(n_weeks):
     pdf_vals, bin_edges = np.histogram(grad_flat, bins=bins, density=True)
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-    # Save data
-    np.savez(os.path.join(pdf_data_dir, f"PDF_week_{date_str}.npz"),
-             bin_centers=bin_centers,
-             pdf_vals=pdf_vals)
+    # # Save data
+    # np.savez(os.path.join(pdf_data_dir, f"PDF_week_{date_str}.npz"),
+    #          bin_centers=bin_centers,
+    #          pdf_vals=pdf_vals)
+    
+    pdf_vals = pdf_vals+1e-10; ### avoid log(0)
 
-    # Plot linear PDF
-    plt.figure(figsize=(8, 6))
-    plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
-    plt.title(f"PDF of SSS Gradient Magnitude\nWeek Starting: {date_str}")
-    plt.xlabel("|∇SSS| (m/m)")
-    plt.ylabel("Probability Density")
-    plt.grid(True)
-    plt.xscale('linear')  # Linear x-axis
-    plt.yscale('log')
-    plt.xlim(1e-8, 1e-2)
-    plt.ylim(3, 1e6)
-    plt.tight_layout()
-    plt.savefig(os.path.join(weekly_pdf_dir, f"SSS_grad_PDF_week_{date_str}.png"), dpi=150)
-    plt.close()
+    # # Plot linear PDF
+    # plt.figure(figsize=(8, 6))
+    # plt.plot(bin_centers, pdf_vals, color='black', linewidth=2)
+    # plt.title(f"PDF of SSS Gradient Magnitude\nWeek Starting: {date_str}")
+    # plt.xlabel("|∇SSS| (m/m)")
+    # plt.ylabel("Probability Density")
+    # plt.grid(True)
+    # plt.xscale('linear')  # Linear x-axis
+    # plt.yscale('log')
+    # plt.xlim(1e-8, 1e-2)
+    # plt.ylim(0.1, 1e5)
+    # plt.tight_layout()
+    # plt.savefig(os.path.join(weekly_pdf_dir, f"SSS_grad_PDF_week_{date_str}.png"), dpi=150)
+    # plt.close()
 
     # Plot log-log PDF
     plt.figure(figsize=(8, 6))
@@ -353,7 +356,7 @@ for week_idx in range(n_weeks):
     plt.xscale('log')
     plt.yscale('log')
     plt.xlim(1e-8, 1e-2)
-    plt.ylim(3, 1e6)
+    plt.ylim(0.1, 1e5)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.tight_layout()
     plt.savefig(os.path.join(weekly_pdf_dir, f"SSS_grad_PDF_loglog_week_{date_str}.png"), dpi=150)
@@ -363,10 +366,30 @@ for week_idx in range(n_weeks):
 
 
 
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SST_gradient_weekly_PDFs"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-SST_grad_PDF_loglog.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/SST_grad_PDF_loglog_week_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSS_gradient_weekly_PDFs"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-SSS_grad_PDF_loglog.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/SSS_grad_PDF_loglog_week_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+
+
+
+
 # ================================
 # Weekly Histograms of SST and SSS Gradients
 # ================================
-weekly_hist_dir = f"{figdir}/weekly_gradient_histograms"
+weekly_hist_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/weekly_gradient_histograms"
 os.makedirs(weekly_hist_dir, exist_ok=True)
 
 print("Generating weekly histograms of SST and SSS gradients...")
@@ -396,35 +419,63 @@ for week_idx in range(n_weeks):
     tt_grad_flat = tt_grad_flat[~np.isnan(tt_grad_flat)];
     ss_grad_flat = ss_grad_flat[~np.isnan(ss_grad_flat)];
 
-    if tt_grad_flat.size == 0 or ss_grad_flat.size == 0:
-        print(f"Week {date_str} has no valid SST or SSS gradient data. Skipping.")
-        continue
+    # Add small value to avoid zeros in bins
+    epsilon = 1e-2
+    tt_hist, tt_bins = np.histogram(tt_grad_flat, bins=100)
+    tt_hist = tt_hist + epsilon  # Avoid log(0)
 
-    # Plot histogram for SST gradient magnitude
     plt.figure(figsize=(8, 6))
-    plt.hist(tt_grad_flat, bins=100, color='royalblue', alpha=0.8, edgecolor='black', log=True);
+    plt.bar(tt_bins[:-1], tt_hist, width=np.diff(tt_bins), color='royalblue', alpha=0.8, edgecolor='black', log=True)
     plt.title(f"Histogram of SST Gradient Magnitude\nWeek Starting: {date_str}")
     plt.xlabel("|∇SST| (m/m)")
     plt.ylabel("Frequency (log scale)")
     plt.xlim(tt_grad_min, tt_grad_max)
+    plt.ylim(0.5, 1e6)  # Should now work
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.tight_layout()
     plt.savefig(os.path.join(weekly_hist_dir, f"SST_grad_hist_week_{date_str}.png"), dpi=150)
     plt.close()
 
-    # Plot histogram for SSS gradient magnitude
+
+    # Add small value to avoid zeros in bins
+    epsilon = 1e-2
+    ss_hist, ss_bins = np.histogram(ss_grad_flat, bins=100)
+    ss_hist = ss_hist + epsilon  # Avoid log(0)
+
     plt.figure(figsize=(8, 6))
-    plt.hist(ss_grad_flat, bins=100, color='darkorange', alpha=0.8, edgecolor='black', log=True);
+    plt.bar(ss_bins[:-1], ss_hist, width=np.diff(ss_bins), color='royalblue', alpha=0.8, edgecolor='black', log=True)
     plt.title(f"Histogram of SSS Gradient Magnitude\nWeek Starting: {date_str}")
     plt.xlabel("|∇SSS| (m/m)")
     plt.ylabel("Frequency (log scale)")
     plt.xlim(ss_grad_min, ss_grad_max)
+    plt.ylim(0.5, 1e6)  # Should now work
+    plt.xticks(rotation=45)
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.tight_layout()
     plt.savefig(os.path.join(weekly_hist_dir, f"SSS_grad_hist_week_{date_str}.png"), dpi=150)
     plt.close()
 
+
     print(f"Saved weekly SST and SSS gradient magnitude histograms for week starting {date_str}")
+
+
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/weekly_gradient_histograms"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-SST_grad_hist.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/SST_grad_hist_week_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/weekly_gradient_histograms"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-SSS_grad_hist.mp4"
+os.system(f"ffmpeg -r 10 -pattern_type glob -i '{figdir}/SSS_grad_hist_week_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 
 
 
