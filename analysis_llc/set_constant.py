@@ -4,15 +4,28 @@
 # ========== Domain ==========
 domain_name = "Station_Papa"
 face = 7
-i = slice(1873,2189+1,1)  # Ocean Weather Station Papa  147W-143W  
-j = slice(3408,3599+1,1) # Ocean Weather Station Papa  48N-52N
+i = slice(1873-82,2189+82,1)  # Ocean Weather Station Papa  147W-143W  
+j = slice(3408-144,3599+1+145,1) # Ocean Weather Station Papa  48N-52N
+# i = slice(1873,2189+1,1)  # Ocean Weather Station Papa  147W-143W  
+# j = slice(3408,3599+1,1) # Ocean Weather Station Papa  48N-52N
 
 
 # # ========== Domain ==========
 # domain_name = "SWOT_Site"
-# face = 1
-# i = slice(520,1000,1)  # SWOT Validation Site
-# j = slice(2800,3201,1) # SWOT Validation Site
+# face = 10
+# i = slice(2931-113,3186+113,1) # SWOT Validation Site 126W-124W
+# j = slice(0,480,1)  # SWOT Validation Site  35N-37N 
+
+
+
+# # ========== Domain ==========
+# domain_name = "Antarctic_Peninsula"
+# face = 12
+# i = slice(183-40,586+40,1) 
+# j = slice(3168,3743,1)
+# ## lat_min, lat_max = -63, -59
+# ## lon_min, lon_max = -62, -50 # West longitudes as negative
+
 
 
 # # ========== Domain ==========

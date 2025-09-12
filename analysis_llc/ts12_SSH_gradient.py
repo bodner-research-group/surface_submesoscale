@@ -158,7 +158,8 @@ import matplotlib
 import os
 
 
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="18GB")
+# cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 # print("Dask dashboard:", client.dashboard_link)
 
@@ -232,7 +233,7 @@ os.system(cmd)
 # ========================================
 # Compute Non-Overlapping Weekly PDFs
 # ========================================
-weekly_pdf_dir = f"{figdir}/SSH_gradient_weekly_PDFs"
+weekly_pdf_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_gradient_weekly_PDFs"
 os.makedirs(weekly_pdf_dir, exist_ok=True)
 
 pdf_data_dir = f"{output_path}/weekly_PDF_data"

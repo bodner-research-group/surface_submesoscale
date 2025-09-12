@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=plot_py
-#SBATCH --output=plot.out
-#SBATCH --error=plot.err
-#SBATCH --partition=mit_normal
+#SBATCH --job-name=Station_Papa
+#SBATCH --output=Station_Papa.out
+#SBATCH --error=Station_Papa.err
+#SBATCH --partition=mit_preemptable
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                # IMPORTANT: use 1 task (you use 64 threads inside Dask)
 #SBATCH --cpus-per-task=64        # Explicitly request 64 CPUs for Dask
@@ -38,11 +38,12 @@ source ~/.bashrc-conda
 # python3 ts9_vorticity_strain_plot.py
 # echo "Complete: ts9_vorticity_strain_plot"
 
-# python3 ts10_Tu_vertical_weekly.py
-# echo "Complete: ts10_Tu_vertical_weekly"
+python3 ts10_TurnerAngle_calc.py
+echo "Complete: ts10_TurnerAngle_calc"
 
-# python3 ts11_Tu_horizontal_weekly.py
-# echo "Complete: ts11_Tu_horizontal_weekly"
+python3 ts11_TurnerAngle_plot.py
+echo "Complete: ts11_TurnerAngle_plot"
+
 
 # python3 ts12_SSH_gradient.py
 # echo "Complete: ts12_SSH_gradient"
