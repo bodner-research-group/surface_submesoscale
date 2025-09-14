@@ -6,11 +6,10 @@ import os
 from scipy import interpolate
 from inpoly.inpoly2 import inpoly2
 import warnings
-from xmitgcm import llcreader  # only import if you have LLC4320 data
 
 # === User inputs (replace with your paths/parameters) ===
 model_file = "/orcd/data/abodner/003/LLC4320/LLC4320"
-swot_file = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/cycle_010/SWOT_GRID_L3_LR_SSH_010_295_20240204T122458_20240204T131624_v1.0.2.nc"
+swot_file = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/cycle_021/SWOT_GRID_L3_LR_SSH_021_581_20241001T055443_20241001T064609_v1.0.2.nc"
 output_file = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_llc/test.nc"
 interpolator = "pyinterp_interpolator"  # or "scipy_interpolator"
 
@@ -19,7 +18,6 @@ model_lon_var = "XC"
 model_time_var = "time"
 model_ssh_var = "Eta"
 model_timestep_index = 1
-# model_face = 6
 
 # === Read model and mask datasets ===
 ds_model =  xr.open_zarr(model_file, consolidated=False)
@@ -31,10 +29,6 @@ ds_swot = xr.open_dataset(swot_file, engine="netcdf4")
 ds_model = ds_model.isel({model_time_var: model_timestep_index})
 
 # === Prepare model variable for interpolation ===
-# var_values = ds_model.Eta.isel(face=model_face).values
-# lat_values = ds_model.YC.isel(face=model_face).values
-# lon_values = ds_model.XC.isel(face=model_face).values
-
 var_values = np.concatenate(ds_model.Eta.values, axis=1) 
 lat_values = np.concatenate(ds_model.YC.values, axis=1) 
 lon_values = np.concatenate(ds_model.XC.values, axis=1) 
