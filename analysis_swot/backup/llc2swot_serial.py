@@ -1,3 +1,16 @@
+### Run this script on an interactive node 
+
+# ========== DASK SETUP ==========
+from dask.distributed import Client, LocalCluster
+from dask import delayed, compute
+import dask
+import gc 
+
+cluster = LocalCluster(n_workers=17, threads_per_worker=1, memory_limit="22.5GB")
+client = Client(cluster)
+print(client.dashboard_link)
+
+# ========== MODULE IMPORTS ==========
 import os
 import glob
 import numpy as np
@@ -6,40 +19,65 @@ from scipy import interpolate
 from inpoly.inpoly2 import inpoly2
 import pyinterp
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 
-# === User inputs ===
-cycle_dir = "cycle_008"
-swot_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/" + cycle_dir
+# === Shared Inputs ===
 model_file = "/orcd/data/abodner/003/LLC4320/LLC4320"
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_llc/llc4320_to_swot/" + cycle_dir
+output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_llc/llc4320_to_swot/"
 interpolator = "pyinterp_interpolator"  # or "scipy_interpolator"
 model_lat_var = "YC"
 model_lon_var = "XC"
 model_time_var = "time"
 model_ssh_var = "Eta"
 
-# Create output directory if it doesn't exist
-os.makedirs(output_dir, exist_ok=True)
+# Cache directory
+model_cache_dir = os.path.join(output_all, "model_cache")
+os.makedirs(model_cache_dir, exist_ok=True)
 
-# Load model metadata
+# === Load shared model metadata ===
 print("Loading model dataset...")
 ds_model_all = xr.open_zarr(model_file, consolidated=False)
 
-model_times = ds_model_all[model_time_var].values  # time coordinates from LLC4320
-# model_times = np.array([np.datetime64(t).astype('datetime64[h]') for t in model_times])  # hourly resolution
+# Cache static grid
+lat_cache_path = os.path.join(model_cache_dir, "lat_clean.npy")
+lon_cache_path = os.path.join(model_cache_dir, "lon_clean.npy")
+mask_cache_path = os.path.join(model_cache_dir, "valid_mask.npy")
 
-# Convert model_times to pandas.DatetimeIndex for easy handling
-model_times = pd.to_datetime(model_times)
+if not os.path.exists(lat_cache_path) or not os.path.exists(lon_cache_path):
+    print("Caching static model grid (lat/lon)...")
+    lat_values = np.concatenate(ds_model_all[model_lat_var], axis=1)
+    lon_values = np.concatenate(ds_model_all[model_lon_var], axis=1)
 
-# Get all SWOT files in directory
-swot_files = sorted(glob.glob(os.path.join(swot_dir, "SWOT_GRID_L3_LR_SSH_*.nc")))
+    mask_valid = ~((lon_values.flatten() == 0) & (lat_values.flatten() == 0))
+    lon_clean = lon_values.flatten()[mask_valid]
+    lat_clean = lat_values.flatten()[mask_valid]
 
-print(f"Found {len(swot_files)} SWOT files.")
+    np.save(lon_cache_path, lon_clean)
+    np.save(lat_cache_path, lat_clean)
+    np.save(mask_cache_path, mask_valid)
+else:
+    print("Loading cached model grid...")
+    lon_clean = np.load(lon_cache_path, mmap_mode='r')
+    lat_clean = np.load(lat_cache_path, mmap_mode='r')
+    mask_valid = np.load(mask_cache_path, mmap_mode='r')
 
-for swot_file in swot_files:
-    # === Extract time from filename ===
+points = np.column_stack((lon_clean, lat_clean))
+
+# Model time coordinates
+model_times = pd.to_datetime(ds_model_all[model_time_var].values)
+
+
+# === Processing Function ===
+@delayed
+def process_swot_file(swot_file):
+
+    # === Load cached grid files inside the function ===
+    lon_clean = np.load(lon_cache_path, mmap_mode='r')
+    lat_clean = np.load(lat_cache_path, mmap_mode='r')
+    mask_valid = np.load(mask_cache_path, mmap_mode='r')
+    points = np.column_stack((lon_clean, lat_clean))
+
     fname = os.path.basename(swot_file)
     try:
         time_str = fname.split("_")[-3]
@@ -48,57 +86,42 @@ for swot_file in swot_files:
         time_end = datetime.strptime(time_str, "%Y%m%dT%H%M%S")
     except Exception as e:
         print(f"Skipping file due to time parse error: {fname}")
-        continue
+        return
 
     mean_time = time_start + (time_end - time_start) / 2
     mean_time_np = np.datetime64(mean_time.replace(minute=0, second=0))  # Round to nearest hour
-
-    # Convert mean_time to pandas.Timestamp
     mean_time = pd.to_datetime(mean_time_np)
 
-    # Extract month-day-hour pattern
     mask_same_time = (
         (model_times.month == mean_time.month) &
         (model_times.day == mean_time.day) &
         (model_times.hour == mean_time.hour)
     )
 
-    # Split by year
     times_2011 = model_times[(model_times.year == 2011) & mask_same_time]
     times_2012 = model_times[(model_times.year == 2012) & mask_same_time]
 
-    # print("Matches in 2011:", times_2011)
-    # print("Matches in 2012:", times_2012)
-
-    model_timestep_index = None  
-
+    model_timestep_index = None
     if len(times_2011) > 0:
         model_timestep_index = np.where(model_times == times_2011[0])[0][0]
     elif len(times_2012) > 0:
         model_timestep_index = np.where(model_times == times_2012[0])[0][0]
 
+    if model_timestep_index is None:
+        print(f"No matching model time found for {fname}")
+        return
+
     print(f"\nProcessing file: {fname}")
     print(f"Mean time: {mean_time} → Closest model time: {model_times[model_timestep_index]} (index {model_timestep_index})")
 
-    # === Load SWOT data ===
     ds_swot = xr.open_dataset(swot_file, engine="netcdf4")
-
-    # === Subset model at closest timestep ===
     ds_model = ds_model_all.isel({model_time_var: model_timestep_index})
 
-    # === Prepare model data ===
     var_values = np.concatenate(ds_model[model_ssh_var].values, axis=1)
-    lat_values = np.concatenate(ds_model[model_lat_var].values, axis=1)
-    lon_values = np.concatenate(ds_model[model_lon_var].values, axis=1)
-
-    # Clean model grid points
-    mask_valid = ~((lon_values.flatten() == 0) & (lat_values.flatten() == 0))
-    lon_clean = lon_values.flatten()[mask_valid]
-    lat_clean = lat_values.flatten()[mask_valid]
     var_clean = var_values.flatten()[mask_valid]
-    points = np.column_stack((lon_clean, lat_clean))
+    del var_values
 
-    # === Create polygon from SWOT swath ===
+    # Polygon creation
     X = xr.where(ds_swot.longitude <= 180, ds_swot.longitude, ds_swot.longitude - 360)
     Y = ds_swot.latitude
     dy = Y.values[-1, 0] - Y.values[0, 0]
@@ -121,15 +144,19 @@ for swot_file in swot_files:
     inside, on_edge = inpoly2(points, polygon)
     mask = inside | on_edge
 
+    del points
+
     lon_in = lon_clean[mask]
     lat_in = lat_clean[mask]
     var_in = var_clean[mask]
 
-    if np.size(var_in) == 0:
-        warnings.warn("No model data found within SWOT swath area.")
-        continue
+    del lon_clean, lat_clean, var_clean
 
-    # === Interpolation ===
+    if np.size(var_in) == 0:
+        warnings.warn(f"No model data found within SWOT swath area for {fname}.")
+        return
+
+    # Interpolation
     if interpolator == "scipy_interpolator":
         finterp = interpolate.LinearNDInterpolator(list(zip(lat_in, lon_in)), var_in, fill_value=np.nan)
     elif interpolator == "pyinterp_interpolator":
@@ -139,7 +166,6 @@ for swot_file in swot_files:
     else:
         raise ValueError(f"Unknown interpolator: {interpolator}")
 
-    # === Interpolate to SWOT grid ===
     lat_swot = ds_swot.latitude.values
     lon_swot = xr.where(ds_swot.longitude > 180, ds_swot.longitude - 360, ds_swot.longitude).values
 
@@ -156,7 +182,7 @@ for swot_file in swot_files:
             within=True
         )[0].reshape(lat_swot.shape)
 
-    # === Build output dataset ===
+    # Build output
     ds_out = xr.Dataset({
         "ssh": (["num_lines", "num_pixels"], ssh_interp)
     }, coords={
@@ -164,7 +190,7 @@ for swot_file in swot_files:
         "longitude": (["num_lines", "num_pixels"], ds_swot.longitude.values)
     })
 
-    # Apply SWOT quality mask
+    # Quality mask
     cross_dist = ds_swot.cross_track_distance
     quality_flag = ds_swot.quality_flag
     mask_dist = xr.where(
@@ -174,14 +200,40 @@ for swot_file in swot_files:
     )
     ds_out["ssh"] = ds_out["ssh"].where(~np.isnan(mask_dist))
 
-    # Convert longitude to 0–360
     ds_out.coords['longitude'] = xr.where(ds_out.longitude < 0, ds_out.longitude + 360, ds_out.longitude)
 
-    # === Save output ===
-    out_fname = "llc2swot_" + mean_time.strftime("%Y%m%dT%H") + ".nc"
+    out_fname = "llc2swot_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
     out_path = os.path.join(output_dir, out_fname)
     ds_out.to_netcdf(out_path)
 
     print(f"Saved: {out_path}")
 
-print("\nAll files processed.")
+    gc.collect()
+
+    return out_path
+
+
+
+# === Loop through cycles 009 to 014 ===
+for cycle_num in range(9, 15):
+    cycle_dir = f"cycle_{cycle_num:03d}"
+    print(f"\n\n=== Processing {cycle_dir} ===")
+
+    swot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/{cycle_dir}"
+    output_dir = os.path.join(output_all, cycle_dir)
+    os.makedirs(output_dir, exist_ok=True)
+
+    swot_files = sorted(glob.glob(os.path.join(swot_dir, "SWOT_GRID_L3_LR_SSH_*.nc")))
+    print(f"Found {len(swot_files)} SWOT files.")
+
+    if not swot_files:
+        print(f"No files found in {swot_dir}. Skipping...")
+        continue
+
+    batch_size = 17
+    for i in range(0, len(swot_files), batch_size):
+        batch = swot_files[i:i+batch_size]
+        tasks = [process_swot_file(f) for f in batch]
+        compute(*tasks)
+
+print("\nAll cycles processed.")

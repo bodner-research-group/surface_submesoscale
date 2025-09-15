@@ -20,7 +20,7 @@ import pandas as pd
 def main():
     # === Shared Inputs ===
     model_file = "/orcd/data/abodner/003/LLC4320/LLC4320"
-    output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_llc/llc4320_to_swot/"
+    output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/llc4320_to_swot/"
     interpolator = "pyinterp_interpolator"  # or "scipy_interpolator"
     model_lat_var = "YC"
     model_lon_var = "XC"
@@ -77,36 +77,15 @@ def main():
 
         fname = os.path.basename(swot_file)
 
-        # try:
-        #     time_str = fname.split("_")[-3]
-        #     time_start = datetime.strptime(time_str, "%Y%m%dT%H%M%S")
-        #     time_str = fname.split("_")[-2].split("_v")[0]
-        #     time_end = datetime.strptime(time_str, "%Y%m%dT%H%M%S")
-        # except Exception as e:
-        #     print(f"Skipping file due to time parse error: {fname}")
-        #     return
-
-        # mean_time = time_start + (time_end - time_start) / 2
-        # mean_time_np = np.datetime64(mean_time.replace(minute=0, second=0))  # Round to nearest hour
-        # mean_time = pd.to_datetime(mean_time_np)
-
-        # === Check if output already exists ===
         try:
             time_str_start = fname.split("_")[-3]
             time_str_end = fname.split("_")[-2].split("_v")[0]
             mean_time = datetime.strptime(time_str_start, "%Y%m%dT%H%M%S") + \
                         (datetime.strptime(time_str_end, "%Y%m%dT%H%M%S") - datetime.strptime(time_str_start, "%Y%m%dT%H%M%S")) / 2
             mean_time = pd.to_datetime(np.datetime64(mean_time.replace(minute=0, second=0)))  # round to nearest hour
-            out_fname = "llc2swot_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
-            out_path = os.path.join(output_dir, out_fname)
-
-            if os.path.exists(out_path):
-                print(f"Output already exists, skipping: {out_path}")
-                return
         except Exception as e:
             print(f"Skipping file due to time parse error: {fname}")
             return
-
 
         mask_same_time = (
             (model_times.month == mean_time.month) &
@@ -126,6 +105,15 @@ def main():
         if model_timestep_index is None:
             print(f"No matching model time found for {fname}")
             return
+        
+        out_fname = "LLC4320_on_" + fname
+        # out_fname = "llc2swot_SSH_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
+        out_path = os.path.join(output_dir, out_fname)
+
+        # === Check if output already exists ===
+        if os.path.exists(out_path):
+            print(f"Output already exists, skipping: {out_path}")
+            return
 
         print(f"\nProcessing file: {fname}")
         print(f"Mean time: {mean_time} → Closest model time: {model_times[model_timestep_index]} (index {model_timestep_index})")
@@ -135,7 +123,7 @@ def main():
 
         var_values = np.concatenate(ds_model[model_ssh_var].values, axis=1)
         var_clean = var_values.flatten()[mask_valid]
-        del var_values
+        del var_values, ds_model
 
         # Polygon creation
         X = xr.where(ds_swot.longitude <= 180, ds_swot.longitude, ds_swot.longitude - 360)
@@ -216,16 +204,16 @@ def main():
         ds_out["ssh"] = ds_out["ssh"].where(~np.isnan(mask_dist))
         ds_out.coords['longitude'] = xr.where(ds_out.longitude < 0, ds_out.longitude + 360, ds_out.longitude)
 
-        # out_fname = "llc2swot_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
-        # out_path = os.path.join(output_dir, out_fname)
         ds_out.to_netcdf(out_path)
 
         print(f"Saved: {out_path}")
+
+        del ds_swot, var_in, lon_in, lat_in, ds_out, mask_dist
         gc.collect()
         return out_path
 
     # === Loop through SWOT cycles ===
-    for cycle_num in range(9, 15):
+    for cycle_num in range(15, 18):
         cycle_dir = f"cycle_{cycle_num:03d}"
         print(f"\n\n=== Processing {cycle_dir} ===")
 
