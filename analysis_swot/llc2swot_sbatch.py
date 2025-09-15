@@ -213,7 +213,7 @@ def main():
         return out_path
 
     # === Loop through SWOT cycles ===
-    for cycle_num in range(15, 18):
+    for cycle_num in range(8, 27):
         cycle_dir = f"cycle_{cycle_num:03d}"
         print(f"\n\n=== Processing {cycle_dir} ===")
 
