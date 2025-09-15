@@ -5,11 +5,14 @@ import matplotlib.pyplot as plt
 import dask
 from dask.distributed import Client, LocalCluster
 import imageio
+from set_colormaps import WhiteBlueGreenYellowRed
+cmap = WhiteBlueGreenYellowRed()
+
 
 # === Config ===
 combined_nc_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/llc4320_to_swot_combined/LLC4320_on_SWOT_GRID_L3_LR_SSH_008_combined.nc"  
-output_images_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_swot/ssh_plots_cycle008/"
-output_video_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_swot/ssh_evolution.mp4"
+output_images_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_swot/figs/llc_ssh_plots_cycle008/"
+output_video_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_swot/figs/llc_ssh_cycle008.mp4"
 n_workers = 64
 
 os.makedirs(output_images_dir, exist_ok=True)
@@ -35,27 +38,41 @@ lon_all = ds["longitude"].values
 times = ds["swot_time"].values
 num_files = ssh_all.shape[0]
 
+
 @dask.delayed
 def plot_cumulative_ssh(index):
     """
-    Plot cumulative SSH from 0 to index (inclusive).
+    Plot cumulative SSH from 0 to index (inclusive) on global map.
     Save figure to disk.
-    """
-    import matplotlib.pyplot as plt  # import inside function for dask workers
+    """ 
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
 
-    cumulative_ssh = np.nanmean(ssh_all[:index+1, :, :], axis=0)  # average SSH over time steps 0 to index
+    cumulative_ssh = np.nanmean(ssh_all[:index+1, :, :], axis=0)  
     cumulative_lat = np.nanmean(lat_all[:index+1, :, :], axis=0)
     cumulative_lon = np.nanmean(lon_all[:index+1, :, :], axis=0)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    im = ax.pcolormesh(cumulative_lon, cumulative_lat, cumulative_ssh, shading="auto", cmap="viridis", vmin=vmin, vmax=vmax)
+
+    # Optional: Wrap longitudes to [-180, 180] if necessary
+    cumulative_lon = np.where(cumulative_lon > 180, cumulative_lon - 360, cumulative_lon)
+
+    fig = plt.figure(figsize=(12, 6))
+    ax = plt.axes(projection=ccrs.PlateCarree())
+
+    im = ax.pcolormesh(cumulative_lon, cumulative_lat, cumulative_ssh,
+                       transform=ccrs.PlateCarree(),
+                       shading="auto", cmap=cmap,
+                       vmin=vmin, vmax=vmax)
+
+    ax.coastlines()
+    ax.set_global()
     ax.set_title(f"Cumulative SSH up to swot_time {np.datetime_as_string(times[index], unit='m')}")
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
-    plt.colorbar(im, ax=ax, label="SSH (m)")
-    plt.tight_layout()
+    plt.colorbar(im, ax=ax, orientation='vertical', shrink=0.5, label='SSH (m)')
+    
     out_path = os.path.join(output_images_dir, f"cumulative_ssh_{index:03d}.png")
-    plt.savefig(out_path)
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
     return out_path
 

@@ -50,7 +50,7 @@ def find_model_timestep_index(swot_dt_start, swot_dt_end, model_times):
 
     return model_timestep_index
 
-for cycle_num in range(16, 27):
+for cycle_num in range(15, 16):
     cycle_str = f"cycle_{cycle_num:03d}"
     print(f"\nProcessing {cycle_str} ...")
 
