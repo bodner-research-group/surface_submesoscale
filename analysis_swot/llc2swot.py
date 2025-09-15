@@ -1,10 +1,12 @@
+### Run this script on an interactive node 
+
 # ========== DASK SETUP ==========
 from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 import dask
 import gc 
 
-cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="19GB")
+cluster = LocalCluster(n_workers=17, threads_per_worker=1, memory_limit="22.5GB")
 client = Client(cluster)
 print(client.dashboard_link)
 
@@ -20,12 +22,9 @@ import warnings
 from datetime import datetime
 import pandas as pd
 
-# === User inputs ===
-cycle_dir = "cycle_008"
-swot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/{cycle_dir}"
+# === Shared Inputs ===
 model_file = "/orcd/data/abodner/003/LLC4320/LLC4320"
 output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_llc/llc4320_to_swot/"
-output_dir = os.path.join(output_all, cycle_dir)
 interpolator = "pyinterp_interpolator"  # or "scipy_interpolator"
 model_lat_var = "YC"
 model_lon_var = "XC"
@@ -35,9 +34,6 @@ model_ssh_var = "Eta"
 # Cache directory
 model_cache_dir = os.path.join(output_all, "model_cache")
 os.makedirs(model_cache_dir, exist_ok=True)
-
-# Create output directory if it doesn't exist
-os.makedirs(output_dir, exist_ok=True)
 
 # === Load shared model metadata ===
 print("Loading model dataset...")
@@ -71,9 +67,6 @@ points = np.column_stack((lon_clean, lat_clean))
 # Model time coordinates
 model_times = pd.to_datetime(ds_model_all[model_time_var].values)
 
-# === Get all SWOT files ===
-swot_files = sorted(glob.glob(os.path.join(swot_dir, "SWOT_GRID_L3_LR_SSH_*.nc")))
-print(f"Found {len(swot_files)} SWOT files.")
 
 # === Processing Function ===
 @delayed
@@ -209,25 +202,38 @@ def process_swot_file(swot_file):
 
     ds_out.coords['longitude'] = xr.where(ds_out.longitude < 0, ds_out.longitude + 360, ds_out.longitude)
 
-    out_fname = "llc2swot_" + mean_time.strftime("%Y%m%dT%H") + ".nc"
+    out_fname = "llc2swot_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
     out_path = os.path.join(output_dir, out_fname)
     ds_out.to_netcdf(out_path)
 
     print(f"Saved: {out_path}")
 
-    del ds_swot, ds_model, var_clean, var_in, ssh_interp, lat_swot, lon_swot, points_swot, ds_out
     gc.collect()
 
     return out_path
 
 
 
+# === Loop through cycles 009 to 014 ===
+for cycle_num in range(9, 15):
+    cycle_dir = f"cycle_{cycle_num:03d}"
+    print(f"\n\n=== Processing {cycle_dir} ===")
 
-# === Dispatch all tasks in parallel ===
-batch_size = 20
-for i in range(0, len(swot_files), batch_size):
-    batch = swot_files[i:i+batch_size]
-    tasks = [process_swot_file(f) for f in batch]
-    compute(*tasks)
+    swot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/global_swot_grid_2024/{cycle_dir}"
+    output_dir = os.path.join(output_all, cycle_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
-print("\nAll files processed.")
+    swot_files = sorted(glob.glob(os.path.join(swot_dir, "SWOT_GRID_L3_LR_SSH_*.nc")))
+    print(f"Found {len(swot_files)} SWOT files.")
+
+    if not swot_files:
+        print(f"No files found in {swot_dir}. Skipping...")
+        continue
+
+    batch_size = 17
+    for i in range(0, len(swot_files), batch_size):
+        batch = swot_files[i:i+batch_size]
+        tasks = [process_swot_file(f) for f in batch]
+        compute(*tasks)
+
+print("\nAll cycles processed.")
