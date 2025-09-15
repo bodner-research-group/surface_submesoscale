@@ -2,8 +2,9 @@
 from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 import dask
+import gc 
 
-cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="19.1GB")
+cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="19GB")
 client = Client(cluster)
 print(client.dashboard_link)
 
@@ -40,7 +41,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 # === Load shared model metadata ===
 print("Loading model dataset...")
-ds_model_all = xr.open_zarr(model_file, consolidated=False, chunks={})
+ds_model_all = xr.open_zarr(model_file, consolidated=False)
 
 # Cache static grid
 lat_cache_path = os.path.join(model_cache_dir, "lat_clean.npy")
@@ -77,6 +78,12 @@ print(f"Found {len(swot_files)} SWOT files.")
 # === Processing Function ===
 @delayed
 def process_swot_file(swot_file):
+
+    # === Load cached grid files inside the function ===
+    lon_clean = np.load(lon_cache_path, mmap_mode='r')
+    lat_clean = np.load(lat_cache_path, mmap_mode='r')
+    mask_valid = np.load(mask_cache_path, mmap_mode='r')
+    points = np.column_stack((lon_clean, lat_clean))
 
     fname = os.path.basename(swot_file)
     try:
@@ -115,10 +122,11 @@ def process_swot_file(swot_file):
     print(f"Mean time: {mean_time} → Closest model time: {model_times[model_timestep_index]} (index {model_timestep_index})")
 
     ds_swot = xr.open_dataset(swot_file, engine="netcdf4")
-    ds_model = ds_model_all.isel({model_time_var: model_timestep_index}).load()
+    ds_model = ds_model_all.isel({model_time_var: model_timestep_index})
 
     var_values = np.concatenate(ds_model[model_ssh_var].values, axis=1)
     var_clean = var_values.flatten()[mask_valid]
+    del var_values
 
     # Polygon creation
     X = xr.where(ds_swot.longitude <= 180, ds_swot.longitude, ds_swot.longitude - 360)
@@ -143,9 +151,13 @@ def process_swot_file(swot_file):
     inside, on_edge = inpoly2(points, polygon)
     mask = inside | on_edge
 
+    del points
+
     lon_in = lon_clean[mask]
     lat_in = lat_clean[mask]
     var_in = var_clean[mask]
+
+    del lon_clean, lat_clean, var_clean
 
     if np.size(var_in) == 0:
         warnings.warn(f"No model data found within SWOT swath area for {fname}.")
@@ -202,7 +214,13 @@ def process_swot_file(swot_file):
     ds_out.to_netcdf(out_path)
 
     print(f"Saved: {out_path}")
+
+    del ds_swot, ds_model, var_clean, var_in, ssh_interp, lat_swot, lon_swot, points_swot, ds_out
+    gc.collect()
+
     return out_path
+
+
 
 
 # === Dispatch all tasks in parallel ===
