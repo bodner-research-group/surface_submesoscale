@@ -5,6 +5,7 @@ import xarray as xr
 import numpy as np
 import os
 from xgcm import Grid
+import gsw
 
 from set_constant import domain_name, face, i, j
 
@@ -42,6 +43,9 @@ metrics = {
 }
 grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
+lon = ds1.XC.isel(face=face,i=i, j=j)
+lat = ds1.YC.isel(face=face,i=i, j=j)
+
 
 # ========= Load daily averaged tt_s =========
 print("Loading daily averaged tt_s and ss_s...")
@@ -54,12 +58,21 @@ ss_s_path = os.path.join(TS_24h_dir, "ss_24h_*.nc")
 ds_ss_s = xr.open_mfdataset(ss_s_path, combine='by_coords')
 ss_s = ds_ss_s["Salt"].isel(k=0) # Align datasets and select face/i/j region
 
+# ========= Compute surface density =========
+SA_s = gsw.SA_from_SP(ss_s, 0, lon, lat)
+CT_s = gsw.CT_from_pt(SA_s, tt_s)
+rho_s = gsw.rho(SA_s, CT_s, 0)
+
+
 # ========= Compute derivatives =========
 tt_s_x = grid.derivative(tt_s, axis="X") # ∂tt_s/∂x
 tt_s_y = grid.derivative(tt_s, axis="Y") # ∂tt_s/∂y
 
 ss_s_x = grid.derivative(ss_s, axis="X") # ∂ss_s/∂x
 ss_s_y = grid.derivative(ss_s, axis="Y") # ∂ss_s/∂y
+
+rho_s_x = grid.derivative(rho_s, axis="X") # ∂rho_s/∂x
+rho_s_y = grid.derivative(rho_s, axis="Y") # ∂rho_s/∂y
 
 # SST and SSS gradient magnitude at center
 tt_s_x_center = grid.interp(tt_s_x, axis="X", to="center")
@@ -71,6 +84,11 @@ ss_s_x_center = grid.interp(ss_s_x, axis="X", to="center")
 ss_s_y_center = grid.interp(ss_s_y, axis="Y", to="center")
 ss_s_grad_mag = np.sqrt(ss_s_x_center**2 + ss_s_y_center**2)
 ss_s_grad_mag = ss_s_grad_mag.assign_coords(time=ss_s.time)
+
+rho_s_x_center = grid.interp(rho_s_x, axis="X", to="center")
+rho_s_y_center = grid.interp(rho_s_y, axis="Y", to="center")
+rho_s_grad_mag = np.sqrt(rho_s_x_center**2 + rho_s_y_center**2)
+rho_s_grad_mag = rho_s_grad_mag.assign_coords(time=rho_s.time)
 
 # Compute the mean tt_s_grad_mag and ss_s_grad_mag over X and Y
 # tt_s_grad_mag_daily = tt_s_grad_mag.mean(dim=["i","j"])
@@ -88,6 +106,9 @@ with ProgressBar():
     ss_s_grad_mag_daily = ss_s_grad_mag.mean(dim=["i", "j"]).compute()
     ss_s_grad_mag_weekly = ss_s_grad_mag_daily.rolling(time=7, center=True).mean()
 
+    rho_s_grad_mag_daily = rho_s_grad_mag.mean(dim=["i", "j"]).compute()
+    rho_s_grad_mag_weekly = rho_s_grad_mag_daily.rolling(time=7, center=True).mean()
+
 
 # ========= Save results =========
 ds_out = xr.Dataset({
@@ -95,9 +116,11 @@ ds_out = xr.Dataset({
     "tt_s_grad_mag_weekly": tt_s_grad_mag_weekly,
     "ss_s_grad_mag_daily": ss_s_grad_mag_daily,
     "ss_s_grad_mag_weekly": ss_s_grad_mag_weekly,
+    "rho_s_grad_mag_daily": rho_s_grad_mag_daily,
+    "rho_s_grad_mag_weekly": rho_s_grad_mag_weekly,
 })
 
-output_file = os.path.join(output_path, "SST-SSS_gradient_magnitude.nc")
+output_file = os.path.join(output_path, "SST-SSS-rho_gradient_magnitude.nc")
 # ds_out.to_netcdf(output_file)
 
 encoding = {
@@ -109,7 +132,7 @@ with ProgressBar():
     ds_out.to_netcdf(output_file, encoding=encoding)
 
 
-print(f"Done: daily/weekly SST/SSS gradient magnitude saved to {output_file}")
+print(f"Done: daily/weekly SST/SSS/surface density gradient magnitude saved to {output_file}")
 
 
 
@@ -127,6 +150,60 @@ cmap = WhiteBlueGreenYellowRed()
 plt.rcParams.update({'font.size': 16})
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}"
+
+
+
+
+
+
+gravity = 9.81
+rho0 = 1000
+buoy_s_grad_mag_daily = -gravity*rho_s_grad_mag_daily/rho0
+buoy_s_grad_mag_weekly = -gravity*rho_s_grad_mag_weekly/rho0
+
+buoy_s_grad_mag_AnnualMean = float(buoy_s_grad_mag_weekly.mean())
+
+vmax = buoy_s_grad_mag_AnnualMean*4
+threshold = buoy_s_grad_mag_AnnualMean*2
+
+buoy_s_grad_mag = -gravity*rho_s_grad_mag/rho0
+
+# Calculate the ratio of area with SST gradient magnitude higher than the threshold
+above_threshold_ratio = (buoy_s_grad_mag > threshold).mean(dim=["i", "j"])
+
+fig, axs = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+
+buoy_s_grad_mag_daily.plot(ax=axs[0], label='Daily Mean')
+buoy_s_grad_mag_weekly.plot(ax=axs[0], label='Weekly Rolling Mean', linewidth=2)
+axs[0].set_title("Surface Buoyancy Gradient Magnitude")
+axs[0].set_ylabel("|∇b| (1/s^2)")
+axs[0].legend()
+axs[0].grid(True)
+
+above_threshold_ratio.plot(ax=axs[1], color='tab:green', linewidth=2)
+axs[1].set_title("Fraction of Area with High surface |∇b|")
+axs[1].set_ylabel("Fraction")
+axs[1].set_xlabel("Time")
+axs[1].grid(True)
+
+### Add labels and minor grid lines
+axs[0].text(0.01, 0.95, "(a)", transform=axs[0].transAxes, fontsize=13,
+            verticalalignment='top', fontweight='bold')
+axs[1].text(0.01, 0.95, "(b)", transform=axs[1].transAxes, fontsize=13,
+            verticalalignment='top', fontweight='bold')
+
+axs[1].xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+fig.autofmt_xdate()
+
+plt.tight_layout()
+plt.savefig(f"{figdir}/surface_buoyancy_gradient_timeseries.png", dpi=200)
+plt.close()
+
+
+
+
+
 
 tt_s_grad_mag_AnnualMean = float(tt_s_grad_mag_weekly.mean())
 

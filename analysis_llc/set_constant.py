@@ -1,13 +1,13 @@
 ###### Set constants for all python scripts
 
 
-# ========== Domain ==========
-domain_name = "Station_Papa"
-face = 7
-i = slice(1873-82,2189+82,1)  # Ocean Weather Station Papa  147W-143W  
-j = slice(3408-144,3599+1+145,1) # Ocean Weather Station Papa  48N-52N
-# i = slice(1873,2189+1,1)  # Ocean Weather Station Papa  147W-143W  
-# j = slice(3408,3599+1,1) # Ocean Weather Station Papa  48N-52N
+# # ========== Domain ==========
+# domain_name = "Station_Papa"
+# face = 7
+# i = slice(1873-82,2189+82,1)  # Ocean Weather Station Papa  147W-143W  
+# j = slice(3408-144,3599+1+145,1) # Ocean Weather Station Papa  48N-52N
+# # i = slice(1873,2189+1,1)  # Ocean Weather Station Papa  147W-143W  
+# # j = slice(3408,3599+1,1) # Ocean Weather Station Papa  48N-52N
 
 
 # # ========== Domain ==========
@@ -28,13 +28,13 @@ j = slice(3408-144,3599+1+145,1) # Ocean Weather Station Papa  48N-52N
 
 
 
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
-# # i=slice(671,864,1)   # icelandic_basin -- small domain, same as Johnson et al. (2016)
-# # j=slice(2982,3419,1) # icelandic_basin -- small domain, same as Johnson et al. (2016)
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# i=slice(671,864,1)   # icelandic_basin -- small domain, same as Johnson et al. (2016)
+# j=slice(2982,3419,1) # icelandic_basin -- small domain, same as Johnson et al. (2016)
 
 # # ========== Domain ==========
 # domain_name = "Southern_Ocean"
