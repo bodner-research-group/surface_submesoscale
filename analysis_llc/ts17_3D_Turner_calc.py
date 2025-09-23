@@ -94,184 +94,182 @@ def process_tile(j0, j1, i0, i1, tt_np, ss_np, eta_np, dxF_np, dyF_np):
 # ============================
 # Loop through weekly data files
 # ============================
-# rho_files = sorted(glob(os.path.join(rho_input_dir, "rho_Hml_TS_7d_*.nc")))
+rho_files = sorted(glob(os.path.join(rho_input_dir, "rho_Hml_TS_7d_*.nc")))
+for rho_file in rho_files:
+# #### test one week
+# rho_file = os.path.join(rho_input_dir, "rho_Hml_TS_7d_2011-11-01.nc")
+# ####
+    date_tag = os.path.basename(rho_file).split("_")[-1].replace(".nc", "")
+    print(f"\nProcessing Turner angle for week: {date_tag}")
 
-# for rho_file in rho_files:
+    eta_file = os.path.join(eta_input_dir, f"eta_weekly_{date_tag}.nc")
 
-#### test one week
-rho_file = os.path.join(rho_input_dir, "rho_Hml_TS_7d_2011-11-01.nc")
-eta_file = os.path.join(eta_input_dir, "eta_weekly_2011-11-01.nc")
-####
+    # ---------------------------
+    # Load weekly dataset with Dask chunks
+    # ---------------------------
+    ds_rho = xr.open_dataset(rho_file, chunks={"k": 10, "j": 100, "i": 100})
+    ds_eta = xr.open_dataset(eta_file, chunks={"j": 100, "i": 100})
+    eta = ds_eta["eta_7d"]
+    rho = ds_rho["rho_7d"]
+    alpha = ds_rho["alpha_7d"]
+    beta = ds_rho["beta_7d"]
+    Hml = ds_rho["Hml_7d"]
+    T_7d = ds_rho["T_7d"]
+    S_7d = ds_rho["S_7d"]
 
-date_tag = os.path.basename(rho_file).split("_")[-1].replace(".nc", "")
-print(f"\nProcessing Turner angle for week: {date_tag}")
+    # =============
+    # Vertical Turner angle computation (TuV)
+    # =============
+    rho_10m = rho.isel(k=6)
+    drho = rho - rho_10m.expand_dims(k=rho.k)
+    drho = drho.assign_coords(k=depth)
 
-# ---------------------------
-# Load weekly dataset with Dask chunks
-# ---------------------------
-ds_rho = xr.open_dataset(rho_file, chunks={"k": 10, "j": 100, "i": 100})
-ds_eta = xr.open_dataset(eta_file, chunks={"j": 100, "i": 100})
-eta = ds_eta["eta_7d"]
-rho = ds_rho["rho_7d"]
-alpha = ds_rho["alpha_7d"]
-beta = ds_rho["beta_7d"]
-Hml = ds_rho["Hml_7d"]
-T_7d = ds_rho["T_7d"]
-S_7d = ds_rho["S_7d"]
+    Hml_50 = Hml * 0.5
+    Hml_90 = Hml * 0.9
+    depth_vals = depth.values
+    depth_3d = depth_vals[:, None, None]
 
-# =============
-# Vertical Turner angle computation (TuV)
-# =============
-rho_10m = rho.isel(k=6)
-drho = rho - rho_10m.expand_dims(k=rho.k)
-drho = drho.assign_coords(k=depth)
+    # Interpolate depth indices
+    k_50 = np.abs(depth_3d - Hml_50.values[None, :, :]).argmin(axis=0)
+    k_90 = np.abs(depth_3d - Hml_90.values[None, :, :]).argmin(axis=0)
+    j_idx, i_idx = np.meshgrid(np.arange(k_50.shape[0]), np.arange(k_50.shape[1]), indexing='ij')
 
-Hml_50 = Hml * 0.5
-Hml_90 = Hml * 0.9
-depth_vals = depth.values
-depth_3d = depth_vals[:, None, None]
+    # Extract values at those depth indices
+    def extract_at_k(arr, k_idx):
+        return arr.values[k_idx, j_idx, i_idx]
 
-# Interpolate depth indices
-k_50 = np.abs(depth_3d - Hml_50.values[None, :, :]).argmin(axis=0)
-k_90 = np.abs(depth_3d - Hml_90.values[None, :, :]).argmin(axis=0)
-j_idx, i_idx = np.meshgrid(np.arange(k_50.shape[0]), np.arange(k_50.shape[1]), indexing='ij')
+    tt_k50 = extract_at_k(T_7d, k_50)
+    tt_k90 = extract_at_k(T_7d, k_90)
+    ss_k50 = extract_at_k(S_7d, k_50)
+    ss_k90 = extract_at_k(S_7d, k_90)
+    alpha_k50 = extract_at_k(alpha, k_50)
+    beta_k50 = extract_at_k(beta, k_50)
 
-# Extract values at those depth indices
-def extract_at_k(arr, k_idx):
-    return arr.values[k_idx, j_idx, i_idx]
+    dz = depth_vals[k_50] - depth_vals[k_90]
+    dz = np.where(dz == 0, np.nan, dz)
+    dT_dz = (tt_k50 - tt_k90) / dz
+    dS_dz = (ss_k50 - ss_k90) / dz
 
-tt_k50 = extract_at_k(T_7d, k_50)
-tt_k90 = extract_at_k(T_7d, k_90)
-ss_k50 = extract_at_k(S_7d, k_50)
-ss_k90 = extract_at_k(S_7d, k_90)
-alpha_k50 = extract_at_k(alpha, k_50)
-beta_k50 = extract_at_k(beta, k_50)
+    x_vert = beta_k50 * dS_dz
+    y_vert = alpha_k50 * dT_dz
+    TuV_rad = np.arctan2((y_vert + x_vert), (y_vert - x_vert))
+    TuV_deg = np.degrees(TuV_rad)
 
-dz = depth_vals[k_50] - depth_vals[k_90]
-dz = np.where(dz == 0, np.nan, dz)
-dT_dz = (tt_k50 - tt_k90) / dz
-dS_dz = (ss_k50 - ss_k90) / dz
+    # =============
+    # Surface values (for horizontal Turner angle)
+    # =============
+    tt_surf = T_7d.isel(k=0)
+    ss_surf = S_7d.isel(k=0)
+    alpha_surf = alpha.isel(k=0)
+    beta_surf = beta.isel(k=0)
 
-x_vert = beta_k50 * dS_dz
-y_vert = alpha_k50 * dT_dz
-TuV_rad = np.arctan2((y_vert + x_vert), (y_vert - x_vert))
-TuV_deg = np.degrees(TuV_rad)
+    tt_np = tt_surf.values
+    ss_np = ss_surf.values
+    dxF_np = dxF.values
+    dyF_np = dyF.values
+    ny, nx = tt_np.shape
 
-# =============
-# Surface values (for horizontal Turner angle)
-# =============
-tt_surf = T_7d.isel(k=0)
-ss_surf = S_7d.isel(k=0)
-alpha_surf = alpha.isel(k=0)
-beta_surf = beta.isel(k=0)
+    eta_np = eta.isel(time=0).values
 
-tt_np = tt_surf.values
-ss_np = ss_surf.values
-dxF_np = dxF.values
-dyF_np = dyF.values
-ny, nx = tt_np.shape
-
-eta_np = eta.isel(time=0).values
-
-# =============
-# Launch delayed tasks for horizontal gradient computation
-# =============
-tile_size = 100
-tasks = []
-for j0 in range(0, ny, tile_size):
-    j1 = min(j0 + tile_size, ny)
-    for i0 in range(0, nx, tile_size):
-        i1 = min(i0 + tile_size, nx)
-        task = process_tile(j0, j1, i0, i1, tt_np, ss_np, eta_np, dxF_np, dyF_np)
-        tasks.append((j0, j1, i0, i1, task))
-        
-# Compute all tiles in parallel
-results = compute(*[t[4] for t in tasks])
+    # =============
+    # Launch delayed tasks for horizontal gradient computation
+    # =============
+    tile_size = 100
+    tasks = []
+    for j0 in range(0, ny, tile_size):
+        j1 = min(j0 + tile_size, ny)
+        for i0 in range(0, nx, tile_size):
+            i1 = min(i0 + tile_size, nx)
+            task = process_tile(j0, j1, i0, i1, tt_np, ss_np, eta_np, dxF_np, dyF_np)
+            tasks.append((j0, j1, i0, i1, task))
+            
+    # Compute all tiles in parallel
+    results = compute(*[t[4] for t in tasks])
 
 
-# Merge tile results into full fields
-dt_dx = np.full_like(tt_np, np.nan)
-dt_dy = np.full_like(tt_np, np.nan)
-ds_dx = np.full_like(ss_np, np.nan)
-ds_dy = np.full_like(ss_np, np.nan)
+    # Merge tile results into full fields
+    dt_dx = np.full_like(tt_np, np.nan)
+    dt_dy = np.full_like(tt_np, np.nan)
+    ds_dx = np.full_like(ss_np, np.nan)
+    ds_dy = np.full_like(ss_np, np.nan)
 
-deta_dx = np.full_like(eta_np, np.nan)
-deta_dy = np.full_like(eta_np, np.nan)
+    deta_dx = np.full_like(eta_np, np.nan)
+    deta_dy = np.full_like(eta_np, np.nan)
 
-for (j0, j1, i0, i1, _), (tile_dt_dx, tile_dt_dy, tile_ds_dx, tile_ds_dy, tile_deta_dx, tile_deta_dy) in zip(tasks, results):
-    dt_dx[j0:j1, i0:i1] = tile_dt_dx
-    dt_dy[j0:j1, i0:i1] = tile_dt_dy
-    ds_dx[j0:j1, i0:i1] = tile_ds_dx
-    ds_dy[j0:j1, i0:i1] = tile_ds_dy
-    deta_dx[j0:j1, i0:i1] = tile_deta_dx
-    deta_dy[j0:j1, i0:i1] = tile_deta_dy
+    for (j0, j1, i0, i1, _), (tile_dt_dx, tile_dt_dy, tile_ds_dx, tile_ds_dy, tile_deta_dx, tile_deta_dy) in zip(tasks, results):
+        dt_dx[j0:j1, i0:i1] = tile_dt_dx
+        dt_dy[j0:j1, i0:i1] = tile_dt_dy
+        ds_dx[j0:j1, i0:i1] = tile_ds_dx
+        ds_dy[j0:j1, i0:i1] = tile_ds_dy
+        deta_dx[j0:j1, i0:i1] = tile_deta_dx
+        deta_dy[j0:j1, i0:i1] = tile_deta_dy
 
-# =============
-# Horizontal Turner angle (TuH)
-# =============
-grad_rho_x = -alpha_surf * dt_dx + beta_surf * ds_dx
-grad_rho_y = -alpha_surf * dt_dy + beta_surf * ds_dy
-mag_linear = np.hypot(grad_rho_x, grad_rho_y)
+    # =============
+    # Horizontal Turner angle (TuH)
+    # =============
+    grad_rho_x = -alpha_surf * dt_dx + beta_surf * ds_dx
+    grad_rho_y = -alpha_surf * dt_dy + beta_surf * ds_dy
+    mag_linear = np.hypot(grad_rho_x, grad_rho_y)
 
-norm_x = grad_rho_x / mag_linear
-norm_y = grad_rho_y / mag_linear
-dt_cross = dt_dx * norm_x + dt_dy * norm_y
-ds_cross = ds_dx * norm_x + ds_dy * norm_y
+    norm_x = grad_rho_x / mag_linear
+    norm_y = grad_rho_y / mag_linear
+    dt_cross = dt_dx * norm_x + dt_dy * norm_y
+    ds_cross = ds_dx * norm_x + ds_dy * norm_y
 
-deta_cross = deta_dx * norm_x + deta_dy * norm_y
+    deta_cross = deta_dx * norm_x + deta_dy * norm_y
 
-numerator = alpha_surf * dt_cross + beta_surf * ds_cross
-denominator = alpha_surf * dt_cross - beta_surf * ds_cross
-TuH_rad = np.arctan(numerator / denominator)
-TuH_deg = np.degrees(TuH_rad)
+    numerator = alpha_surf * dt_cross + beta_surf * ds_cross
+    denominator = alpha_surf * dt_cross - beta_surf * ds_cross
+    TuH_rad = np.arctan(numerator / denominator)
+    TuH_deg = np.degrees(TuH_rad)
 
-# =============
-# Differences and KDE PDFs
-# =============
-Tu_diff = np.abs(TuV_deg - TuH_deg)
+    # =============
+    # Differences and KDE PDFs
+    # =============
+    Tu_diff = np.abs(TuV_deg - TuH_deg)
 
-TuV_clean = TuV_deg.ravel()[~np.isnan(TuV_deg.ravel())]
-TuH_clean = TuH_deg.data.ravel()[~np.isnan(TuH_deg.data.ravel())]
+    TuV_clean = TuV_deg.ravel()[~np.isnan(TuV_deg.ravel())]
+    TuH_clean = TuH_deg.data.ravel()[~np.isnan(TuH_deg.data.ravel())]
 
-# if TuV_clean.size < 100 or TuH_clean.size < 100:
-#     print(f"Insufficient data for KDE, skipping week: {date_tag}")
-#     ds_rho.close()
-#     continue
+    # if TuV_clean.size < 100 or TuH_clean.size < 100:
+    #     print(f"Insufficient data for KDE, skipping week: {date_tag}")
+    #     ds_rho.close()
+    #     continue
 
-x_grid = np.linspace(-180, 180, 73)  # 5-degree bins
-pdf_v = gaussian_kde(TuV_clean, bw_method=0.05)(x_grid)
-pdf_h = gaussian_kde(TuH_clean, bw_method=0.05)(x_grid)
+    x_grid = np.linspace(-180, 180, 73)  # 5-degree bins
+    pdf_v = gaussian_kde(TuV_clean, bw_method=0.05)(x_grid)
+    pdf_h = gaussian_kde(TuH_clean, bw_method=0.05)(x_grid)
 
-# =============
-# Save to NetCDF
-# =============
-ds_out = xr.Dataset(
-    {
-        "norm_x": (["j", "i"], norm_x.data),
-        "norm_y": (["j", "i"], norm_y.data),
-        "deta_cross": (["j", "i"], deta_cross.data),
-        "dt_cross": (["j", "i"], dt_cross.data),
-        "ds_cross": (["j", "i"], ds_cross.data),
-        "TuV_deg": (["j", "i"], TuV_deg),
-        "TuH_deg": (["j", "i"], TuH_deg.data),
-        "Tu_diff": (["j", "i"], Tu_diff.data),
-        "alpha_surf": (["j", "i"], alpha_surf.data),
-        "beta_surf": (["j", "i"], beta_surf.data),
-        "lon2d": (["i", "j"], lon2d.data),
-        "lat2d": (["i", "j"], lat2d.data),
-        "pdf_values_v": (["x_grid"], pdf_v),
-        "pdf_values_h": (["x_grid"], pdf_h),
-    },
-    coords={
-        "j": TuH_deg.coords["j"],
-        "i": TuH_deg.coords["i"],
-        "x_grid": x_grid,
-        "face": TuH_deg.coords["face"],
-        "k": TuH_deg.coords["k"],
-    },
-)
+    # =============
+    # Save to NetCDF
+    # =============
+    ds_out = xr.Dataset(
+        {
+            "norm_x": (["j", "i"], norm_x.data),
+            "norm_y": (["j", "i"], norm_y.data),
+            "deta_cross": (["j", "i"], deta_cross.data),
+            "dt_cross": (["j", "i"], dt_cross.data),
+            "ds_cross": (["j", "i"], ds_cross.data),
+            "TuV_deg": (["j", "i"], TuV_deg),
+            "TuH_deg": (["j", "i"], TuH_deg.data),
+            "Tu_diff": (["j", "i"], Tu_diff.data),
+            "alpha_surf": (["j", "i"], alpha_surf.data),
+            "beta_surf": (["j", "i"], beta_surf.data),
+            "lon2d": (["i", "j"], lon2d.data),
+            "lat2d": (["i", "j"], lat2d.data),
+            "pdf_values_v": (["x_grid"], pdf_v),
+            "pdf_values_h": (["x_grid"], pdf_h),
+        },
+        coords={
+            "j": TuH_deg.coords["j"],
+            "i": TuH_deg.coords["i"],
+            "x_grid": x_grid,
+            "face": TuH_deg.coords["face"],
+            "k": TuH_deg.coords["k"],
+        },
+    )
 
-out_path = os.path.join(out_dir, f"Turner_3D_7d_{date_tag}.nc")
-ds_out.to_netcdf(out_path)
-print(f"Saved: {out_path}")
-ds_rho.close()
+    out_path = os.path.join(out_dir, f"Turner_3D_7d_{date_tag}.nc")
+    ds_out.to_netcdf(out_path)
+    print(f"Saved: {out_path}")
+    ds_rho.close()
