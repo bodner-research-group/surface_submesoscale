@@ -238,7 +238,7 @@ TuH_clean = TuH_deg.data.ravel()[~np.isnan(TuH_deg.data.ravel())]
 #     ds_rho.close()
 #     continue
 
-x_grid = np.linspace(-180, 180, 1000)
+x_grid = np.linspace(-180, 180, 73)  # 5-degree bins
 pdf_v = gaussian_kde(TuV_clean, bw_method=0.05)(x_grid)
 pdf_h = gaussian_kde(TuH_clean, bw_method=0.05)(x_grid)
 
