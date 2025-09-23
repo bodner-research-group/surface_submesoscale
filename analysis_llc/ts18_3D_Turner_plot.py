@@ -6,6 +6,8 @@ import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D
 
 from set_constant import domain_name, face, i, j  
+from set_colormaps import WhiteBlueGreenYellowRed
+cmap = WhiteBlueGreenYellowRed()
 
 # Path to saved output file from previous script
 nc_file = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_3D/Turner_3D_7d_2011-11-01.nc"
@@ -256,9 +258,22 @@ plt.close()
 # - mean_deta_per_bin (computed from TuH_vals vs. |deta_cross|)
 # - x_grid, pdf_values_h, pdf_values_v, beta, alpha (from original dataset)
 
-scale = 1
+import numpy as np
+import xarray as xr
+import matplotlib.pyplot as plt
+import os
+from scipy.interpolate import interp1d
+from mpl_toolkits.mplot3d import Axes3D  # required for 3D plotting
 
-# Re-open dataset if needed
+# Required inputs:
+# - bin_centers: angle bin centers (e.g., np.linspace(-180, 180, 37))
+# - mean_deta_per_bin: mean |∂η| per bin (same length as bin_centers)
+# - nc_file: path to NetCDF dataset
+# - figdir: directory to save figures
+
+scale = 10000  # scaling factor for vector lengths
+
+# Open dataset
 ds_pdf = xr.open_dataset(nc_file)
 
 x_grid = ds_pdf["x_grid"].data  # angle bins in degrees
@@ -267,73 +282,97 @@ pdf_values_v = ds_pdf["pdf_values_v"].data
 alpha = np.nanmean(ds_pdf["alpha_surf"].data)
 beta = np.nanmean(ds_pdf["beta_surf"].data)
 
-# Unit vectors
+# Define unit vectors for projection space
 slope_rho = 1
 v_cross = np.array([-slope_rho, 1.0])
 v_iso = np.array([1.0, slope_rho])
 v_cross /= np.linalg.norm(v_cross)
 v_iso /= np.linalg.norm(v_iso)
 
-# Project each angle bin into (β ∂S, α ∂θ) space
-x_proj = []
-y_proj = []
-z_vals = []
-
-for angle_deg, mag_h, mag_v in zip(x_grid, pdf_values_h, pdf_values_v):
-    dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
-    x_h = mag_h * dir_vec[0] * beta
-    y_h = mag_h * dir_vec[1] * alpha
-    x_proj.append(x_h)
-    y_proj.append(y_h)
-
 # Interpolate mean |∂η| onto x_grid (PDF bins)
-from scipy.interpolate import interp1d
-
 valid = ~np.isnan(mean_deta_per_bin)
 interp_func = interp1d(bin_centers[valid], mean_deta_per_bin[valid],
                        kind='linear', bounds_error=False, fill_value=np.nan)
 z_vals = interp_func(x_grid)
 
+# Compute x_proj, y_proj using the same formula/scaling as horizontal PDF vectors plot
+x_proj = []
+y_proj = []
 
+for angle_deg, mag_h in zip(x_grid, pdf_values_h):
+    dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
+    dx = mag_h * dir_vec[0] * beta * scale * 20  # same scaling as horizontal vectors
+    dy = mag_h * dir_vec[1] * alpha * scale * 20
+    x_proj.append(dx)
+    y_proj.append(dy)
 
-# Plot 3D figure
+# Prepare plot
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
 
-# Plot 3D scatter
-sc = ax.scatter(x_proj, y_proj, z_vals, c=z_vals, cmap='plasma', s=30, edgecolor='k', alpha=0.8)
+# # Normalize z_vals for colormap (handle NaNs carefully)
+# z_min = np.nanmin(z_vals)
+# z_max = np.nanmax(z_vals)
+# normed_vals = (z_vals - z_min) / (z_max - z_min)
+
+# # Plot 3D lines from origin to (x_proj, y_proj, z_vals)
+# for x, y, z, cval in zip(x_proj, y_proj, z_vals, normed_vals):
+#     if not np.isnan(z):
+#         ax.plot([0, x], [0, y], [0, z], color=plt.cm.plasma(cval), alpha=0.8, linewidth=1.0)
+
+# # Dummy scatter to enable colorbar
+# sc = ax.scatter([0], [0], [0], c=[z_min], cmap=cmap, vmin=0, vmax=6e-6)
+
+# Normalization limits
+z_min_plot = 0
+z_max_plot = 6e-6
+
+# Clip and normalize z_vals to [0,6e-6] for coloring
+normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
+normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
+
+# Plot 3D lines from origin to (x_proj, y_proj, z_vals) with custom cmap
+for x, y, z, cval in zip(x_proj, y_proj, z_vals, normed_vals):
+    if not np.isnan(z):
+        ax.plot([0, x], [0, y], [0, z], color=cmap(cval), alpha=0.8, linewidth=1.0)
+
+# Dummy scatter to enable colorbar using same cmap
+sc = ax.scatter([0], [0], [0], c=[0], cmap=cmap, vmin=z_min_plot, vmax=z_max_plot)
 
 # Plot TuH (horizontal PDF vectors) at z=0 plane
 for angle_deg, mag_h in zip(x_grid, pdf_values_h):
     dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
     x0, y0, z0 = 0, 0, 0
-    dx = mag_h * dir_vec[0] * beta * scale * 20  # scaled for display
+    dx = mag_h * dir_vec[0] * beta * scale * 20
     dy = mag_h * dir_vec[1] * alpha * scale * 20
-    ax.plot([x0, x0 + dx], [y0, y0 + dy], [z0, z0], color='orange', alpha=0.7, linewidth=0.7)
+    ax.plot([x0, x0 + dx], [y0, y0 + dy], [z0, z0], color='darkgray', linestyle='--', alpha=0.7, linewidth=0.7)
 
 # Plot TuV (vertical PDF vectors) at z=0 plane
 for angle_deg, mag_v in zip(x_grid, pdf_values_v):
     dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
     x0, y0, z0 = 0, 0, 0
-    dx = mag_v * dir_vec[0] * beta * scale * 10  # different scaling
+    dx = mag_v * dir_vec[0] * beta * scale * 10
     dy = mag_v * dir_vec[1] * alpha * scale * 10
     ax.plot([x0, x0 + dx], [y0, y0 + dy], [z0, z0], color='green', alpha=0.7, linewidth=0.7)
 
-# Axis labels
+# Set axis labels and title
 ax.set_xlabel(r"$\beta \, \partial S$ (PDF projection)")
 ax.set_ylabel(r"$\alpha \, \partial \theta$ (PDF projection)")
 ax.set_zlabel(r"Mean $|\partial \eta|$")
-ax.set_title("3D Turner PDF Vectors (z=0) vs. SSH Gradient")
+ax.set_title("3D Turner PDF Vectors vs. SSH Gradient")
 
-# Colorbar
-fig.colorbar(sc, ax=ax, label=r"Mean $|\partial \eta|$")
+# Apply axis limits
+ax.set_xlim([-1, 4])
+ax.set_ylim([-1, 6])
+ax.set_zlim([0, 6e-6])
+
+# Add colorbar
+cbar = fig.colorbar(sc, ax=ax, label=r"Mean $|\partial \eta|$", shrink=0.5, fraction=0.02, pad=0.05)
 
 # Save figure
-fig_path = os.path.join(figdir, "3d_turner_pdf_with_vectors.png")
+fig_path = os.path.join(figdir, "3d_turner_pdf_with_lines.png")
 plt.savefig(fig_path, dpi=300)
 plt.close()
 ds_pdf.close()
 
-print("✅ 3D Turner PDF with horizontal/vertical vectors added on z=0 plane.")
-
-print("✅ All plots saved.")
+print("✅ 3D Turner PDF with lines from origin to horizontal PDF vectors added.")
