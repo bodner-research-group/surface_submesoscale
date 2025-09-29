@@ -20,14 +20,15 @@ import pandas as pd
 def main():
     # === Shared Inputs ===
     model_file = "/orcd/data/abodner/003/LLC4320/LLC4320"
-    output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/llc4320_to_swot/"
+    output_all = "/orcd/data/abodner/002/ysi/surface_submesoscale/data_swot/LLC4320/"
     interpolator = "pyinterp_interpolator"  # or "scipy_interpolator"
     model_lat_var = "YC"
     model_lon_var = "XC"
     model_time_var = "time"
     model_ssh_var = "Eta"
 
-    model_cache_dir = os.path.join(output_all, "model_cache")
+    # model_cache_dir = os.path.join(output_all, "../model_cache")
+    model_cache_dir = os.path.abspath(os.path.join(output_all, "../model_cache"))
     os.makedirs(model_cache_dir, exist_ok=True)
 
     # Start Dask cluster
@@ -106,7 +107,7 @@ def main():
             print(f"No matching model time found for {fname}")
             return
         
-        out_fname = "LLC4320_on_" + fname
+        out_fname = "LLC4320_" + fname[len("SWOT_"):]
         # out_fname = "llc2swot_SSH_" + model_times[model_timestep_index].strftime("%Y%m%dT%H") + ".nc"
         out_path = os.path.join(output_dir, out_fname)
 
