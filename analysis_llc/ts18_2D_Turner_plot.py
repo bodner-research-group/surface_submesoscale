@@ -13,8 +13,6 @@ from dask.distributed import Client, LocalCluster
 from set_constant import domain_name, face, i, j
 from set_colormaps import WhiteBlueGreenYellowRed
 
-# Global font size setting for figures
-plt.rcParams.update({'font.size': 16})
 
 # =====================
 # Setup Dask cluster
@@ -28,7 +26,9 @@ print("Dask dashboard:", client.dashboard_link)
 # Define constants and directories
 # =====================
 cmap = WhiteBlueGreenYellowRed()
-plt.rcParams.update({'font.size': 14})
+# Global font size setting for figures
+plt.rcParams.update({'font.size': 16})
+
 
 nc_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_3D"
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
@@ -115,7 +115,7 @@ def process_week(nc_file, vlims):
     # Define color limits
     zmin, zmax = 0, 1e-5
 
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(6, 5))
     ax.set_aspect('equal', adjustable='box')  # Make x and y axis scale equal
     # sc = ax.scatter(x, y, c=z, cmap=cmocean.cm.balance, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
     sc = ax.scatter(x_sorted, y_sorted, c=z_sorted, cmap=cmap, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
@@ -126,7 +126,16 @@ def process_week(nc_file, vlims):
     ax.set_ylim(-3.5e-8, 1.5e-8)
     ax.set_title(f"Color: Cross-isopycnal SSH Gradient magnitude - {date_tag}")
 
-    cbar = fig.colorbar(sc, ax=ax, label=r"$\partial \eta_{cross}$", shrink=0.8)
+    cbar = fig.colorbar(sc, ax=ax, label=r"$\vert\partial \eta_{cross}\vert$", shrink=0.8)
+
+    scale = 3e-7
+
+    slope_rho = 1  # Or slope_rho = beta / alpha if dynamic
+    # Unit vectors
+    v_cross = np.array([-slope_rho, 1.0])
+    v_iso = np.array([1.0, slope_rho])
+    v_cross /= np.linalg.norm(v_cross)
+    v_iso /= np.linalg.norm(v_iso)
 
     # --- Add isopycnal lines ---
     min_ds = -1e-08
@@ -156,15 +165,6 @@ def process_week(nc_file, vlims):
     pdf_values_v = ds_pdf["pdf_values_v"].data
     alpha_val = np.nanmean(ds_pdf["alpha_surf"].data)
     beta_val = np.nanmean(ds_pdf["beta_surf"].data)
-
-    scale = 3e-7
-
-    slope_rho = 1  # Or slope_rho = beta / alpha if dynamic
-    # Unit vectors
-    v_cross = np.array([-slope_rho, 1.0])
-    v_iso = np.array([1.0, slope_rho])
-    v_cross /= np.linalg.norm(v_cross)
-    v_iso /= np.linalg.norm(v_iso)
 
     # Compute mean |deta| in Turner angle bins
     TuH_vals = TuH_deg.values[mask]
@@ -198,14 +198,6 @@ def process_week(nc_file, vlims):
     ax.set_facecolor("white")
 
     # --- Add isopycnal lines ---
-    min_ds = -1e-08
-    max_ds = 1e-08
-    min_dt = -1e-08
-    max_dt = 1e-08
-
-    S_line = np.linspace(min_ds * 7, max_ds * 7, 400)
-    c_values = np.linspace(min_dt * 10, max_dt * 10, 100)
-
     for c in c_values:
         T_line = slope_rho * S_line + c
         ax.plot(S_line, T_line, '-', color='gray', linewidth=0.5, alpha=0.3)
@@ -269,10 +261,10 @@ for r in results:
 
 
 
-# import os
-# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
-# output_movie = f"{figdir}/movie-2d_scatter_deta_cross.mp4"
-# os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/2d_scatter_deta_cross_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
+output_movie = f"{figdir}/movie-2d_scatter_deta_cross.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/2d_scatter_deta_cross_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 
 
 import os

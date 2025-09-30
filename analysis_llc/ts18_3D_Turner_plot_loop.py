@@ -195,14 +195,14 @@ def process_week(nc_file, vlims):
 
     ax.set_xlabel('β·dS_cross')
     ax.set_ylabel('α·dT_cross')
-    ax.set_zlabel('|dη_cross|')
+    ax.set_zlabel(r"$\vert\partial \eta_{cross}\vert$")
     ax.set_zlim(zmin, zmax)
     ax.set_xlim(-2e-8, 4e-8)
     ax.set_ylim(-3.5e-8, 1.5e-8)
 
-    # fig.colorbar(sc, label='|dη_cross|')
+    fig.colorbar(sc, label=r"$\vert\partial \eta_{cross}\vert$")
 
-    ax.set_title(f"3D Scatter: SSH Gradient ({date_tag})")
+    ax.set_title(f"3D Scatter: Cross-Isopycnal SSH Gradient ({date_tag})")
     plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
     plt.close()
 
@@ -285,12 +285,6 @@ def process_week(nc_file, vlims):
     normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
     normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
 
-    for x, y, z, cval in zip(x_proj, y_proj, z_vals, normed_vals):
-        if not np.isnan(z):
-            ax.plot([0, x], [0, y], [0, z], color=cmap(cval), alpha=0.8, linewidth=1.0)
-
-    sc = ax.scatter([0], [0], [0], c=[0], cmap=cmap, vmin=z_min_plot, vmax=z_max_plot)
-
     for angle_deg, mag_h in zip(x_grid, pdf_values_h):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
         dx = mag_h * dir_vec[0] * beta_val * scale * 20
@@ -302,6 +296,12 @@ def process_week(nc_file, vlims):
         dx = mag_v * dir_vec[0] * beta_val * scale * 10
         dy = mag_v * dir_vec[1] * alpha_val * scale * 10
         ax.plot([0, dx], [0, dy], [0, 0], color='magenta', alpha=0.7, linewidth=0.7)
+
+    for x, y, z, cval in zip(x_proj, y_proj, z_vals, normed_vals):
+        if not np.isnan(z):
+            ax.plot([0, x], [0, y], [0, z], color=cmap(cval), alpha=0.8, linewidth=1.0)
+
+    sc = ax.scatter([0], [0], [0], c=[0], cmap=cmap, vmin=z_min_plot, vmax=z_max_plot)
 
     ax.set_xlabel(r"$\beta \, \partial S$")
     ax.set_ylabel(r"$\alpha \, \partial \theta$")
