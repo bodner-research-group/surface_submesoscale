@@ -42,7 +42,7 @@ def compute_global_limits(nc_files):
         "ds": [np.inf, -np.inf],
         "TuV": [180, -180],
         "TuH": [180, -180],
-        "Tu_diff": [np.inf, -np.inf],
+        "Tu_diff_abs": [0, 180],
     }
 
     for nc_file in nc_files:
@@ -52,10 +52,11 @@ def compute_global_limits(nc_files):
         ds_ = ds['ds_cross'][:-1, :-1]
         TuV = ds['TuV_deg'][:-1, :-1]
         TuH = ds['TuH_deg'][:-1, :-1]
-        Tu_diff = TuV - TuH
+        # Tu_diff = TuV - TuH
+        Tu_diff_abs = np.abs(TuV - TuH)
 
-        for key, data in zip(['deta', 'dt', 'ds', 'TuV', 'TuH', 'Tu_diff'], 
-                             [deta, dt, ds_, TuV, TuH, Tu_diff]):
+        for key, data in zip(['deta', 'dt', 'ds', 'TuV', 'TuH', 'Tu_diff_abs'], 
+                             [deta, dt, ds_, TuV, TuH, Tu_diff_abs]):
             data_vals = data.values
             finite_vals = data_vals[np.isfinite(data_vals)]
             if finite_vals.size == 0:
@@ -127,17 +128,19 @@ def process_week(nc_file, vlims):
     # --------------------------------
     TuV_plot = TuV_deg[:-1, :-1]
     TuH_plot = TuH_deg[:-1, :-1]
-    Tu_diff_plot = TuV_plot - TuH_plot
+    # Tu_diff_plot = TuV_plot - TuH_plot
+    Tu_diff_abs_plot = np.abs(TuV_plot - TuH_plot)
+    
 
     fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
-    angles = [TuV_plot, TuH_plot, Tu_diff_plot]
-    cmaps = ['twilight', 'twilight', 'coolwarm']
-    titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"TuV - TuH ({date_tag})"]
+    angles = [TuV_plot, TuH_plot, Tu_diff_abs_plot]
+    cmaps = ['twilight', 'twilight', cmap]
+    titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"|TuV - TuH| ({date_tag})"]
 
-    vlims_diff = vlims["Tu_diff"]
+    vlims_diff = vlims["Tu_diff_abs"]
     diff_vmax = max(abs(vlims_diff[0]), abs(vlims_diff[1]))
 
-    vmins = [vlims["TuV"][0], vlims["TuH"][0], -diff_vmax]
+    vmins = [vlims["TuV"][0], vlims["TuH"][0], 0]
     vmaxs = [vlims["TuV"][1], vlims["TuH"][1], diff_vmax]
 
     for i, ax in enumerate(axs):
@@ -181,21 +184,23 @@ def process_week(nc_file, vlims):
 
     x = (beta * ds_cross).values[mask]
     y = (alpha * dt_cross).values[mask]
-    z = deta_cross.values[mask]
+    # z = deta_cross.values[mask]
+    z = np.abs(deta_cross.values[mask])
 
     # Define z (and color) limits
-    zmin, zmax = -7e-6, 7e-6
+    zmin, zmax = 0, 8e-6
 
-    sc = ax.scatter(x, y, z, c=z, cmap=cmocean.cm.balance, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
+    # sc = ax.scatter(x, y, z, c=z, cmap=cmocean.cm.balance, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
+    sc = ax.scatter(x, y, z, c=z, cmap=cmap, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
 
     ax.set_xlabel('β·dS_cross')
     ax.set_ylabel('α·dT_cross')
-    ax.set_zlabel('deta_cross')
+    ax.set_zlabel('|dη_cross|')
     ax.set_zlim(zmin, zmax)
     ax.set_xlim(-2e-8, 4e-8)
     ax.set_ylim(-3.5e-8, 1.5e-8)
 
-    fig.colorbar(sc, label='deta_cross')
+    # fig.colorbar(sc, label='|dη_cross|')
 
     ax.set_title(f"3D Scatter: SSH Gradient ({date_tag})")
     plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
@@ -207,7 +212,7 @@ def process_week(nc_file, vlims):
     # (4) Histogram and KDE
     # --------------------------------
     fig, ax = plt.subplots(figsize=(8.5, 5))
-    sns.histplot(z, kde=True, bins=73, color='skyblue', stat='density', edgecolor='none')
+    sns.histplot(z, kde=True, bins=361, color='skyblue', stat='density', edgecolor='none')
     ax.set_title(f"Histogram and KDE of SSH Gradient ({date_tag})")
     ax.set_xlabel(r'$\partial \eta$')
     ax.set_ylabel("Density")
@@ -224,7 +229,7 @@ def process_week(nc_file, vlims):
     # -----------------------------
     TuH_vals = TuH_deg.values[mask]
     deta_vals = np.abs(z)
-    bins = np.linspace(-180, 180, 73)
+    bins = np.linspace(-180, 180, 361)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
     digitized = np.digitize(TuH_vals, bins) - 1
     mean_deta_per_bin = np.array([
@@ -296,7 +301,7 @@ def process_week(nc_file, vlims):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
         dx = mag_v * dir_vec[0] * beta_val * scale * 10
         dy = mag_v * dir_vec[1] * alpha_val * scale * 10
-        ax.plot([0, dx], [0, dy], [0, 0], color='cyan', alpha=0.7, linewidth=0.7)
+        ax.plot([0, dx], [0, dy], [0, 0], color='magenta', alpha=0.7, linewidth=0.7)
 
     ax.set_xlabel(r"$\beta \, \partial S$")
     ax.set_ylabel(r"$\alpha \, \partial \theta$")

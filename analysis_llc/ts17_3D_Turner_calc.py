@@ -236,7 +236,7 @@ for rho_file in rho_files:
     #     ds_rho.close()
     #     continue
 
-    x_grid = np.linspace(-180, 180, 73)  # 5-degree bins
+    x_grid = np.linspace(-180, 180, 361)  # 1-degree bins
     pdf_v = gaussian_kde(TuV_clean, bw_method=0.05)(x_grid)
     pdf_h = gaussian_kde(TuH_clean, bw_method=0.05)(x_grid)
 
