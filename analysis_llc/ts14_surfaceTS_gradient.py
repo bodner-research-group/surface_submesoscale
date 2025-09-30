@@ -11,8 +11,7 @@ from set_constant import domain_name, face, i, j
 
 from dask.distributed import Client, LocalCluster
 
-cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="18GB")
-# cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
@@ -63,16 +62,20 @@ SA_s = gsw.SA_from_SP(ss_s, 0, lon, lat)
 CT_s = gsw.CT_from_pt(SA_s, tt_s)
 rho_s = gsw.rho(SA_s, CT_s, 0)
 
-alpha_s = gsw.alpha(SA_s, CT_s, 0)
-beta_s = gsw.beta(SA_s, CT_s, 0) 
+alpha_s = gsw.alpha(SA_s, CT_s, 0) ## alpha_s.mean().values = 1.601e-4
+beta_s = gsw.beta(SA_s, CT_s, 0)   ## beta_s.mean().values = 7.552e-4
+
+tAlpha_ref = 2.0e-4
+sBeta_ref = 7.4e-4
 
 gravity = 9.81
-rho0 = 1000
-T0_const = 0
-S0_const = 0
+rho0 = 999.8
+T0_const = 20
+S0_const = 30
 
 buoy_s = -gravity*(rho_s-rho0)/rho0
-buoy_s_linear = gravity*alpha_s*(CT_s-T0_const) - gravity*beta_s*(SA_s-S0_const)
+# buoy_s_linear = gravity*alpha_s*(CT_s-T0_const) - gravity*beta_s*(SA_s-S0_const)
+buoy_s_linear = gravity*tAlpha_ref*(CT_s-T0_const) - gravity*sBeta_ref*(SA_s-S0_const)
 
 
 # ========= Compute derivatives =========
