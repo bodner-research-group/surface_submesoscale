@@ -120,6 +120,10 @@ def process_week(nc_file, vlims):
     # sc = ax.scatter(x, y, c=z, cmap=cmocean.cm.balance, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
     sc = ax.scatter(x_sorted, y_sorted, c=z_sorted, cmap=cmap, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
 
+    # Reference lines
+    ax.axhline(0, color='k', linestyle='--', linewidth=1)
+    ax.axvline(0, color='k', linestyle='--', linewidth=1)
+    
     ax.set_xlabel(r"$\beta \cdot \partial S_{cross}$")
     ax.set_ylabel(r"$\alpha \cdot \partial \theta_{cross}$")
     ax.set_xlim(-2e-8, 4e-8)

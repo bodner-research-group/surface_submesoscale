@@ -43,8 +43,13 @@ gravity = 9.81
 rho0 = 999.8
 # buoy_s_grad_mag_daily = gravity*rho_s_grad_mag_daily/rho0
 
-g_alpha_gradT = gravity*alpha_s_daily * tt_s_grad_mag_daily
-g_beta_gradS = gravity*beta_s_daily * ss_s_grad_mag_daily
+tAlpha_ref = 2.0e-4
+sBeta_ref = 7.4e-4
+
+# g_alpha_gradT = gravity*alpha_s_daily * tt_s_grad_mag_daily
+# g_beta_gradS = gravity*beta_s_daily * ss_s_grad_mag_daily
+g_alpha_gradT = gravity*tAlpha_ref * tt_s_grad_mag_daily
+g_beta_gradS = gravity*sBeta_ref * ss_s_grad_mag_daily
 
 b_linear_grad = buoy_s_linear_grad_mag_daily
 # b_linear_grad = g_alpha_gradT - g_beta_gradS
@@ -53,12 +58,12 @@ b_linear_grad = buoy_s_linear_grad_mag_daily
 time = ds.time
 
 # Create figure
-fig, ax = plt.subplots(figsize=(12, 6))
+fig, ax = plt.subplots(figsize=(12, 8))
 
 ax.plot(time, buoy_s_grad_mag_daily, label='|∇b| (nonlinear EOS)', color='black', linewidth=2)
 ax.plot(time, b_linear_grad, label='|∇b| (linear EOS)', color='red', linestyle='--')
-ax.plot(time, g_alpha_gradT, label='gα|∇T|', color='blue', linestyle=':')
-ax.plot(time, g_beta_gradS, label='gβ|∇S|', color='green', linestyle='-.')
+ax.plot(time, g_alpha_gradT, label='gα₀|∇T|', color='blue', linestyle=':')
+ax.plot(time, g_beta_gradS, label='gβ₀|∇S|', color='green', linestyle='-.')
 
 # Axis formatting
 ax.set_ylabel("Buoyancy Gradient Magnitude [s⁻²]")
@@ -69,7 +74,7 @@ ax.legend(loc='upper left')
 # Improve time axis
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 ax.xaxis.set_minor_locator(mdates.MonthLocator())  # Minor ticks every month
-fig.autofmt_xdate()
+# fig.autofmt_xdate()
 
 # Grid lines
 ax.grid(which='major', linestyle='-', linewidth=0.5, alpha=0.8)
@@ -82,3 +87,32 @@ fig.savefig(os.path.join(figdir, "surface_buoyancy_gradient_time_series.png"), d
 plt.show()
 
 
+
+# Create two vertically stacked subplots
+fig2, (ax1, ax2) = plt.subplots(nrows=2, figsize=(12, 10), sharex=True)
+
+# Plot α (thermal expansion)
+ax1.plot(time, alpha_s_daily, label=r'$\alpha$ (thermal expansion)', color='orange')
+ax1.set_ylabel(r"$\alpha$ [$^\circ$C$^{-1}$]")
+ax1.set_title("Daily Time Series of Surface α (thermal expansion)")
+ax1.grid(True)
+ax1.legend()
+ax1.set_ylim(1.4e-4, 2.1e-4)  # Example limits — adjust as needed
+
+# Plot β (haline contraction)
+ax2.plot(time, beta_s_daily, label=r'$\beta$ (haline contraction)', color='purple')
+ax2.set_ylabel(r"$\beta$ [psu$^{-1}$]")
+ax2.set_xlabel("Time")
+ax2.set_title("Daily Time Series of Surface β (haline contraction)")
+ax2.grid(True)
+ax2.legend()
+ax2.set_ylim(6.5e-4, 8.5e-4)  # Example limits — adjust as needed
+
+# Format x-axis (shared)
+ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax2.xaxis.set_minor_locator(mdates.MonthLocator())
+
+# Save figure
+fig2.tight_layout()
+fig2.savefig(os.path.join(figdir, "alpha_beta_time_series_subplots.png"), dpi=300, bbox_inches='tight')
+plt.show()
