@@ -125,12 +125,14 @@ for rho_file in rho_files:
     drho = drho.assign_coords(k=depth)
 
     Hml_50 = Hml * 0.5
+    Hml_70 = Hml * 0.7
     Hml_90 = Hml * 0.9
     depth_vals = depth.values
     depth_3d = depth_vals[:, None, None]
 
     # Interpolate depth indices
     k_50 = np.abs(depth_3d - Hml_50.values[None, :, :]).argmin(axis=0)
+    k_70 = np.abs(depth_3d - Hml_70.values[None, :, :]).argmin(axis=0)
     k_90 = np.abs(depth_3d - Hml_90.values[None, :, :]).argmin(axis=0)
     j_idx, i_idx = np.meshgrid(np.arange(k_50.shape[0]), np.arange(k_50.shape[1]), indexing='ij')
 
@@ -142,16 +144,21 @@ for rho_file in rho_files:
     tt_k90 = extract_at_k(T_7d, k_90)
     ss_k50 = extract_at_k(S_7d, k_50)
     ss_k90 = extract_at_k(S_7d, k_90)
-    alpha_k50 = extract_at_k(alpha, k_50)
-    beta_k50 = extract_at_k(beta, k_50)
 
+    alpha_k50 = extract_at_k(alpha, k_50)
+    alpha_k70 = extract_at_k(alpha, k_70)
+    alpha_k90 = extract_at_k(alpha, k_90)
+
+    beta_k70 = extract_at_k(beta, k_70)
+
+    
     dz = depth_vals[k_50] - depth_vals[k_90]
     dz = np.where(dz == 0, np.nan, dz)
     dT_dz = (tt_k50 - tt_k90) / dz
     dS_dz = (ss_k50 - ss_k90) / dz
 
-    x_vert = beta_k50 * dS_dz
-    y_vert = alpha_k50 * dT_dz
+    x_vert = beta_k70 * dS_dz
+    y_vert = alpha_k70 * dT_dz
     TuV_rad = np.arctan2((y_vert + x_vert), (y_vert - x_vert))
     TuV_deg = np.degrees(TuV_rad)
 
@@ -216,12 +223,13 @@ for rho_file in rho_files:
     dt_cross = dt_dx * norm_x + dt_dy * norm_y
     ds_cross = ds_dx * norm_x + ds_dy * norm_y
 
-    deta_cross = deta_dx * norm_x + deta_dy * norm_y
-
     numerator = alpha_surf * dt_cross + beta_surf * ds_cross
     denominator = alpha_surf * dt_cross - beta_surf * ds_cross
     TuH_rad = np.arctan(numerator / denominator)
     TuH_deg = np.degrees(TuH_rad)
+
+    deta_cross = deta_dx * norm_x + deta_dy * norm_y
+    deta_magnitude = np.sqrt(deta_dx**2 + deta_dy**2)
 
     # =============
     # Differences and KDE PDFs
@@ -247,7 +255,6 @@ for rho_file in rho_files:
         {
             "norm_x": (["j", "i"], norm_x.data),
             "norm_y": (["j", "i"], norm_y.data),
-            "deta_cross": (["j", "i"], deta_cross.data),
             "dt_cross": (["j", "i"], dt_cross.data),
             "ds_cross": (["j", "i"], ds_cross.data),
             "TuV_deg": (["j", "i"], TuV_deg),
@@ -259,6 +266,12 @@ for rho_file in rho_files:
             "lat2d": (["i", "j"], lat2d.data),
             "pdf_values_v": (["x_grid"], pdf_v),
             "pdf_values_h": (["x_grid"], pdf_h),
+            "deta_cross": (["j", "i"], deta_cross.data),
+            "deta_magnitude": (["j", "i"], deta_magnitude),
+            "alpha_k50": (["j", "i"], alpha_k50),
+            "alpha_k70": (["j", "i"], alpha_k70),
+            "alpha_k90": (["j", "i"], alpha_k90),
+            "beta_k70": (["j", "i"], beta_k70),
         },
         coords={
             "j": TuH_deg.coords["j"],

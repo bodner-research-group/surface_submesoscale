@@ -52,11 +52,11 @@ def compute_global_limits(nc_files):
         ds_ = ds['ds_cross'][:-1, :-1]
         TuV = ds['TuV_deg'][:-1, :-1]
         TuH = ds['TuH_deg'][:-1, :-1]
-        # Tu_diff = TuV - TuH
         Tu_diff_abs = np.abs(TuV - TuH)
+        Tu_diff_abs_new = np.abs(TuV - np.abs(TuH))
 
-        for key, data in zip(['deta', 'dt', 'ds', 'TuV', 'TuH', 'Tu_diff_abs'], 
-                             [deta, dt, ds_, TuV, TuH, Tu_diff_abs]):
+        for key, data in zip(['deta', 'dt', 'ds', 'TuV', 'TuH', 'Tu_diff_abs','Tu_diff_abs_new'], 
+                             [deta, dt, ds_, TuV, TuH, Tu_diff_abs,Tu_diff_abs_new]):
             data_vals = data.values
             finite_vals = data_vals[np.isfinite(data_vals)]
             if finite_vals.size == 0:

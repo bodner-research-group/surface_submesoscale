@@ -97,7 +97,7 @@ ax1.set_ylabel(r"$\alpha$ [$^\circ$C$^{-1}$]")
 ax1.set_title("Daily Time Series of Surface α (thermal expansion)")
 ax1.grid(True)
 ax1.legend()
-ax1.set_ylim(1.4e-4, 2.1e-4)  # Example limits — adjust as needed
+ax1.set_ylim(1.3e-4, 2.1e-4)  # Example limits — adjust as needed
 
 # Plot β (haline contraction)
 ax2.plot(time, beta_s_daily, label=r'$\beta$ (haline contraction)', color='purple')
