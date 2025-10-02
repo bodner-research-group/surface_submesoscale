@@ -32,7 +32,7 @@ figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{do
 os.makedirs(figdir, exist_ok=True)
 
 nc_files = sorted(glob(os.path.join(nc_dir, "Turner_3D_7d_*.nc")))
-
+# nc_file = os.path.join(nc_dir, "Turner_3D_7d_2011-11-01.nc")
 # =====================
 # Step 1: Compute global limits
 # =====================
@@ -88,10 +88,14 @@ def process_week(nc_file, vlims):
 
     # --- Load data ---
     deta_cross = ds['deta_cross']
+    # deta_cross = ds['deta_magnitude']
     dt_cross = ds['dt_cross']
     ds_cross = ds['ds_cross']
     TuV_deg = ds['TuV_deg']
     TuH_deg = ds['TuH_deg']
+    Tu_diff = ds['Tu_diff']
+    TuH_minus_TuV =  TuH_deg - TuV_deg
+    # Tu_diff = np.abs(TuV_deg - np.abs(TuH_deg))
     alpha = ds['alpha_surf']
     beta = ds['beta_surf']
     lon = ds['lon2d']
@@ -104,7 +108,7 @@ def process_week(nc_file, vlims):
     lat_plot = lat.transpose("j", "i").values[:-1, :-1]
 
     # --- Add isopycnal lines ---
-    slope_rho = 1  # Or slope_rho = beta / alpha if dynamic
+    slope_rho = 1  # Or slope_rho = beta / alpha if using ΔT and ΔS as axes, instead of α·ΔT and β·ΔS
     v_cross = np.array([-slope_rho, 1.0])
     v_iso = np.array([1.0, slope_rho])
     v_cross /= np.linalg.norm(v_cross)
@@ -130,15 +134,38 @@ def process_week(nc_file, vlims):
     z_sorted = z[sort_idx]
 
     # --- Compute mean |deta| in Turner angle bins ---
-    TuH_vals = TuH_deg.values[mask]
-    deta_vals = np.abs(z)
-    bins = x_grid # bins = np.linspace(-180, 180, 361)
+    # TuH_vals = TuH_deg.values[mask]
+    # deta_vals = np.abs(z)
+    # # bins = x_grid 
+    # bins = np.linspace(-180, 180, 37)
+    # bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    # digitized = np.digitize(TuH_vals, bins) - 1
+    # mean_deta_per_bin = np.array([
+    #     deta_vals[digitized == i].mean() if np.any(digitized == i) else np.nan
+    #     for i in range(len(bin_centers))
+    # ])
+
+    TuDiff_vals = TuH_minus_TuV.values[mask]
+    # deta_vals = np.abs(z)
+    deta_vals = deta_cross.values[mask]
+    bins = np.linspace(-180, 180, 37)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
-    digitized = np.digitize(TuH_vals, bins) - 1
+    digitized = np.digitize(TuDiff_vals, bins) - 1
     mean_deta_per_bin = np.array([
         deta_vals[digitized == i].mean() if np.any(digitized == i) else np.nan
         for i in range(len(bin_centers))
     ])
+
+    # TuV_vals = TuV_deg.values[mask]
+    # deta_vals = deta_cross.values[mask]
+    # bins = np.linspace(-90, 90, 37)
+    # bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    # digitized = np.digitize(TuV_vals, bins) - 1
+    # mean_deta_per_bin = np.array([
+    #     deta_vals[digitized == i].mean() if np.any(digitized == i) else np.nan
+    #     for i in range(len(bin_centers))
+    # ])
+    
 
     # --- Turner Angles ---
     valid = ~np.isnan(mean_deta_per_bin)
@@ -153,144 +180,158 @@ def process_week(nc_file, vlims):
         x_proj.append(dx)
         y_proj.append(dy)
 
-    # --------------------------------
-    # (1) Map: deta_cross, dt_cross, ds_cross
-    # --------------------------------
-    fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
+    # Set color limits for 2D and 3D Turner Angle Plots
+    z_min_plot = 0
+    z_max_plot = 3e-6
+    normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
+    normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
+        
+    # # --------------------------------
+    # # (1) Map: deta_cross, dt_cross, ds_cross
+    # # --------------------------------
+    # fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
 
-    deta_plot = deta_cross[:-1, :-1]
-    dt_plot = dt_cross[:-1, :-1]
-    ds_plot = ds_cross[:-1, :-1]
+    # deta_plot = deta_cross[:-1, :-1]
+    # dt_plot = dt_cross[:-1, :-1]
+    # ds_plot = ds_cross[:-1, :-1]
 
-    titles = ['SSH Gradient', 'Temperature Gradient', 'Salinity Gradient']
-    data = [deta_plot, dt_plot, ds_plot]
-    keys = ['deta', 'dt', 'ds']
+    # titles = ['SSH Gradient', 'Temperature Gradient', 'Salinity Gradient']
+    # data = [deta_plot, dt_plot, ds_plot]
+    # keys = ['deta', 'dt', 'ds']
 
-    for i, ax in enumerate(axs):
-        vmin, vmax = vlims[keys[i]]
-        pcm = ax.pcolormesh(lon_plot, lat_plot, data[i], cmap='RdBu_r', shading='auto',
-                            vmin=vmin, vmax=vmax)
-        ax.set_title(f"{titles[i]} ({date_tag})")
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-        fig.colorbar(pcm, ax=ax, orientation='vertical')
+    # for i, ax in enumerate(axs):
+    #     vmin, vmax = vlims[keys[i]]
+    #     pcm = ax.pcolormesh(lon_plot, lat_plot, data[i], cmap='RdBu_r', shading='auto',
+    #                         vmin=vmin, vmax=vmax)
+    #     ax.set_title(f"{titles[i]} ({date_tag})")
+    #     ax.set_xlabel("Longitude")
+    #     ax.set_ylabel("Latitude")
+    #     fig.colorbar(pcm, ax=ax, orientation='vertical')
 
-    plt.savefig(os.path.join(figdir, f"cross_gradients_map_{date_tag}.png"), dpi=300)
-    plt.close()
+    # plt.savefig(os.path.join(figdir, f"cross_gradients_map_{date_tag}.png"), dpi=300)
+    # plt.close()
 
-    # --------------------------------
-    # (2) Map: TuV_deg, TuH_deg, Difference
-    # --------------------------------
-    TuV_plot = TuV_deg[:-1, :-1]
-    TuH_plot = TuH_deg[:-1, :-1]
-    # Tu_diff_plot = TuV_plot - TuH_plot
-    Tu_diff_abs_plot = np.abs(TuV_plot - np.abs(TuH_plot))
+    # # --------------------------------
+    # # (2) Map: TuV_deg, TuH_deg, Difference
+    # # --------------------------------
+    # TuV_plot = TuV_deg[:-1, :-1]
+    # TuH_plot = TuH_deg[:-1, :-1]
+    # # Tu_diff_plot = TuV_plot - TuH_plot
+    # Tu_diff_abs_plot = np.abs(TuV_plot - TuH_plot)
     
-    fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
-    angles = [TuV_plot, TuH_plot, Tu_diff_abs_plot]
-    cmaps = ['twilight', 'twilight', cmap]
-    titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"|TuV - |TuH|| ({date_tag})"]
+    # fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
+    # angles = [TuV_plot, TuH_plot, Tu_diff_abs_plot]
+    # cmaps = ['twilight', 'twilight', cmap]
+    # titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"|TuV - TuH| ({date_tag})"]
 
-    vlims_diff = vlims["Tu_diff_abs"]
-    diff_vmax = max(abs(vlims_diff[0]), abs(vlims_diff[1]))
+    # vlims_diff = vlims["Tu_diff_abs"]
+    # diff_vmax = max(abs(vlims_diff[0]), abs(vlims_diff[1]))
 
-    vmins = [vlims["TuV"][0], vlims["TuH"][0], 0]
-    vmaxs = [vlims["TuV"][1], vlims["TuH"][1], diff_vmax]
+    # vmins = [vlims["TuV"][0], vlims["TuH"][0], 0]
+    # vmaxs = [vlims["TuV"][1], vlims["TuH"][1], diff_vmax]
 
-    for i, ax in enumerate(axs):
-        pcm = ax.pcolormesh(lon_plot, lat_plot, angles[i], cmap=cmaps[i], shading='auto',
-                            vmin=vmins[i], vmax=vmaxs[i])
-        ax.set_title(titles[i])
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-        fig.colorbar(pcm, ax=ax, orientation='vertical')
+    # for i, ax in enumerate(axs):
+    #     pcm = ax.pcolormesh(lon_plot, lat_plot, angles[i], cmap=cmaps[i], shading='auto',
+    #                         vmin=vmins[i], vmax=vmaxs[i])
+    #     ax.set_title(titles[i])
+    #     ax.set_xlabel("Longitude")
+    #     ax.set_ylabel("Latitude")
+    #     fig.colorbar(pcm, ax=ax, orientation='vertical')
 
-    plt.savefig(os.path.join(figdir, f"turner_angles_map_{date_tag}.png"), dpi=300)
-    plt.close()
+    # plt.savefig(os.path.join(figdir, f"turner_angles_map_{date_tag}.png"), dpi=300)
+    # plt.close()
 
-    # --------------------------------
-    # (3) 2D Scatter: Color-coded deta_cross
-    # --------------------------------
-    # Define color limits
-    zmin, zmax = 0, 1e-5
+    # # --------------------------------
+    # # (3) 2D Scatter: Color-coded deta_cross
+    # # --------------------------------
+    # # Define color limits
+    # zmin, zmax = 0, 1e-5
 
-    fig, ax = plt.subplots(figsize=(6, 5))
-    ax.set_aspect('equal', adjustable='box')  # Make x and y axis scale equal
-    # sc = ax.scatter(x, y, c=z, cmap=cmocean.cm.balance, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
-    sc = ax.scatter(x_sorted, y_sorted, c=z_sorted, cmap=cmap, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
+    # fig, ax = plt.subplots(figsize=(6, 5))
+    # ax.set_aspect('equal', adjustable='box')  # Make x and y axis scale equal
+    # # sc = ax.scatter(x, y, c=z, cmap=cmocean.cm.balance, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
+    # sc = ax.scatter(x_sorted, y_sorted, c=z_sorted, cmap=cmap, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
 
-    # Reference lines
-    ax.axhline(0, color='k', linestyle='--', linewidth=1)
-    ax.axvline(0, color='k', linestyle='--', linewidth=1)
+    # # Reference lines
+    # ax.axhline(0, color='k', linestyle='--', linewidth=1)
+    # ax.axvline(0, color='k', linestyle='--', linewidth=1)
     
-    ax.set_xlabel(r"$\beta \cdot \partial S_{cross}$")
-    ax.set_ylabel(r"$\alpha \cdot \partial \theta_{cross}$")
-    ax.set_xlim(-2e-8, 4e-8)
-    ax.set_ylim(-3.5e-8, 1.5e-8)
-    ax.set_title(f"Color: Cross-isopycnal SSH Gradient magnitude - {date_tag}")
+    # ax.set_xlabel(r"$\beta \cdot \partial S_{cross}$")
+    # ax.set_ylabel(r"$\alpha \cdot \partial \theta_{cross}$")
+    # ax.set_xlim(-2e-8, 4e-8)
+    # ax.set_ylim(-3.5e-8, 1.5e-8)
+    # ax.set_title(f"Color: Cross-isopycnal SSH Gradient magnitude - {date_tag}")
 
-    cbar = fig.colorbar(sc, ax=ax, label=r"$\vert\partial \eta_{cross}\vert$", shrink=0.8)
+    # cbar = fig.colorbar(sc, ax=ax, label=r"$\vert\partial \eta_{cross}\vert$", shrink=0.8)
 
-    # --- Add isopycnal lines ---
-    for c in c_values:
-        T_line = slope_rho * S_line + c
-        ax.plot(S_line, T_line, '-', color='gray', linewidth=0.5, alpha=0.3)
+    # # --- Add isopycnal lines ---
+    # for c in c_values:
+    #     T_line = slope_rho * S_line + c
+    #     ax.plot(S_line/4e6, T_line/4e6, '-', color='gray', linewidth=0.5, alpha=0.3)
 
-    plt.tight_layout()
-    plt.savefig(os.path.join(figdir, f"2d_scatter_deta_cross_{date_tag}.png"), dpi=300)
-    plt.close()
+    # plt.tight_layout()
+    # plt.savefig(os.path.join(figdir, f"2d_scatter_deta_cross_{date_tag}.png"), dpi=300)
+    # plt.close()
 
-    # --------------------------------
-    # (4) 3D Scatter
-    # --------------------------------
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
+    # # --------------------------------
+    # # (4) 3D Scatter
+    # # --------------------------------
+    # fig = plt.figure(figsize=(10, 8))
+    # ax = fig.add_subplot(111, projection='3d')
 
-    # Define z (and color) limits
-    zmin, zmax = 0, 8e-6
+    # # Define z (and color) limits
+    # zmin, zmax = 0, 8e-6
 
-    # sc = ax.scatter(x, y, z, c=z, cmap=cmocean.cm.balance, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
-    sc = ax.scatter(x_sorted, y_sorted, z_sorted, c=z_sorted, cmap=cmap, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
+    # # sc = ax.scatter(x, y, z, c=z, cmap=cmocean.cm.balance, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
+    # sc = ax.scatter(x_sorted, y_sorted, z_sorted, c=z_sorted, cmap=cmap, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
 
-    ax.set_xlabel('β·dS_cross')
-    ax.set_ylabel('α·dT_cross')
-    ax.set_zlabel(r"$\vert\partial \eta_{cross}\vert$")
-    ax.set_zlim(zmin, zmax)
-    ax.set_xlim(-2e-8, 4e-8)
-    ax.set_ylim(-3.5e-8, 1.5e-8)
+    # ax.set_xlabel('β·dS_cross')
+    # ax.set_ylabel('α·dT_cross')
+    # ax.set_zlabel(r"$\vert\partial \eta_{cross}\vert$")
+    # ax.set_zlim(zmin, zmax)
+    # ax.set_xlim(-2e-8, 4e-8)
+    # ax.set_ylim(-3.5e-8, 1.5e-8)
 
-    fig.colorbar(sc, label=r"$\vert\partial \eta_{cross}\vert$")
+    # fig.colorbar(sc, label=r"$\vert\partial \eta_{cross}\vert$")
 
-    ax.set_title(f"3D Scatter: Cross-Isopycnal SSH Gradient ({date_tag})")
-    plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
-    plt.close()
-    # # savemat(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.mat"), {'x': x, 'y': y, 'z': z})
+    # ax.set_title(f"3D Scatter: Cross-Isopycnal SSH Gradient ({date_tag})")
+    # plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
+    # plt.close()
+    # # # savemat(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.mat"), {'x': x, 'y': y, 'z': z})
     
-    # --------------------------------
-    # (5) Histogram and KDE
-    # --------------------------------
-    fig, ax = plt.subplots(figsize=(8.5, 5))
-    sns.histplot(z, kde=True, bins=361, color='skyblue', stat='density', edgecolor='none')
-    ax.set_title(f"Histogram and KDE of SSH Gradient ({date_tag})")
-    ax.set_xlabel(r'$\partial \eta$')
-    ax.set_ylabel("Density")
-    ax.set_ylim(0, 800000)
-    ax.set_xlim(0, 7e-6)
-    ax.minorticks_on()
-    ax.grid(which='major', linestyle='-', linewidth=0.8, alpha=0.7)
-    ax.grid(which='minor', linestyle='--', linewidth=0.5, alpha=0.4)
-    plt.savefig(os.path.join(figdir, f"hist_kde_deta_cross_{date_tag}.png"), dpi=300)
-    plt.close()
+    # # --------------------------------
+    # # (5) Histogram and KDE
+    # # --------------------------------
+    # fig, ax = plt.subplots(figsize=(8.5, 5))
+    # sns.histplot(z, kde=True, bins=361, color='skyblue', stat='density', edgecolor='none')
+    # ax.set_title(f"Histogram and KDE of SSH Gradient ({date_tag})")
+    # ax.set_xlabel(r'$\partial \eta$')
+    # ax.set_ylabel("Density")
+    # ax.set_ylim(0, 800000)
+    # ax.set_xlim(0, 7e-6)
+    # ax.minorticks_on()
+    # ax.grid(which='major', linestyle='-', linewidth=0.8, alpha=0.7)
+    # ax.grid(which='minor', linestyle='--', linewidth=0.5, alpha=0.4)
+    # plt.savefig(os.path.join(figdir, f"hist_kde_deta_cross_{date_tag}.png"), dpi=300)
+    # plt.close()
 
     # -----------------------------
     # (6) Mean deta vs TuH
     # -----------------------------
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 8))
     ax.plot(bin_centers, mean_deta_per_bin, marker='o', linestyle='-')
-    ax.set_ylim(0, 2.2e-6)
-    ax.set_xlabel("Horizontal Turner Angle (deg)")
-    ax.set_ylabel(r"Mean $|\partial \eta|$")
-    ax.set_title(f"Mean SSH Gradient vs. Turner Angle ({date_tag})")
+    # ax.set_ylim(0, 4e-6)
+    ax.set_ylim(-2.5e-6, 2.5e-6)
+    # ax.set_xlim(-90, 90)
+    # ax.set_xlim(0, 180)
+    ax.set_xlim(-180, 180)
+    # ax.set_xlabel("|TuV-TuH| (deg)")
+    ax.set_xlabel("TuH-TuV (deg)")
+    # ax.set_xlabel("TuV (deg)")
+    # ax.set_ylabel(r"Mean $|\partial \eta|$")
+    ax.set_ylabel(r"Mean $\partial \eta$")
+    ax.set_title(f"SSH Gradient vs. Turner Angle Difference ({date_tag})")
+    # ax.set_title(f"SSH Gradient vs. Vertical Turner Angle ({date_tag})")
     ax.grid(True)
     plt.savefig(os.path.join(figdir, f"turner_angle_vs_deta_cross_{date_tag}.png"), dpi=300)
     plt.close()
@@ -298,12 +339,7 @@ def process_week(nc_file, vlims):
     # -----------------------------
     # (7) 2D Plot: PDF Vectors Colored by |deta|
     # -----------------------------
-    # Set color limits
-    z_min_plot = 0
-    z_max_plot = 3e-6
-    normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
-    normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
-    
+
     # Setup plot
     fig, ax = plt.subplots(figsize=(5, 6))
     ax.set_title(f"Kernel PDF of Turner Angles\nWeek: {date_tag}", fontsize=16)
@@ -365,11 +401,6 @@ def process_week(nc_file, vlims):
     # -----------------------------
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
-
-    z_min_plot = 0
-    z_max_plot = 3e-6
-    normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
-    normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
 
     for angle_deg, mag_h in zip(x_grid, pdf_values_h):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
