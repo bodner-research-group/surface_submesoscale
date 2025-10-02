@@ -210,7 +210,7 @@ nc_files = sorted(glob.glob(file_pattern))
 # =======================
 dates = []
 TuV_means, TuH_means = [], []
-Tu_diff_means, Tu_RMSEs, Tu_corrs, Tu_agreements = [], [], [], []
+Tu_diff_means, Tu_diff_means_new, Tu_RMSEs, Tu_corrs, Tu_agreements, Tu_agreements_new = [], [], [], [], [], []
 
 # =======================
 # 3. Loop through each file
@@ -243,8 +243,10 @@ for fpath in nc_files:
         mean_TuV = np.nanmean(TuV_flat)
         mean_TuH = np.nanmean(TuH_flat)
         diff_mean = np.nanmean(np.abs(TuV_flat - TuH_flat))
+        diff_mean_new = np.nanmean(np.abs(TuV_flat - np.abs(TuH_flat)))
         rmse = np.sqrt(np.nanmean((TuV_flat - TuH_flat) ** 2))
         agreement = np.mean(np.abs(TuV_flat - TuH_flat) <= 10)
+        agreement_new = np.mean(np.abs(TuV_flat - np.abs(TuH_flat)) <= 10)
         corr, _ = pearsonr(TuV_flat, TuH_flat)
 
         # Store
@@ -252,8 +254,10 @@ for fpath in nc_files:
         TuV_means.append(mean_TuV)
         TuH_means.append(mean_TuH)
         Tu_diff_means.append(diff_mean)
+        Tu_diff_means_new.append(diff_mean_new)
         Tu_RMSEs.append(rmse)
         Tu_agreements.append(agreement)
+        Tu_agreements_new.append(agreement_new)
         Tu_corrs.append(corr)
 
         ds.close()
@@ -273,6 +277,7 @@ dates = pd.to_datetime(dates)
 fig, ax = plt.subplots(2, 1, figsize=(14, 9), sharex=True)
 
 Tu_agreements_pct = np.array(Tu_agreements) * 100
+Tu_agreements_new_pct = np.array(Tu_agreements_new) * 100
 Tu_corrs_pct = np.array(Tu_corrs) * 100
 
 # Plot mean Turner angles
@@ -284,9 +289,11 @@ ax[0].legend()
 ax[0].grid(True)
 
 # Plot agreement metrics
-ax[1].plot(dates, Tu_diff_means, label="Mean Abs Difference", color="orange",linewidth=2)
+ax[1].plot(dates, Tu_diff_means_new, label="|TuV-|TuV||", color="orange",linewidth=2)
+ax[1].plot(dates, Tu_diff_means, label="|TuV-TuV|", color="orange",linestyle="--",linewidth=2)
 ax[1].plot(dates, Tu_RMSEs, label="RMSE", color="green",linewidth=2)
 ax[1].plot(dates, Tu_agreements_pct, label="% Agreement (±10°)", color="gray",linestyle="-.")
+ax[1].plot(dates, Tu_agreements_new_pct, label="% Agreement (±10°), using |TuV|", color="gray",linestyle="--")
 ax[1].plot(dates, Tu_corrs_pct, label="Correlation (%)", color="gray",linestyle=":")
 ax[1].set_ylabel("Agreement Metric")
 ax[1].set_xlabel("Date")
@@ -305,19 +312,20 @@ fig_path = os.path.join(figdir, "TurnerAngle_Timeseries_Agreement.png")
 fig.savefig(fig_path, dpi=300)
 print(f"\n Saved figure to: {fig_path}")
 
-# =======================
-# 5. Save statistics to CSV
-# =======================
-df_stats = pd.DataFrame({
-    "date": dates,
-    "TuV_mean": TuV_means,
-    "TuH_mean": TuH_means,
-    "Mean_abs_diff": Tu_diff_means,
-    "RMSE": Tu_RMSEs,
-    "Pearson_corr": Tu_corrs,
-    "Agreement_±10deg": Tu_agreements,
-})
+# # =======================
+# # 5. Save statistics to CSV
+# # =======================
+# df_stats = pd.DataFrame({
+#     "date": dates,
+#     "TuV_mean": TuV_means,
+#     "TuH_mean": TuH_means,
+#     "Mean_abs_diff": Tu_diff_means,
+#     "Mean_abs_diff_new": Tu_diff_means_new,
+#     "RMSE": Tu_RMSEs,
+#     "Pearson_corr": Tu_corrs,
+#     "Agreement_±10deg": Tu_agreements,
+# })
 
-csv_out = os.path.join(data_dir, "TurnerAngle_Timeseries_Stats.csv")
-df_stats.to_csv(csv_out, index=False)
-print(f" Saved statistics to: {csv_out}")
+# csv_out = os.path.join(data_dir, "TurnerAngle_Timeseries_Stats.csv")
+# df_stats.to_csv(csv_out, index=False)
+# print(f" Saved statistics to: {csv_out}")

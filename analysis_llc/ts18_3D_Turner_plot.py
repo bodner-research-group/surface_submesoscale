@@ -11,6 +11,7 @@ from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j
 from set_colormaps import WhiteBlueGreenYellowRed
+import cmocean
 
 # =====================
 # Setup Dask cluster
@@ -24,7 +25,7 @@ print("Dask dashboard:", client.dashboard_link)
 # Define constants and directories
 # =====================
 cmap = WhiteBlueGreenYellowRed()
-plt.rcParams.update({'font.size': 14})
+plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 
 nc_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_3D"
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
@@ -43,6 +44,7 @@ def compute_global_limits(nc_files):
         "TuV": [180, -180],
         "TuH": [180, -180],
         "Tu_diff_abs": [0, 180],
+        "Tu_diff_abs_new": [0, 180],
     }
 
     for nc_file in nc_files:
@@ -84,6 +86,7 @@ def process_week(nc_file, vlims):
     
     ds = xr.open_dataset(nc_file)
 
+    # --- Load data ---
     deta_cross = ds['deta_cross']
     dt_cross = ds['dt_cross']
     ds_cross = ds['ds_cross']
@@ -93,16 +96,68 @@ def process_week(nc_file, vlims):
     beta = ds['beta_surf']
     lon = ds['lon2d']
     lat = ds['lat2d']
+    x_grid = ds["x_grid"].data
+    pdf_values_h = ds["pdf_values_h"].data
+    pdf_values_v = ds["pdf_values_v"].data
+
+    lon_plot = lon.transpose("j", "i").values[:-1, :-1]
+    lat_plot = lat.transpose("j", "i").values[:-1, :-1]
+
+    # --- Add isopycnal lines ---
+    slope_rho = 1  # Or slope_rho = beta / alpha if dynamic
+    v_cross = np.array([-slope_rho, 1.0])
+    v_iso = np.array([1.0, slope_rho])
+    v_cross /= np.linalg.norm(v_cross)
+    v_iso /= np.linalg.norm(v_iso)
+
+    min_ds = -0.5
+    max_ds = 0.5
+    min_dt = -0.5
+    max_dt = 0.5
+    S_line = np.linspace(min_ds, max_ds, 100)
+    c_values = np.linspace(min_dt, max_dt, 100)
 
     mask = np.isfinite(deta_cross) & np.isfinite(dt_cross) & np.isfinite(ds_cross)
+
+    # --- x, y, and z values for the 3D scatter plot ---
+    x = (beta * ds_cross).values[mask]
+    y = (alpha * dt_cross).values[mask]
+    z = np.abs(deta_cross.values[mask])   # z = deta_cross.values[mask]
+    # Sort by z (ascending)
+    sort_idx = np.argsort(z)
+    x_sorted = x[sort_idx]
+    y_sorted = y[sort_idx]
+    z_sorted = z[sort_idx]
+
+    # --- Compute mean |deta| in Turner angle bins ---
+    TuH_vals = TuH_deg.values[mask]
+    deta_vals = np.abs(z)
+    bins = x_grid # bins = np.linspace(-180, 180, 361)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    digitized = np.digitize(TuH_vals, bins) - 1
+    mean_deta_per_bin = np.array([
+        deta_vals[digitized == i].mean() if np.any(digitized == i) else np.nan
+        for i in range(len(bin_centers))
+    ])
+
+    # --- Turner Angles ---
+    valid = ~np.isnan(mean_deta_per_bin)
+    interp_func = interp1d(bin_centers[valid], mean_deta_per_bin[valid], kind='linear', bounds_error=False, fill_value=np.nan)
+    z_vals = interp_func(x_grid)
+
+    x_proj, y_proj = [], []
+    for angle_deg, mag_h in zip(x_grid, pdf_values_h):
+        dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
+        dx = mag_h * dir_vec[0] 
+        dy = mag_h * dir_vec[1] 
+        x_proj.append(dx)
+        y_proj.append(dy)
 
     # --------------------------------
     # (1) Map: deta_cross, dt_cross, ds_cross
     # --------------------------------
     fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
 
-    lon_plot = lon.transpose("j", "i").values[:-1, :-1]
-    lat_plot = lat.transpose("j", "i").values[:-1, :-1]
     deta_plot = deta_cross[:-1, :-1]
     dt_plot = dt_cross[:-1, :-1]
     ds_plot = ds_cross[:-1, :-1]
@@ -129,13 +184,12 @@ def process_week(nc_file, vlims):
     TuV_plot = TuV_deg[:-1, :-1]
     TuH_plot = TuH_deg[:-1, :-1]
     # Tu_diff_plot = TuV_plot - TuH_plot
-    Tu_diff_abs_plot = np.abs(TuV_plot - TuH_plot)
+    Tu_diff_abs_plot = np.abs(TuV_plot - np.abs(TuH_plot))
     
-
     fig, axs = plt.subplots(1, 3, figsize=(18, 4.5), constrained_layout=True)
     angles = [TuV_plot, TuH_plot, Tu_diff_abs_plot]
     cmaps = ['twilight', 'twilight', cmap]
-    titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"|TuV - TuH| ({date_tag})"]
+    titles = [f"TuV ({date_tag})", f"TuH ({date_tag})", f"|TuV - |TuH|| ({date_tag})"]
 
     vlims_diff = vlims["Tu_diff_abs"]
     diff_vmax = max(abs(vlims_diff[0]), abs(vlims_diff[1]))
@@ -154,44 +208,49 @@ def process_week(nc_file, vlims):
     plt.savefig(os.path.join(figdir, f"turner_angles_map_{date_tag}.png"), dpi=300)
     plt.close()
 
-    # # --------------------------------
-    # # (3) 3D Scatter
-    # # --------------------------------
-    # fig = plt.figure(figsize=(10, 8))
-    # ax = fig.add_subplot(111, projection='3d')
-    # x = (beta * ds_cross).values[mask]
-    # y = (alpha * dt_cross).values[mask]
-    # z = deta_cross.values[mask]
-    # sc = ax.scatter(x, y, z, c=z, cmap='RdBu', alpha=0.6, s=1)
-    # ax.set_xlabel('β·dS_cross')
-    # ax.set_ylabel('α·dT_cross')
-    # ax.set_zlabel('deta_cross')
-    # ax.set_zlim(-7e-6, 7e-6)
-    # ax.set_xlim(-2e-8, 4e-8)
-    # ax.set_ylim(-3.5e-8, 1.5e-8)
-    # fig.colorbar(sc, label='deta_cross')
-    # ax.set_title(f"3D Scatter: SSH Gradient ({date_tag})")
-    # plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
-    # plt.close()
+    # --------------------------------
+    # (3) 2D Scatter: Color-coded deta_cross
+    # --------------------------------
+    # Define color limits
+    zmin, zmax = 0, 1e-5
 
-    import cmocean
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.set_aspect('equal', adjustable='box')  # Make x and y axis scale equal
+    # sc = ax.scatter(x, y, c=z, cmap=cmocean.cm.balance, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
+    sc = ax.scatter(x_sorted, y_sorted, c=z_sorted, cmap=cmap, s=2, alpha=0.7, vmin=zmin, vmax=zmax)
+
+    # Reference lines
+    ax.axhline(0, color='k', linestyle='--', linewidth=1)
+    ax.axvline(0, color='k', linestyle='--', linewidth=1)
+    
+    ax.set_xlabel(r"$\beta \cdot \partial S_{cross}$")
+    ax.set_ylabel(r"$\alpha \cdot \partial \theta_{cross}$")
+    ax.set_xlim(-2e-8, 4e-8)
+    ax.set_ylim(-3.5e-8, 1.5e-8)
+    ax.set_title(f"Color: Cross-isopycnal SSH Gradient magnitude - {date_tag}")
+
+    cbar = fig.colorbar(sc, ax=ax, label=r"$\vert\partial \eta_{cross}\vert$", shrink=0.8)
+
+    # --- Add isopycnal lines ---
+    for c in c_values:
+        T_line = slope_rho * S_line + c
+        ax.plot(S_line, T_line, '-', color='gray', linewidth=0.5, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(figdir, f"2d_scatter_deta_cross_{date_tag}.png"), dpi=300)
+    plt.close()
 
     # --------------------------------
-    # (3) 3D Scatter
+    # (4) 3D Scatter
     # --------------------------------
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
-
-    x = (beta * ds_cross).values[mask]
-    y = (alpha * dt_cross).values[mask]
-    # z = deta_cross.values[mask]
-    z = np.abs(deta_cross.values[mask])
 
     # Define z (and color) limits
     zmin, zmax = 0, 8e-6
 
     # sc = ax.scatter(x, y, z, c=z, cmap=cmocean.cm.balance, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
-    sc = ax.scatter(x, y, z, c=z, cmap=cmap, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
+    sc = ax.scatter(x_sorted, y_sorted, z_sorted, c=z_sorted, cmap=cmap, alpha=0.6, s=1, vmin=zmin, vmax=zmax)
 
     ax.set_xlabel('β·dS_cross')
     ax.set_ylabel('α·dT_cross')
@@ -205,11 +264,10 @@ def process_week(nc_file, vlims):
     ax.set_title(f"3D Scatter: Cross-Isopycnal SSH Gradient ({date_tag})")
     plt.savefig(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.png"), dpi=300)
     plt.close()
-
-    savemat(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.mat"), {'x': x, 'y': y, 'z': z})
-
+    # # savemat(os.path.join(figdir, f"3d_scatter_deta_cross_{date_tag}.mat"), {'x': x, 'y': y, 'z': z})
+    
     # --------------------------------
-    # (4) Histogram and KDE
+    # (5) Histogram and KDE
     # --------------------------------
     fig, ax = plt.subplots(figsize=(8.5, 5))
     sns.histplot(z, kde=True, bins=361, color='skyblue', stat='density', edgecolor='none')
@@ -225,18 +283,8 @@ def process_week(nc_file, vlims):
     plt.close()
 
     # -----------------------------
-    # (5) Mean deta vs TuH
+    # (6) Mean deta vs TuH
     # -----------------------------
-    TuH_vals = TuH_deg.values[mask]
-    deta_vals = np.abs(z)
-    bins = np.linspace(-180, 180, 361)
-    bin_centers = 0.5 * (bins[:-1] + bins[1:])
-    digitized = np.digitize(TuH_vals, bins) - 1
-    mean_deta_per_bin = np.array([
-        deta_vals[digitized == i].mean() if np.any(digitized == i) else np.nan
-        for i in range(len(bin_centers))
-    ])
-
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(bin_centers, mean_deta_per_bin, marker='o', linestyle='-')
     ax.set_ylim(0, 2.2e-6)
@@ -248,35 +296,73 @@ def process_week(nc_file, vlims):
     plt.close()
 
     # -----------------------------
-    # (6) 3D Plot: PDF Vectors
+    # (7) 2D Plot: PDF Vectors Colored by |deta|
     # -----------------------------
-    ds_pdf = xr.open_dataset(nc_file)
+    # Set color limits
+    z_min_plot = 0
+    z_max_plot = 3e-6
+    normed_vals = np.clip(z_vals, z_min_plot, z_max_plot)
+    normed_vals = (normed_vals - z_min_plot) / (z_max_plot - z_min_plot)
+    
+    # Setup plot
+    fig, ax = plt.subplots(figsize=(5, 6))
+    ax.set_title(f"Kernel PDF of Turner Angles\nWeek: {date_tag}", fontsize=16)
+    ax.set_xlabel(r"$\beta \partial S$")
+    ax.set_ylabel(r"$\alpha \partial \theta$")
+    ax.set_aspect("equal")
+    ax.set_facecolor("white")
 
-    x_grid = ds_pdf["x_grid"].data
-    pdf_values_h = ds_pdf["pdf_values_h"].data
-    pdf_values_v = ds_pdf["pdf_values_v"].data
-    alpha_val = np.nanmean(ds_pdf["alpha_surf"].data)
-    beta_val = np.nanmean(ds_pdf["beta_surf"].data)
+    # --- Add isopycnal lines ---
+    for c in c_values:
+        T_line = slope_rho * S_line + c
+        ax.plot(S_line, T_line, '-', color='gray', linewidth=0.5, alpha=0.3)
 
-    scale = 10000
-    slope_rho = 1
-    v_cross = np.array([-slope_rho, 1.0])
-    v_iso = np.array([1.0, slope_rho])
-    v_cross /= np.linalg.norm(v_cross)
-    v_iso /= np.linalg.norm(v_iso)
-
-    valid = ~np.isnan(mean_deta_per_bin)
-    interp_func = interp1d(bin_centers[valid], mean_deta_per_bin[valid], kind='linear', bounds_error=False, fill_value=np.nan)
-    z_vals = interp_func(x_grid)
-
-    x_proj, y_proj = [], []
-    for angle_deg, mag_h in zip(x_grid, pdf_values_h):
+    # Plot PDF vectors
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=z_min_plot, vmax=z_max_plot))
+    for angle_deg, mag_h, mag_v, color_val in zip(x_grid, pdf_values_h, pdf_values_v, normed_vals):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
-        dx = mag_h * dir_vec[0] * beta_val * scale * 20
-        dy = mag_h * dir_vec[1] * alpha_val * scale * 20
-        x_proj.append(dx)
-        y_proj.append(dy)
 
+        # Horizontal (colored by |deta|)
+        dx_h = mag_h * dir_vec[0] * 3
+        dy_h = mag_h * dir_vec[1] * 3
+        ax.plot([0, dx_h], [0, dy_h], color=cmap(color_val), linewidth=1.0)
+
+        # Vertical (green)
+        dx_v = mag_v * dir_vec[0]
+        dy_v = mag_v * dir_vec[1]
+        ax.plot([0, dx_v], [0, dy_v], color='magenta', linewidth=0.7, alpha=0.7, linestyle=':')
+
+
+    # Axis limits from global settings
+    # (OPTIONAL: Use get_global_axis_limits if needed)
+    ax.set_xlim([-0.03, 0.12])
+    ax.set_ylim([-0.025, 0.19])
+
+    # Reference lines
+    ax.axhline(0, color='k', linestyle='--', linewidth=1)
+    ax.axvline(0, color='k', linestyle='--', linewidth=1)
+
+    # Unit direction vectors
+    origin = [0, 0]
+    ax.quiver(*origin, *(v_cross * 0.03), color='red', angles='xy', scale_units='xy', scale=1,
+              label='⊥ isopycnal', linewidth=2)
+    ax.quiver(*origin, *(v_iso * 0.03), color='blue', angles='xy', scale_units='xy', scale=1,
+              label='∥ isopycnal', linewidth=2)
+
+    ax.legend(fontsize=10, loc='upper right')
+    plt.tight_layout()
+
+    # Colorbar
+    cbar = fig.colorbar(sm, ax=ax, label=r"Mean $|\partial \eta|$", shrink=0.8)
+
+    plt.tight_layout()
+    fig_path = os.path.join(figdir, f"2d_turner_pdf_with_color_{date_tag}.png")
+    plt.savefig(fig_path, dpi=300)
+    plt.close()
+
+    # -----------------------------
+    # (8) 3D Plot: PDF Vectors
+    # -----------------------------
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
 
@@ -287,14 +373,14 @@ def process_week(nc_file, vlims):
 
     for angle_deg, mag_h in zip(x_grid, pdf_values_h):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
-        dx = mag_h * dir_vec[0] * beta_val * scale * 20
-        dy = mag_h * dir_vec[1] * alpha_val * scale * 20
+        dx = mag_h * dir_vec[0]  * 3
+        dy = mag_h * dir_vec[1]  * 3
         ax.plot([0, dx], [0, dy], [0, 0], color='darkgray', linestyle='--', alpha=0.7, linewidth=0.7)
 
     for angle_deg, mag_v in zip(x_grid, pdf_values_v):
         dir_vec = np.cos(np.deg2rad(angle_deg)) * v_cross + np.sin(np.deg2rad(angle_deg)) * v_iso
-        dx = mag_v * dir_vec[0] * beta_val * scale * 10
-        dy = mag_v * dir_vec[1] * alpha_val * scale * 10
+        dx = mag_v * dir_vec[0]
+        dy = mag_v * dir_vec[1]
         ax.plot([0, dx], [0, dy], [0, 0], color='magenta', alpha=0.7, linewidth=0.7)
 
     for x, y, z, cval in zip(x_proj, y_proj, z_vals, normed_vals):
@@ -307,15 +393,15 @@ def process_week(nc_file, vlims):
     ax.set_ylabel(r"$\alpha \, \partial \theta$")
     ax.set_zlabel(r"Mean $|\partial \eta|$")
     ax.set_title(f"3D Turner PDF Vectors vs. SSH Gradient ({date_tag})")
-    ax.set_xlim([-1, 6])
-    ax.set_ylim([-0.5, 3])
+    ax.set_xlim([-0.03, 0.12])
+    ax.set_ylim([-0.025, 0.19])
     ax.set_zlim([0, z_max_plot])
     cbar = fig.colorbar(sc, ax=ax, label=r"Mean $|\partial \eta|$", shrink=0.5, fraction=0.02, pad=0.05)
 
     fig_path = os.path.join(figdir, f"3d_turner_pdf_with_lines_{date_tag}.png")
     plt.savefig(fig_path, dpi=300)
     plt.close()
-    ds_pdf.close()
+    ds.close()
 
     print(f"✅ Finished: {date_tag}")
     return fig_path
@@ -329,10 +415,6 @@ results = compute(*tasks)
 print("\n🎉 All weeks processed.")
 for r in results:
     print(r)
-
-
-
-
 
 
 
@@ -365,3 +447,13 @@ import os
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
 output_movie = f"{figdir}/movie-3d_turner_pdf_with_lines.mp4"
 os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/3d_turner_pdf_with_lines_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
+output_movie = f"{figdir}/movie-2d_scatter_deta_cross.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/2d_scatter_deta_cross_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/TurnerAngle_3D"
+output_movie = f"{figdir}/movie-2d_turner_pdf_with_color.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/2d_turner_pdf_with_color_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
