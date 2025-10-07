@@ -134,7 +134,8 @@ for rho_file in rho_files:
 
     x_vert = beta_k50 * dS_dz
     y_vert = alpha_k50 * dT_dz
-    TuV_rad = np.arctan2((y_vert + x_vert), (y_vert - x_vert))
+    # TuV_rad = np.arctan2((y_vert + x_vert), (y_vert - x_vert))
+    TuV_rad = np.arctan((y_vert + x_vert), (y_vert - x_vert))
     TuV_deg = np.degrees(TuV_rad)
 
     # =============

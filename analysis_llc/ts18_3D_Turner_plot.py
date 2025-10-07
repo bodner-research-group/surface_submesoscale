@@ -93,9 +93,9 @@ def process_week(nc_file, vlims):
     ds_cross = ds['ds_cross']
     TuV_deg = ds['TuV_deg']
     TuH_deg = ds['TuH_deg']
-    Tu_diff = ds['Tu_diff']
-    TuH_minus_TuV =  TuH_deg - TuV_deg
-    # Tu_diff = np.abs(TuV_deg - np.abs(TuH_deg))
+    # Tu_diff = ds['Tu_diff']
+    # TuH_minus_TuV =  TuH_deg - TuV_deg
+    Tu_diff = np.abs(np.abs(TuV_deg) - np.abs(TuH_deg))
     alpha = ds['alpha_surf']
     beta = ds['beta_surf']
     lon = ds['lon2d']
@@ -145,10 +145,10 @@ def process_week(nc_file, vlims):
     #     for i in range(len(bin_centers))
     # ])
 
-    TuDiff_vals = TuH_minus_TuV.values[mask]
+    TuDiff_vals = Tu_diff.values[mask]
     # deta_vals = np.abs(z)
     deta_vals = deta_cross.values[mask]
-    bins = np.linspace(-180, 180, 37)
+    bins = np.linspace(0, 180, 37)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
     digitized = np.digitize(TuDiff_vals, bins) - 1
     mean_deta_per_bin = np.array([
@@ -323,10 +323,10 @@ def process_week(nc_file, vlims):
     # ax.set_ylim(0, 4e-6)
     ax.set_ylim(-2.5e-6, 2.5e-6)
     # ax.set_xlim(-90, 90)
-    # ax.set_xlim(0, 180)
-    ax.set_xlim(-180, 180)
-    # ax.set_xlabel("|TuV-TuH| (deg)")
-    ax.set_xlabel("TuH-TuV (deg)")
+    ax.set_xlim(0, 180)
+    # ax.set_xlim(-180, 180)
+    ax.set_xlabel("||TuV|-|TuH|| (deg)")
+    # ax.set_xlabel("TuH-TuV (deg)")
     # ax.set_xlabel("TuV (deg)")
     # ax.set_ylabel(r"Mean $|\partial \eta|$")
     ax.set_ylabel(r"Mean $\partial \eta$")
