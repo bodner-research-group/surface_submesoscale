@@ -28,7 +28,7 @@ file1_3 = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysi
 N2ml_mean = xr.open_dataset(file1_3).N2ml_mean
 
 
-### 2.1 Wavelength of the most unstable mixed-layer-instability (MLI) waves
+### 2.1 Wavelength of the most unstable mixed-layer-instability (MLI) waves (TO DO)
 
 ### 2.2 Wavelength at the peak of the wb cross-spectra
 
@@ -40,10 +40,10 @@ N2ml_mean = xr.open_dataset(file1_3).N2ml_mean
 
 ### 3.1 Turner Angle agreement (% of casts with |TuV-TuH|<= 10 degrees)
 
-### 3.2 Averaged wb cross-spectra within the mixed layer and within the submesoscale range
+### 3.2 Averaged wb cross-spectra within the mixed layer and within the submesoscale range (TO DO)
 
 ### 3.3 SSH gradient magnitude
 
-### 3.4 Mean SSH gradient magnitude for regions with |TuV-TuH|<= 10 degrees
+### 3.4 Mean SSH gradient magnitude for regions with |TuV-TuH|<= 10 degrees (TO DO)
 
 

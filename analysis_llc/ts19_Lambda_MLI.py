@@ -9,6 +9,8 @@ from dask.diagnostics import ProgressBar
 from scipy.io import savemat
 
 from set_constant import domain_name, face, i, j
+from set_colormaps import WhiteBlueGreenYellowRed
+cmap = WhiteBlueGreenYellowRed()
 
 # --- Physical constants ---
 g = 9.81        # gravity (m/s²)
@@ -29,26 +31,27 @@ os.makedirs(output_dir, exist_ok=True)
 # --- Load Grid & Setup xgcm ---
 ds1 = xr.open_zarr(grid_path, consolidated=False)
 
-ds_grid = ds1.isel(face=face, i=i, j=j, i_g=i, j_g=j)
+# ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
+ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k_p1=0,k_u=0)
 
 # Drop time dimension if exists
-if 'time' in ds_grid.dims:
-    ds_grid = ds_grid.isel(time=0, drop=True)  # or .squeeze('time')
+if 'time' in ds_grid_face.dims:
+    ds_grid_face = ds_grid_face.isel(time=0, drop=True)  # or .squeeze('time')
 
-lat2d = ds1.YC.isel(face=face, i=i, j=j)
-depth = ds1.Z.values
-
+# ========= Setup xgcm grid =========
 coords = {
     "X": {"center": "i", "left": "i_g"},
     "Y": {"center": "j", "left": "j_g"},
-    "Z": {"center": "k"},
 }
 metrics = {
     ("X",): ["dxC", "dxG"],
     ("Y",): ["dyC", "dyG"],
-    ("Z",): ["Z"],
 }
-grid = Grid(ds1, coords=coords, metrics=metrics, periodic=False)
+grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
+
+
+lat2d = ds1.YC.isel(face=face, i=i, j=j)
+depth = ds1.Z.values
 
 # --- Coriolis parameter ---
 f_cor = 2 * omega * np.sin(np.deg2rad(lat2d.values))
@@ -61,8 +64,8 @@ def compute_N2_xr(rho, depth):
     return N2
 
 # --- Loop through files ---
-for fpath in hml_files:
-
+# for fpath in hml_files:
+fpath = hml_files[0]
 
 print(f"Processing {os.path.basename(fpath)}")
 ds = xr.open_dataset(fpath)
@@ -70,6 +73,7 @@ date_tag = os.path.basename(fpath).split("_")[-1].replace(".nc", "")
 
 Hml = ds["Hml_7d"].load()
 rho = ds["rho_7d"].load()  # (k, j, i)
+
 
 # Depth broadcast
 depth_broadcasted = xr.DataArray(
@@ -104,12 +108,12 @@ Mml4_mean = M4_masked.mean(dim="k", skipna=True)
 # --- Compute Rib and Lambda_MLI ---
 Rib = (N2ml_mean * f_cor**2) / Mml4_mean
 Rib = Rib.where(Rib > 0)
-Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * Hml / f_cor
+Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 
 # --- Plot ---
 plt.figure(figsize=(8, 6))
-plt.pcolormesh(Lambda_MLI, cmap=cmocean.cm.thermal, shading="auto")
-plt.colorbar(label="Lambda_MLI (m)")
+plt.pcolormesh(Lambda_MLI/1000, cmap=cmap, shading="auto",vmin = 2, vmax = 20)
+plt.colorbar(label="Lambda_MLI (km)")
 plt.title(f"MLI Wavelength - {date_tag}")
 plt.tight_layout()
 plt.savefig(os.path.join(figdir, f"Lambda_MLI_{date_tag}.png"), dpi=150)
