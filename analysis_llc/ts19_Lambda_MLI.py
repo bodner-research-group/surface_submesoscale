@@ -12,13 +12,13 @@ from set_constant import domain_name, face, i, j
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
 
-from dask.distributed import Client, LocalCluster
+# from dask.distributed import Client, LocalCluster
 
-# Dask Cluster Setup
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-client = Client(cluster)
-print("✅ Dask cluster started")
-print("Dask dashboard:", client.dashboard_link)
+# # Dask Cluster Setup
+# cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+# client = Client(cluster)
+# print("✅ Dask cluster started")
+# print("Dask dashboard:", client.dashboard_link)
 
 
 # --- Physical constants ---
@@ -60,7 +60,14 @@ grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
 
 lat2d = ds1.YC.isel(face=face, i=i, j=j)
+lon2d = ds1.XC.isel(face=face, i=i, j=j)
 depth = ds1.Z.values
+
+# lon_plot = lon2d.transpose("j", "i").values[:-1, :-1]
+# lat_plot = lat2d.transpose("j", "i").values[:-1, :-1]
+
+lon_plot = lon2d.transpose("j", "i")
+lat_plot = lat2d.transpose("j", "i")
 
 # --- Coriolis parameter ---
 f_cor = 2 * omega * np.sin(np.deg2rad(lat2d.values))
@@ -74,7 +81,7 @@ def compute_N2_xr(rho, depth):
 
 # --- Loop through files ---
 for fpath in hml_files:
-# fpath = hml_files[0]
+# fpath = hml_files[9]
 
     print(f"Processing {os.path.basename(fpath)}")
     ds = xr.open_dataset(fpath)
@@ -99,10 +106,29 @@ for fpath in hml_files:
     k_hml_base_da = xr.DataArray(k_hml_base, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
 
     # Create mask
+    # k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
+    # k_indices = k_indices.astype(int)
+    # in_range_mask = k_indices <= k_hml_base_da
+    # N2_masked = N2.where(in_range_mask)
+    # N2ml_mean = N2_masked.mean(dim="k", skipna=True)
+
+    # Compute depth bounds (30%-90%) of mixed layer
+    Hml_30 = Hml * 0.3
+    Hml_90 = Hml * 0.9
+    # Interpolate to nearest depth levels
+    k_30 = np.abs(depth[:, None, None] - Hml_30.values[None, :, :]).argmin(axis=0)
+    k_90 = np.abs(depth[:, None, None] - Hml_90.values[None, :, :]).argmin(axis=0)
+    # Convert to xarray DataArrays
+    k_30_da = xr.DataArray(k_30, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    k_90_da = xr.DataArray(k_90, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    # Create k indices aligned with N2
     k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
     k_indices = k_indices.astype(int)
-    in_range_mask = k_indices <= k_hml_base_da
+    # Mask for k within 30%-90% of Hml
+    in_range_mask = (k_indices >= k_30_da) & (k_indices <= k_90_da)
+    # Apply mask
     N2_masked = N2.where(in_range_mask)
+    # Mean over vertical dimension (k)
     N2ml_mean = N2_masked.mean(dim="k", skipna=True)
 
     # --- Compute horizontal buoyancy gradient squared Mml² using xgcm ---
@@ -120,15 +146,41 @@ for fpath in hml_files:
     Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 
     # --- Plot ---
-    plt.figure(figsize=(8, 6))
-    plt.pcolormesh(Lambda_MLI/1000, cmap=cmap, shading="auto",vmin = 2, vmax = 20)
-    plt.colorbar(label="Lambda_MLI (km)")
-    plt.title(f"MLI Wavelength - {date_tag}")
-    plt.tight_layout()
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
-    plt.savefig(os.path.join(figdir, f"Lambda_MLI_{date_tag}.png"), dpi=150)
+    # plt.figure(figsize=(8, 6))
+    # plt.pcolormesh(lon_plot, lat_plot, Lambda_MLI/1000, cmap=cmap, shading="auto",vmin = 0, vmax = 20)
+    # plt.colorbar(label="Lambda_MLI (km)")
+    # plt.title(f"MLI Wavelength - {date_tag}")
+    # plt.tight_layout()
+    # plt.xlabel("Longitude")
+    # plt.ylabel("Latitude")
+    # plt.savefig(os.path.join(figdir, f"Lambda_MLI_{date_tag}.png"), dpi=150)
+    # plt.close()
+
+    # --- 2x2 Plot of Lambda_MLI, N2ml_mean, Hml, Rib ---
+    fig, axs = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True)
+    plots = [
+        (Lambda_MLI / 1000, "Lambda_MLI (km)", (0, 40), cmap),
+        (N2ml_mean, "N² (s⁻²)", (0, 2e-6), "viridis"),
+        # (Hml, "Hml (m)", None, "plasma"),
+        (np.sqrt(Mml4_mean), "M2", (0, 5e-8), "plasma"),
+        (Rib, "Ri_b", (0, 10), "magma"),
+    ]
+
+    for ax, (data, label, clim, cm) in zip(axs.flat, plots):
+        p = ax.pcolormesh(lon_plot, lat_plot, data, shading="auto", cmap=cm)
+        if clim:
+            p.set_clim(*clim)
+        cbar = plt.colorbar(p, ax=ax, orientation="vertical")
+        cbar.set_label(label)
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.set_title(label)
+
+    plt.suptitle(f"MLI Diagnostics - {date_tag}", fontsize=16)
+    plot_path = os.path.join(figdir, f"MLI_summary_{date_tag}.png")
+    plt.savefig(plot_path, dpi=150)
     plt.close()
+
 
     # --- Save to NetCDF ---
     ds_out = xr.Dataset(
