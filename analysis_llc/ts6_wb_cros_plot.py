@@ -48,6 +48,7 @@ max_values = []
 max_depths = []
 max_krs = []
 max_Lr = []
+mean_spec_in_mld_submeso = []
 
 def plot_wb_spectrum(nc_path):
     fname = os.path.basename(nc_path)
@@ -87,6 +88,22 @@ def plot_wb_spectrum(nc_path):
 
     mean_spec_in_mld.append(mld_mean_val)
 
+
+    # --- Compute mean spectrum in MLD contributed by submesoscales
+    # Filter mesoscale
+    kr_cutoff_meso = 1/10  # cycles per km
+    spec_vp_filtered_meso = spec_vp_real.where(k_r >= kr_cutoff_meso, drop=True)
+    spec_sel_submeso = spec_vp_filtered_meso.where(valid_depth_mask, drop=True)
+
+    if not np.isnan(Hml_this_week):
+        mld_mask = depth >= Hml_this_week  # depths shallower than Hml (less negative)
+        spec_in_mld_submeso = spec_sel_submeso.where(mld_mask, drop=True)
+        mld_mean_submeso_val = spec_in_mld_submeso.mean().item()
+    else:
+        mld_mean_submeso_val = np.nan
+
+    mean_spec_in_mld_submeso.append(mld_mean_submeso_val)
+
     # --- Find spectral peak info
     max_val = spec_sel.max()
     idx = spec_sel.argmax(dim=["k", "freq_r"])
@@ -124,6 +141,8 @@ def plot_wb_spectrum(nc_path):
     plt.colorbar(pc, label=r'Spectral density (m$^2$s$^{-3}$)')
     plt.grid(True, which='both', ls='--')
     plt.tight_layout()
+    plt.axvline(x=kr_cutoff_meso, color='r', linestyle='--', label='10 km cutoff')
+    plt.legend()
     plt.savefig(f"{figdir}/wb_cross-spectrum_{date_str}.png", dpi=150)
     plt.close()
     print(f"Saved figure for {date_str}")
@@ -141,6 +160,7 @@ result_ds = xr.Dataset(
         "kr_at_max": (["time"], max_krs),
         "Lr_at_max": (["time"], max_Lr),
         "mean_spec_in_MLD": (["time"], mean_spec_in_mld),
+        "mean_spec_in_MLD_submeso": (["time"], mean_spec_in_mld_submeso),
     },
     coords={
         "time": pd.to_datetime(times)
@@ -212,3 +232,17 @@ plt.tight_layout()
 plt.savefig(os.path.join(figdir, "mean_spec_in_MLD_timeseries.png"), dpi=150)
 plt.close()
 print("Saved: mean_spec_in_MLD_timeseries.png")
+
+
+# New plot: MLD-averaged spec_vp contributed by submesoscale
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(times, mean_spec_in_mld, marker='o', linestyle='-', color='tab:purple')
+ax.set_title('Mean $w$-$b$ Spectrum in Mixed Layer (submesoscale)')
+ax.set_ylabel('Mean spec_vp (m²/s³)')
+ax.set_xlabel('Time')
+ax.grid(True, linestyle='--')
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+plt.tight_layout()
+plt.savefig(os.path.join(figdir, "mean_spec_in_MLD_submeso_timeseries.png"), dpi=150)
+plt.close()
+print("Saved: mean_spec_in_MLD_submeso_timeseries.png")

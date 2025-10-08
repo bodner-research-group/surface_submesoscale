@@ -36,12 +36,17 @@ N2ml_mean = xr.open_dataset(fname).N2ml_mean
 ### 2.1 Turner Angle agreement (% of casts with |TuV-TuH|<= 10 degrees)
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_Timeseries_Stats.nc"
 Tu_agreements_pct = xr.open_dataset(fname).Tu_agreements_pct
+Tu_diff_means = xr.open_dataset(fname).Tu_diff_means
+
 
 ### 2.2 SSH gradient magnitude
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_gradient/SSH_gradient_magnitude.nc"
 eta_grad_mag_weekly = xr.open_dataset(fname).eta_grad_mag_weekly
 
 ### 2.3 Averaged wb cross-spectra within the mixed layer and within the submesoscale range (TO DO)
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
+mean_spec_in_MLD_submeso = xr.open_dataset(fname).mean_spec_in_MLD_submeso
+mean_spec_in_MLD = xr.open_dataset(fname).mean_spec_in_MLD
 
 ### (*?) 2.4 Mean SSH gradient magnitude for regions with |TuV-TuH|<= 10 degrees (TO DO)
 
@@ -61,16 +66,18 @@ Lr_at_max = xr.open_dataset(fname).Lr_at_max  # in km
 
 
 
-
 # --- Prepare dictionary to save ---
 mat_data = {
     "qnet_7day_smooth": qnet_7day_smooth.values,
     "Hml_mean": Hml_mean.values,
     "N2ml_mean": N2ml_mean.values,
     "Tu_agreements_pct": Tu_agreements_pct.values,
+    "Tu_diff_means": Tu_diff_means.values,
     "eta_grad_mag_weekly": eta_grad_mag_weekly.values,
     "Lambda_MLI_mean": Lambda_MLI_mean.values,
     "Lr_at_max": Lr_at_max.values,
+    "mean_spec_in_MLD": mean_spec_in_MLD.values,
+    "mean_spec_in_MLD_submeso": mean_spec_in_MLD_submeso.values,
     # Optional: Save coordinates (e.g. time) if needed
     "time_qnet": qnet_7day_smooth.time.values.astype('datetime64[s]').astype(str),
     "time_Hml": Hml_mean.time.values.astype('datetime64[s]').astype(str),

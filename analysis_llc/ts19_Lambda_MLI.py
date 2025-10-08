@@ -71,6 +71,11 @@ lat_plot = lat2d.transpose("j", "i")
 
 # --- Coriolis parameter ---
 f_cor = 2 * omega * np.sin(np.deg2rad(lat2d.values))
+f_cor_squared = f_cor**2
+
+
+
+
 
 # --- Helper function to compute N² ---
 def compute_N2_xr(rho, depth):
@@ -141,8 +146,18 @@ for fpath in hml_files:
     Mml4_mean = M4_masked.mean(dim="k", skipna=True)
 
     # --- Compute Rib and Lambda_MLI ---
-    Rib = (N2ml_mean * f_cor**2) / Mml4_mean
-    Rib = Rib.where(Rib > 0)
+    f_cor_3D_squared = xr.DataArray(
+        np.broadcast_to(f_cor_squared[None, :, :], rho.shape),
+        dims=rho.dims,
+        coords=rho.coords
+    )
+
+    Rib_local = (N2 * f_cor_3D_squared) / M4_full
+    Rib_local = Rib_local.where(Rib_local > 0)
+    Rib_masked = Rib_local.where(in_range_mask)
+    Rib = Rib_masked.mean(dim="k", skipna=True)
+
+
     Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 
     # --- Plot ---
