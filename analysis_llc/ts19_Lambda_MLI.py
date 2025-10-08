@@ -41,20 +41,33 @@ os.makedirs(output_dir, exist_ok=True)
 ds1 = xr.open_zarr(grid_path, consolidated=False)
 
 # ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
-ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k_p1=0,k_u=0)
+ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k_u=0)
 
 # Drop time dimension if exists
 if 'time' in ds_grid_face.dims:
     ds_grid_face = ds_grid_face.isel(time=0, drop=True)  # or .squeeze('time')
 
 # ========= Setup xgcm grid =========
+# coords = {
+#     "X": {"center": "i", "left": "i_g"},
+#     "Y": {"center": "j", "left": "j_g"},
+# }
+# metrics = {
+#     ("X",): ["dxC", "dxG"],
+#     ("Y",): ["dyC", "dyG"],
+# }
+# grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
+
+
 coords = {
     "X": {"center": "i", "left": "i_g"},
     "Y": {"center": "j", "left": "j_g"},
+    "Z": {"center": "k", "outer": "k_p1"}, 
 }
 metrics = {
     ("X",): ["dxC", "dxG"],
     ("Y",): ["dyC", "dyG"],
+    ("Z",): ["drF"],  
 }
 grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
@@ -75,14 +88,19 @@ f_cor_squared = f_cor**2
 
 
 
-
-
 # --- Helper function to compute N² ---
-def compute_N2_xr(rho, depth):
-    drho = - rho.differentiate("k")
-    dz = - depth.differentiate("k")
-    N2 = - (g / rho0) * (drho / dz)
-    return N2
+# def compute_N2_xr(rho, depth):
+#     drho = - rho.differentiate("k")
+#     dz = - depth.differentiate("k")
+#     N2 = - (g / rho0) * (drho / dz)
+#     return N2
+def compute_N2_xr(rho, depth, grid):
+    drho_dz = grid.derivative(rho, axis="Z") / grid.derivative(depth, axis="Z")
+    N2 = - (g / rho0) * drho_dz
+    # Optional: interp to center
+    N2_centered = grid.interp(N2, axis="Z", to="center")
+    return N2_centered
+
 
 # --- Loop through files ---
 for fpath in hml_files:
@@ -104,7 +122,8 @@ for fpath in hml_files:
     )
 
     # Compute N²
-    N2 = compute_N2_xr(rho, depth_broadcasted)
+    # N2 = compute_N2_xr(rho, depth_broadcasted)
+    N2 = compute_N2_xr(rho, depth_broadcasted, grid)
 
     # Find index of Hml base
     k_hml_base = np.abs(depth[:, None, None] - Hml.values[None, :, :]).argmin(axis=0)
@@ -117,20 +136,20 @@ for fpath in hml_files:
     # N2_masked = N2.where(in_range_mask)
     # N2ml_mean = N2_masked.mean(dim="k", skipna=True)
 
-    # Compute depth bounds (30%-90%) of mixed layer
-    Hml_30 = Hml * 0.3
+    # Compute depth bounds (10%-90%) of mixed layer
+    Hml_10 = Hml * 0.1
     Hml_90 = Hml * 0.9
     # Interpolate to nearest depth levels
-    k_30 = np.abs(depth[:, None, None] - Hml_30.values[None, :, :]).argmin(axis=0)
+    k_10 = np.abs(depth[:, None, None] - Hml_10.values[None, :, :]).argmin(axis=0)
     k_90 = np.abs(depth[:, None, None] - Hml_90.values[None, :, :]).argmin(axis=0)
     # Convert to xarray DataArrays
-    k_30_da = xr.DataArray(k_30, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    k_10_da = xr.DataArray(k_10, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
     k_90_da = xr.DataArray(k_90, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
     # Create k indices aligned with N2
     k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
     k_indices = k_indices.astype(int)
-    # Mask for k within 30%-90% of Hml
-    in_range_mask = (k_indices >= k_30_da) & (k_indices <= k_90_da)
+    # Mask for k within 10%-90% of Hml
+    in_range_mask = (k_indices >= k_10_da) & (k_indices <= k_90_da)
     # Apply mask
     N2_masked = N2.where(in_range_mask)
     # Mean over vertical dimension (k)
@@ -152,11 +171,14 @@ for fpath in hml_files:
         coords=rho.coords
     )
 
+    ### Compute local balanced Richardson Number
     Rib_local = (N2 * f_cor_3D_squared) / M4_full
     Rib_local = Rib_local.where(Rib_local > 0)
     Rib_masked = Rib_local.where(in_range_mask)
-    Rib = Rib_masked.mean(dim="k", skipna=True)
-
+    ### Compute the harmonic mean of balanced Richardson Number (to highlight the influence of small local Richardson numbers)
+    inverseRib_masked = 1/Rib_masked
+    inverseRib = inverseRib_masked.mean(dim="k", skipna=True)
+    Rib = 1/inverseRib
 
     Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 
