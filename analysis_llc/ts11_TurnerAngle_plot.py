@@ -312,6 +312,33 @@ fig_path = os.path.join(figdir, "TurnerAngle_Timeseries_Agreement.png")
 fig.savefig(fig_path, dpi=300)
 print(f"\n Saved figure to: {fig_path}")
 
+
+# Create DataFrame
+df_stats = pd.DataFrame({
+    "date": dates,
+    "TuV_means": TuV_means,
+    "TuH_means": TuH_means,
+    "Tu_diff_means": Tu_diff_means,
+    "Tu_diff_means_new": Tu_diff_means_new,
+    "Tu_agreements_pct": Tu_agreements_pct,
+    "Tu_agreements_new_pct": Tu_agreements_new_pct,
+    "Tu_RMSEs": Tu_RMSEs,
+    "Tu_corrs_pct": Tu_corrs_pct,
+})
+
+# Set the output directory
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"  # Change this to your actual output directory
+
+# Convert DataFrame to xarray Dataset
+ds_stats = xr.Dataset.from_dataframe(df_stats.set_index("date"))
+
+# Save to NetCDF
+nc_out = os.path.join(output_dir, "TurnerAngle_Timeseries_Stats.nc")
+ds_stats.to_netcdf(nc_out)
+
+print(f"✅ Saved statistics to: {nc_out}")
+
+
 # # =======================
 # # 5. Save statistics to CSV
 # # =======================
