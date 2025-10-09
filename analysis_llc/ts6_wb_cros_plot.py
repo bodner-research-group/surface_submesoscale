@@ -121,34 +121,33 @@ def plot_wb_spectrum(nc_path):
     max_krs.append(max_k_r)
     max_Lr.append(max_L_r)
 
-    # Plot
-    plt.figure(figsize=(8, 6))
-    # vmax = np.abs(spec_vp_filtered).max().item()
-    vmax = 5e-10
-    # norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
-    norm = TwoSlopeNorm(vcenter=vmax/2, vmin=0, vmax=vmax)
+    # # Plot
+    # plt.figure(figsize=(8, 6))
+    # # vmax = np.abs(spec_vp_filtered).max().item()
+    # vmax = 5e-10
+    # # norm = TwoSlopeNorm(vcenter=0, vmin=-vmax, vmax=vmax)
+    # norm = TwoSlopeNorm(vcenter=vmax/2, vmin=0, vmax=vmax)
 
-    pc = plt.pcolormesh(
-        k_r_filtered, depth, spec_vp_filtered,
-        shading='auto', cmap=cmap, norm=norm
-    )
-    plt.gca().invert_yaxis()
-    plt.xscale('log')
-    plt.gca().invert_yaxis()  # Flip y-axis so depth increases downward
-    plt.xlabel(r'Wavenumber $k_r$ (cpkm)')
-    plt.ylabel('Depth (m)')
-    plt.title(f'$w$-$b$ Cross-Spectrum (VP), {date_str}')
-    plt.colorbar(pc, label=r'Spectral density (m$^2$s$^{-3}$)')
-    plt.grid(True, which='both', ls='--')
-    plt.tight_layout()
-    plt.axvline(x=kr_cutoff_meso, color='r', linestyle='--', label='30 km cutoff')
-    plt.legend()
-    plt.savefig(f"{figdir}/wb_cross-spectrum_{date_str}.png", dpi=150)
-    plt.close()
-    print(f"Saved figure for {date_str}")
+    # pc = plt.pcolormesh(
+    #     k_r_filtered, depth, spec_vp_filtered,
+    #     shading='auto', cmap=cmap, norm=norm
+    # )
+    # plt.xscale('log')
+    # # plt.gca().invert_yaxis()  # Flip y-axis so depth increases downward
+    # plt.xlabel(r'Wavenumber $k_r$ (cpkm)')
+    # plt.ylabel('Depth (m)')
+    # plt.title(f'$w$-$b$ Cross-Spectrum (VP), {date_str}')
+    # plt.colorbar(pc, label=r'Spectral density (m$^2$s$^{-3}$)')
+    # plt.grid(True, which='both', ls='--')
+    # plt.tight_layout()
+    # plt.axvline(x=kr_cutoff_meso, color='r', linestyle='--', label='30 km cutoff')
+    # plt.legend()
+    # plt.savefig(f"{figdir}/wb_cross-spectrum_{date_str}.png", dpi=150)
+    # plt.close()
+    # print(f"Saved figure for {date_str}")
 
 # ===== Loop through all .nc files and plot =====
-all_spec_files = sorted(glob(os.path.join(input_dir, "wb_cross_spec_vp_real_24hfilter_*.nc")))
+all_spec_files = sorted(glob(os.path.join(input_path, "wb_cross_spec_vp_real_24hfilter_*.nc")))
 for f in all_spec_files:
     plot_wb_spectrum(f)
 
@@ -212,12 +211,14 @@ plt.close()
 print("Saved: combined_spec_timeseries.png")
 
 
-##### Convert images to video
-import os
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly_24hfilter"
-# high-resolution
-output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-wb_spectra_weekly_24hfilter.mp4"
-os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_cross-spectrum_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+# ##### Convert images to video
+# import os
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_spectra_weekly_24hfilter"
+# # high-resolution
+# output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-wb_spectra_weekly_24hfilter.mp4"
+# os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_cross-spectrum_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
 
 
 # New plot: MLD-averaged spec_vp

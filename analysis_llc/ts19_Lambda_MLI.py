@@ -110,6 +110,12 @@ for fpath in hml_files:
     ds = xr.open_dataset(fpath)
     date_tag = os.path.basename(fpath).split("_")[-1].replace(".nc", "")
 
+    out_nc = os.path.join(output_dir, f"Lambda_MLI_{date_tag}.nc")
+    
+    if os.path.exists(out_nc):
+        print(f"⏭️  Skipping {date_tag}, output already exists.")
+        continue
+
     Hml = ds["Hml_7d"].load()
     rho = ds["rho_7d"].load()  # (k, j, i)
 
@@ -231,7 +237,7 @@ for fpath in hml_files:
         }
     )
 
-    out_nc = os.path.join(output_dir, f"Lambda_MLI_{date_tag}.nc")
+    
 
     # Optional: Compression
     encoding = {

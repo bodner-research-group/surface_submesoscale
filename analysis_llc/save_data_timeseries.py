@@ -25,11 +25,12 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 qnet_7day_smooth = xr.open_dataset(fname).qnet_7day_smooth
 
 ### 1.2 Mixed-layer depth
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries.nc" # Hml_weekly_mean.nc
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # Hml_weekly_mean.nc
 Hml_mean = xr.open_dataset(fname).Hml_mean
 
+
 ### 1.3 Mean stratification of 30%-90% of the mixed layer
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries.nc" # N2ml_weekly.nc
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # N2ml_weekly.nc
 N2ml_mean = xr.open_dataset(fname).N2ml_mean
 
 
@@ -44,7 +45,7 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 eta_grad_mag_weekly = xr.open_dataset(fname).eta_grad_mag_weekly
 
 ### 2.3 Averaged wb cross-spectra within the mixed layer and within the submesoscale range (TO DO)
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered_7d_rolling_mean.nc"
 mean_spec_in_MLD_submeso = xr.open_dataset(fname).mean_spec_in_MLD_submeso
 mean_spec_in_MLD = xr.open_dataset(fname).mean_spec_in_MLD
 
@@ -53,7 +54,7 @@ mean_spec_in_MLD = xr.open_dataset(fname).mean_spec_in_MLD
 
 
 ### 3.1 Wavelength of the most unstable mixed-layer-instability (MLI) waves
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc"
 Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 ### 3.2 Surface energy injection scale (TO DO)
@@ -62,9 +63,9 @@ Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 
 ### 3.4 Wavelength at the peak of the wb cross-spectra
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered_7d_rolling_mean.nc"
 Lr_at_max = xr.open_dataset(fname).Lr_at_max  # in km
-
+energy_weighted_Lr = xr.open_dataset(fname).energy_weighted_Lr  # in km
 
 
 # --- Prepare dictionary to save ---
