@@ -292,10 +292,11 @@ figure(3); clf;
 set(gcf,'Color','w','Position',POSITION)
 
 plot(time_Hml, squeeze(Lambda_MLI_mean), 'r-', 'LineWidth', 2); hold on;
-plot(time_Hml, squeeze(Lr_at_max), 'b-', 'LineWidth', 2);
+% plot(time_Hml, squeeze(Lr_at_max), 'b-', 'LineWidth', 2);
 ylabel('Wavelength (km)');
 grid on;grid minor;
-legend({'\lambda_{MLI}', 'L_r (wb spectrum)'}, 'Location', 'best');
+legend({'\lambda_{MLI}'}, 'Location', 'best');
+% legend({'\lambda_{MLI}', 'L_r (wb spectrum)'}, 'Location', 'best');
 
 % Define custom tick locations (every 2 months from Nov 2011 to Nov 2012)
 xticks_custom = datetime(2011,11,1) : calmonths(2) : datetime(2012,11,1);

@@ -39,8 +39,7 @@ os.makedirs(figdir, exist_ok=True)
 plt.rcParams.update({'font.size': 15})
 
 # Filtering threshold (1/500 cpkm)
-# kr_cutoff = 2 / 500  # cycles per km
-kr_cutoff = 8 / 500
+kr_cutoff = 2 / 500  # cycles per km
 
 # Lists to collect results
 times = []
@@ -91,7 +90,7 @@ def plot_wb_spectrum(nc_path):
 
     # --- Compute mean spectrum in MLD contributed by submesoscales
     # Filter mesoscale
-    kr_cutoff_meso = 1/10  # cycles per km
+    kr_cutoff_meso = 1/30  # cycles per km
     spec_vp_filtered_meso = spec_vp_real.where(k_r >= kr_cutoff_meso, drop=True)
     spec_sel_submeso = spec_vp_filtered_meso.where(valid_depth_mask, drop=True)
 
@@ -141,7 +140,7 @@ def plot_wb_spectrum(nc_path):
     plt.colorbar(pc, label=r'Spectral density (m$^2$s$^{-3}$)')
     plt.grid(True, which='both', ls='--')
     plt.tight_layout()
-    plt.axvline(x=kr_cutoff_meso, color='r', linestyle='--', label='10 km cutoff')
+    plt.axvline(x=kr_cutoff_meso, color='r', linestyle='--', label='30 km cutoff')
     plt.legend()
     plt.savefig(f"{figdir}/wb_cross-spectrum_{date_str}.png", dpi=150)
     plt.close()
