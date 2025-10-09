@@ -39,6 +39,13 @@ dy = ds1.dyF.isel(face=face, i=i, j=j).mean().values
 dr = np.sqrt(dx**2 / 2 + dy**2 / 2)
 
 
+def compute_one_spec_from_file(tt_path, ss_path, ww_path, time_index):
+    tt = xr.open_dataset(tt_path)['Theta'].isel(time=time_index)
+    ss = xr.open_dataset(ss_path)['Salt'].isel(time=time_index)
+    ww = xr.open_dataset(ww_path)['W'].isel(time=time_index)
+    return compute_one_spec(tt, ss, ww)
+
+
 # ========== Cross-spectrum function ==========
 def compute_one_spec(tt, ss, ww):
     """
@@ -91,63 +98,89 @@ def compute_one_spec(tt, ss, ww):
 # ========== Main processing ==========
 def main():
     # ========== Setup Dask distributed cluster ==========
-    cluster = LocalCluster(
-        n_workers=32,              # fewer workers but each with more memory
-        threads_per_worker=1,
-        memory_limit='10GB',        # increase per-worker memory
-        local_directory="/tmp/dask",  # temp storage for spills
-        dashboard_address=":8787"
-    )
+    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit='5.5GB')
     client = Client(cluster)
     print("Dask dashboard:", client.dashboard_link)
 
-    # Store all daily results temporarily to disk instead of keeping in RAM
-    tmp_files = []
+    all_results = []  # 🔹 save all cross-spectra
 
-    for week_idx, (tt_file, ss_file, ww_file) in enumerate(zip(tt_files, ss_files, ww_files)):
+    # ========== Loop through weekly 24-hour average files and compute cross-spectra ==========
+    for tt_file, ss_file, ww_file in zip(tt_files, ss_files, ww_files):
+
         date_str = os.path.basename(tt_file).split('_')[-1].replace('.nc', '')
         print(f"Processing {date_str}...")
 
-        # load lazily
-        tt = xr.open_dataset(tt_file, chunks={'time': 1, 'i': 200, 'j': 200})['Theta']
-        ss = xr.open_dataset(ss_file, chunks={'time': 1, 'i': 200, 'j': 200})['Salt']
-        ww = xr.open_dataset(ww_file, chunks={'time': 1, 'i': 200, 'j': 200})['W']
+        # Load datasets. Chunk time dimension
+        tt = xr.open_dataset(tt_file)['Theta'].chunk({'time': 1, 'i': -1, 'j': -1})
+        ss = xr.open_dataset(ss_file)['Salt'].chunk({'time': 1, 'i': -1, 'j': -1})
+        ww = xr.open_dataset(ww_file)['W'].chunk({'time': 1, 'i': -1, 'j': -1})
 
-        # process each day sequentially (no large delayed graph)
-        daily_specs = []
+        ### ---- option1: warnings of large graph
+        # # Create lists for delayed computation 
+        # tasks = []
+        # for t in range(tt.sizes['time']):
+        #     t_tt = tt.isel(time=t)
+        #     t_ss = ss.isel(time=t)
+        #     t_ww = ww.isel(time=t)
+        #     task = delayed(compute_one_spec)(t_tt, t_ss, t_ww)
+        #     tasks.append(task)
+        #     # free memory between iterations
+        #     del t_tt, t_ss, t_ww
+        #     client.run(gc.collect)
+        # # Compute cross-spectra for each day of the week
+        # week_results = compute(*tasks)
+        # all_results.extend(week_results)  # 🔹 add weekly results to all_results
+
+        ### ---- option2: Too slow, not parallel
+        # for t in range(tt.sizes['time']): 
+        #     print(f"  └─ Time index {t}")
+        #     t_tt = tt.isel(time=t)
+        #     t_ss = ss.isel(time=t)
+        #     t_ww = ww.isel(time=t)
+        #     # Use client.submit instead of delayed
+        #     future = client.submit(compute_one_spec, t_tt, t_ss, t_ww)
+        #     result = future.result()  
+        #     all_results.append(result)
+        #     del t_tt, t_ss, t_ww, future, result
+        #     client.run(gc.collect)
+
+        ### ---- option3: 
+        # futures = []
+        # for t in range(tt.sizes['time']):
+        #     print(f"  └─ Time index {t}")
+        #     t_tt = tt.isel(time=t)
+        #     t_ss = ss.isel(time=t)
+        #     t_ww = ww.isel(time=t)
+        #     future = client.submit(compute_one_spec, t_tt, t_ss, t_ww)
+        #     futures.append(future)
+        # week_results = client.gather(futures)
+        # all_results.extend(week_results)
+        # del tt, ss, ww, futures, week_results
+        # client.run(gc.collect)
+
+        futures = []
         for t in range(tt.sizes['time']):
-            t_tt = tt.isel(time=t)
-            t_ss = ss.isel(time=t)
-            t_ww = ww.isel(time=t)
+            future = client.submit(compute_one_spec_from_file, tt_file, ss_file, ww_file, t)
+            futures.append(future)
+        week_results = client.gather(futures)
+        all_results.extend(week_results)
 
-            spec = compute_one_spec(t_tt, t_ss, t_ww)  # compute immediately
-            spec.load()  # force into memory (tiny compared to 3D field)
-            daily_specs.append(spec)
 
-            # free memory between iterations
-            del t_tt, t_ss, t_ww, spec
-            client.run(gc.collect)
+    # 🔹 all_results contains data for 364 days
+    print(f"Total days processed: {len(all_results)}")
 
-        # concatenate and save this week’s results to disk
-        week_specs = xr.concat(daily_specs, dim='time')
-        week_tmp = os.path.join(output_dir, f"_tmp_week_{week_idx:02d}.nc")
-        week_specs.to_netcdf(week_tmp)
-        tmp_files.append(week_tmp)
+    # 🔹 combine into one timeseries
+    WB_cross_spectra_all = xr.concat(all_results, dim='time')
 
-        # clean up references to release memory
-        del daily_specs, week_specs
-        client.run(gc.collect)
+    # 🔹 compute 7-day rolling mean
+    WB_cross_spectra_rolling = WB_cross_spectra_all.rolling(time=7, center=True).mean()
 
-    # Combine all weeks into one big dataset (on disk, not in memory)
-    print("Combining all weeks...")
-    all_specs = xr.open_mfdataset(tmp_files, combine='nested', concat_dim='time')
-
-    # rolling mean (lazy)
-    WB_cross_spectra_rolling = all_specs.rolling(time=7, center=True).mean()
-
-    # save final output
+    # 🔹 
+    dr = np.sqrt(dx**2 / 2 + dy**2 / 2)
     k_r = WB_cross_spectra_rolling.freq_r / dr / 1e-3
     spec_vp = WB_cross_spectra_rolling * k_r
+
+    # 🔹 save data
     out_file = os.path.join(output_dir, "wb_cross_spec_vp_real_7day_rolling.nc")
     ds_out = xr.Dataset({
         'spec_vp_real': spec_vp.real,
@@ -155,7 +188,7 @@ def main():
         'depth': WB_cross_spectra_rolling.Z
     })
     ds_out.to_netcdf(out_file)
-    print(f"Saved final output: {out_file}")
+    print(f"Saved 7-day rolling mean spectra to {out_file}")
 
     client.close()
     cluster.close()
