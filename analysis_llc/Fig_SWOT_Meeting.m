@@ -108,7 +108,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 % Hide the plot in ax3_label, only show y-axis
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$N^2\ (\mathrm{s^{-2}})$  (30\%--90\% ML)','Interpreter','latex');
+ylabel(ax3_label, '\boldmath$N^2\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex');
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis
@@ -153,7 +153,7 @@ hold on;
 
 % Left y-axis: Turner Angle difference
 yyaxis left
-l21 = plot(time_Hml, squeeze(Tu_diff_means), 'LineWidth', 2);
+l21 = plot(time_Hml, squeeze(Tu_diff_means),'LineWidth', 2);
 ylabel('\boldmath$\mathrm{Mean}\ \big\vert\mathrm{Tu}_V - \mathrm{Tu}_H\big\vert$','Interpreter','latex');
 set(gca, 'YDir', 'reverse');
 ax1 = gca;

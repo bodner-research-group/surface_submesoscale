@@ -136,20 +136,20 @@ for fpath in hml_files:
     # N2_masked = N2.where(in_range_mask)
     # N2ml_mean = N2_masked.mean(dim="k", skipna=True)
 
-    # Compute depth bounds (10%-90%) of mixed layer
-    Hml_10 = Hml * 0.1
+    # Compute depth bounds (50%-90%) of mixed layer
+    Hml_50 = Hml * 0.5
     Hml_90 = Hml * 0.9
     # Interpolate to nearest depth levels
-    k_10 = np.abs(depth[:, None, None] - Hml_10.values[None, :, :]).argmin(axis=0)
+    k_50 = np.abs(depth[:, None, None] - Hml_50.values[None, :, :]).argmin(axis=0)
     k_90 = np.abs(depth[:, None, None] - Hml_90.values[None, :, :]).argmin(axis=0)
     # Convert to xarray DataArrays
-    k_10_da = xr.DataArray(k_10, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    k_50_da = xr.DataArray(k_50, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
     k_90_da = xr.DataArray(k_90, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
     # Create k indices aligned with N2
     k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
     k_indices = k_indices.astype(int)
-    # Mask for k within 10%-90% of Hml
-    in_range_mask = (k_indices >= k_10_da) & (k_indices <= k_90_da)
+    # Mask for k within 50%-90% of Hml
+    in_range_mask = (k_indices >= k_50_da) & (k_indices <= k_90_da)
     # Apply mask
     N2_masked = N2.where(in_range_mask)
     # Mean over vertical dimension (k)

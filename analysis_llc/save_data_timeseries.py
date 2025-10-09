@@ -60,6 +60,7 @@ Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 ### 3.3 Wavelength corresponding to the peak in the isotropic spectra of SSH anomaly (TO DO)
 
+
 ### 3.4 Wavelength at the peak of the wb cross-spectra
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered.nc"
 Lr_at_max = xr.open_dataset(fname).Lr_at_max  # in km
