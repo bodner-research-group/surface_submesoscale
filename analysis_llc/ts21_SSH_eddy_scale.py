@@ -109,7 +109,16 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km, plot_dir):
             return (date_str, np.nan)
 
         # --- Compute energy-weighted mean wavelength ---
-        eddy_scale = np.sum(ps * wl) / np.sum(ps)
+        # 	•	If the spectrum has multiple peaks or a broad maximum, the absolute peak might be noisy or jump between adjacent bins.
+        # 	•	The energy-weighted mean is smoother and more physically meaningful as a representative scale.
+        # --- \lambda_{\text{eddy}} = \frac{\int P(k)\lambda(k)\,dk}{\int P(k)\,dk} ---
+        # 	•	P(k) = power spectral density at wavenumber k (or equivalently wavelength λ = 1/k).
+        # 	•	λ(k) = corresponding wavelength.
+        # eddy_scale is basically a weighted average of all wavelengths, where each wavelength is weighted by its contribution to the total variance (energy) in the SSH field.
+        #  	•	Wavelengths with more energy contribute more to the mean.
+        #  	•	Wavelengths with very little energy contribute almost nothing.
+        # So this gives a single number that characterizes the typical scale of SSH variability, i.e., the “eddy scale”.
+        eddy_scale = np.sum(ps * wl) / np.sum(ps)   
 
         # --- Plot spectrum ---
         plt.figure(figsize=(6, 4))
@@ -202,7 +211,7 @@ plt.figure(figsize=(12,4))
 plt.plot(time, eddy_scale, '-o', markersize=3, color='b', label='Eddy scale')
 plt.xlabel('Date')
 plt.ylabel('Eddy scale (km)')
-plt.title('Daily Eddy Scale Time Series')
+plt.title('Daily Eddy Scale Time Series (remove mesoscale)')
 plt.grid(True)
 plt.ylim(0, np.nanmax(eddy_scale)*1.2)  # optional, leave some margin
 plt.legend()
@@ -211,7 +220,7 @@ plt.tight_layout()
 # -----------------------------
 # Save figure
 # -----------------------------
-plot_file = os.path.join(plot_dir, f"eddy_scale_timeseries_{domain_name}.png")
+plot_file = os.path.join(figdir, f"eddy_scale_timeseries_{domain_name}.png")
 plt.savefig(plot_file, dpi=200)
 plt.close()
 
