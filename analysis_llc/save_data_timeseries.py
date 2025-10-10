@@ -21,8 +21,9 @@ output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs
 # --- Load datasets ---
 
 ### 1.1 Net surface buoyancy flux
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/qnet_fwflx_daily_7day.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/qnet_fwflx_daily_7day_Bflux.nc"
 qnet_7day_smooth = xr.open_dataset(fname).qnet_7day_smooth
+Bflux_7day_smooth = xr.open_dataset(fname).Bflux_7day_smooth
 
 ### 1.2 Mixed-layer depth
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # Hml_weekly_mean.nc
@@ -35,7 +36,7 @@ N2ml_mean = xr.open_dataset(fname).N2ml_mean
 
 
 ### 2.1 Turner Angle agreement (% of casts with |TuV-TuH|<= 10 degrees)
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_Timeseries_Stats.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_Timeseries_Stats_7d_rolling.nc"
 Tu_agreements_pct = xr.open_dataset(fname).Tu_agreements_pct
 Tu_diff_means = xr.open_dataset(fname).Tu_diff_means
 
@@ -44,11 +45,11 @@ Tu_diff_means = xr.open_dataset(fname).Tu_diff_means
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_gradient/SSH_gradient_magnitude.nc"
 eta_grad_mag_weekly = xr.open_dataset(fname).eta_grad_mag_weekly
 
-### 2.3 Averaged wb cross-spectra within the mixed layer and within the submesoscale range (TO DO)
+### 2.3 Averaged wb cross-spectra within the mixed layer and within the submesoscale range
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered_7d_rolling_mean.nc"
-mean_spec_in_MLD_submeso = xr.open_dataset(fname).mean_spec_in_MLD_submeso
-mean_spec_in_MLD = xr.open_dataset(fname).mean_spec_in_MLD
-
+mean_spec_in_mld_submeso = xr.open_dataset(fname).mean_spec_in_mld_submeso
+mean_spec_in_mld = xr.open_dataset(fname).mean_spec_in_mld
+vertical_bf_submeso_mld = xr.open_dataset(fname).vertical_bf_submeso_mld
 ### (*?) 2.4 Mean SSH gradient magnitude for regions with |TuV-TuH|<= 10 degrees (TO DO)
 
 
@@ -59,17 +60,18 @@ Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 ### 3.2 Surface energy injection scale (TO DO)
 
-### 3.3 Wavelength corresponding to the peak in the isotropic spectra of SSH anomaly (TO DO)
-
-
-### 3.4 Wavelength at the peak of the wb cross-spectra
+### 3.2 Wavelength at the peak of the wb cross-spectra
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_max_spec_vp_filtered_7d_rolling_mean.nc"
-Lr_at_max = xr.open_dataset(fname).Lr_at_max  # in km
-energy_weighted_Lr = xr.open_dataset(fname).energy_weighted_Lr  # in km
+wavelength_peak_smoothed = xr.open_dataset(fname).wavelength_peak_smoothed  # in km
+energy_weighted_Lr_smoothed = xr.open_dataset(fname).energy_weighted_Lr_smoothed  # in km
+
+### 3.4 Wavelength corresponding to the peak in the isotropic spectra of SSH anomaly (much larger than submesoscale)
+
 
 
 # --- Prepare dictionary to save ---
 mat_data = {
+    "Bflux_7day_smooth": Bflux_7day_smooth.values,
     "qnet_7day_smooth": qnet_7day_smooth.values,
     "Hml_mean": Hml_mean.values,
     "N2ml_mean": N2ml_mean.values,
@@ -77,12 +79,15 @@ mat_data = {
     "Tu_diff_means": Tu_diff_means.values,
     "eta_grad_mag_weekly": eta_grad_mag_weekly.values,
     "Lambda_MLI_mean": Lambda_MLI_mean.values,
-    "Lr_at_max": Lr_at_max.values,
-    "mean_spec_in_MLD": mean_spec_in_MLD.values,
-    "mean_spec_in_MLD_submeso": mean_spec_in_MLD_submeso.values,
+    "wavelength_peak_smoothed": wavelength_peak_smoothed.values,
+    "energy_weighted_Lr_smoothed": energy_weighted_Lr_smoothed.values,
+    "mean_spec_in_mld": mean_spec_in_mld.values,
+    "mean_spec_in_mld_submeso": mean_spec_in_mld_submeso.values,
+    "vertical_bf_submeso_mld": vertical_bf_submeso_mld.values,
     # Optional: Save coordinates (e.g. time) if needed
     "time_qnet": qnet_7day_smooth.time.values.astype('datetime64[s]').astype(str),
     "time_Hml": Hml_mean.time.values.astype('datetime64[s]').astype(str),
+    "time_Tu": Tu_diff_means.date.values.astype('datetime64[s]').astype(str),
     # Add others as needed
 }
 

@@ -30,7 +30,7 @@ omega = 7.2921e-5  # Earth rotation rate
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_notInverseRib"
 hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
 
 os.makedirs(figdir, exist_ok=True)
@@ -181,10 +181,11 @@ for fpath in hml_files:
     Rib_local = (N2 * f_cor_3D_squared) / M4_full
     Rib_local = Rib_local.where(Rib_local > 0)
     Rib_masked = Rib_local.where(in_range_mask)
-    ### Compute the harmonic mean of balanced Richardson Number (to highlight the influence of small local Richardson numbers)
-    inverseRib_masked = 1/Rib_masked
-    inverseRib = inverseRib_masked.mean(dim="k", skipna=True)
-    Rib = 1/inverseRib
+    Rib = Rib_masked.mean(dim="k", skipna=True)
+    # ### Compute the harmonic mean of balanced Richardson Number (to highlight the influence of small local Richardson numbers)
+    # inverseRib_masked = 1/Rib_masked
+    # inverseRib = inverseRib_masked.mean(dim="k", skipna=True)
+    # Rib = 1/inverseRib
 
     Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 
@@ -199,30 +200,30 @@ for fpath in hml_files:
     # plt.savefig(os.path.join(figdir, f"Lambda_MLI_{date_tag}.png"), dpi=150)
     # plt.close()
 
-    # --- 2x2 Plot of Lambda_MLI, N2ml_mean, Hml, Rib ---
-    fig, axs = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True)
-    plots = [
-        (Lambda_MLI / 1000, "Lambda_MLI (km)", (0, 40), cmap),
-        (N2ml_mean, "N² (s⁻²)", (0, 2e-6), "viridis"),
-        # (Hml, "Hml (m)", None, "plasma"),
-        (np.sqrt(Mml4_mean), "M2", (0, 5e-8), "plasma"),
-        (Rib, "Ri_b", (0, 10), "magma"),
-    ]
+    # # --- 2x2 Plot of Lambda_MLI, N2ml_mean, Hml, Rib ---
+    # fig, axs = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True)
+    # plots = [
+    #     (Lambda_MLI / 1000, "Lambda_MLI (km)", (0, 40), cmap),
+    #     (N2ml_mean, "N² (s⁻²)", (0, 2e-6), "viridis"),
+    #     # (Hml, "Hml (m)", None, "plasma"),
+    #     (np.sqrt(Mml4_mean), "M2", (0, 5e-8), "plasma"),
+    #     (Rib, "Ri_b", (0, 10), "magma"),
+    # ]
 
-    for ax, (data, label, clim, cm) in zip(axs.flat, plots):
-        p = ax.pcolormesh(lon_plot, lat_plot, data, shading="auto", cmap=cm)
-        if clim:
-            p.set_clim(*clim)
-        cbar = plt.colorbar(p, ax=ax, orientation="vertical")
-        cbar.set_label(label)
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-        ax.set_title(label)
+    # for ax, (data, label, clim, cm) in zip(axs.flat, plots):
+    #     p = ax.pcolormesh(lon_plot, lat_plot, data, shading="auto", cmap=cm)
+    #     if clim:
+    #         p.set_clim(*clim)
+    #     cbar = plt.colorbar(p, ax=ax, orientation="vertical")
+    #     cbar.set_label(label)
+    #     ax.set_xlabel("Longitude")
+    #     ax.set_ylabel("Latitude")
+    #     ax.set_title(label)
 
-    plt.suptitle(f"MLI Diagnostics - {date_tag}", fontsize=16)
-    plot_path = os.path.join(figdir, f"MLI_summary_{date_tag}.png")
-    plt.savefig(plot_path, dpi=150)
-    plt.close()
+    # plt.suptitle(f"MLI Diagnostics - {date_tag}", fontsize=16)
+    # plot_path = os.path.join(figdir, f"MLI_summary_{date_tag}.png")
+    # plt.savefig(plot_path, dpi=150)
+    # plt.close()
 
 
     # --- Save to NetCDF ---

@@ -27,7 +27,7 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/eddy_scale_timeseries-nofilter.nc"
+out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/eddy_scale_timeseries-submeso_20kmCutoff.nc"
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_spectra_plots"
 os.makedirs(plot_dir, exist_ok=True)
 
@@ -69,21 +69,21 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km, plot_dir):
                                 axis=1, type='linear')
         eta_detrended = xr.DataArray(eta_detrended, dims=('i', 'j'))
 
-        # # =====================
-        # # Detrend SSH field (remove large-scale background)
-        # # =====================
+        # =====================
+        # Detrend SSH field (remove large-scale background)
+        # =====================
         # window_size = 181  # ~200 km cutoff, given dx ≈ 1.1 km, for mesoscales
-        # # window_size = 45  # ~50 km cutoff, given dx ≈ 1.1 km, for submesoscales
-        # # Remove domain mean
-        # eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
-        # # Remove large-scale background using rolling mean
-        # eta_detrended = eta_mean_removed - eta_mean_removed.rolling(
-        #     i=window_size, j=window_size, center=True
-        # ).mean()
-        # # Fill NaNs at edges (from rolling)
-        # eta_detrended = eta_detrended.fillna(0.0)
-        # # ⚙️ rechunk before FFT
-        # eta_detrended = eta_detrended.chunk({'i': -1, 'j': -1})
+        window_size = 20  # 20 km cutoff, given dx ≈ 1.1 km, for submesoscales
+        # Remove domain mean
+        eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
+        # Remove large-scale background using rolling mean
+        eta_detrended = eta_mean_removed - eta_mean_removed.rolling(
+            i=window_size, j=window_size, center=True
+        ).mean()
+        # Fill NaNs at edges (from rolling)
+        eta_detrended = eta_detrended.fillna(0.0)
+        # ⚙️ rechunk before FFT
+        eta_detrended = eta_detrended.chunk({'i': -1, 'j': -1})
 
         # --- Compute isotropic power spectrum ---
         ps_iso = xrft.isotropic_power_spectrum(
@@ -132,7 +132,7 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km, plot_dir):
         plt.legend()
         plt.tight_layout()
         plt.ylim(3e-11,1e-2)
-        plt.savefig(os.path.join(plot_dir, f"nofilter_xrft_spectrum_{date_str}.png"))
+        plt.savefig(os.path.join(plot_dir, f"submeso_20kmCutoff_xrft_spectrum_{date_str}.png"))
         plt.close()
 
         return (date_str, eddy_scale)
@@ -185,8 +185,8 @@ print("🏁 Done!")
 
 import os
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}"
-output_movie = f"{figdir}/movie-SSH_nofilter_xrft_spectrum.mp4"
-os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/SSH_spectra_plots/nofilter_xrft_spectrum_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+output_movie = f"{figdir}/movie-SSH_submeso_20kmCutoff_xrft_spectrum.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/SSH_spectra_plots/submeso_20kmCutoff_xrft_spectrum_*.png' -vf scale=iw/2:ih/2 -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 
 
 
@@ -198,7 +198,7 @@ import numpy as np
 # -----------------------------
 # Load eddy scale timeseries
 # -----------------------------
-nc_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/eddy_scale_timeseries-nofilter.nc"
+nc_path = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/icelandic_basin/eddy_scale_timeseries-submeso_20kmCutoff.nc"
 ds = xr.open_dataset(nc_path)
 
 eddy_scale = ds['eddy_scale_km']
