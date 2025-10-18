@@ -25,8 +25,8 @@ print("Dask dashboard:", client.dashboard_link)
 # Define paths and grid info
 # ===================
 zarr_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-eta_input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_weekly"
-rho_input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_weekly"
+eta_input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_7d_rolling"
+rho_input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
 out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_3D"
 os.makedirs(out_dir, exist_ok=True)
 
