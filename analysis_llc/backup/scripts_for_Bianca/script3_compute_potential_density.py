@@ -33,7 +33,7 @@ salt  = ds1['Salt'].isel(face=face, i=i, j=j, k=k, time=t)
 lon = ds1['XC'].isel(face=face, i=i, j=j)
 lat = ds1['YC'].isel(face=face, i=i, j=j)
 depth = ds1.Z.isel(k=k)                       # 1D vertical coordinate
-depth3d, _, _ = xr.broadcast(depth, lon, lat) # Broadcast depth
+depth3d, _, _ = xr.broadcast(np.abs(depth), lon, lat) # Broadcast depth
 
 # ========== Calculate SA and CT ==========
 ##### SA: Absolute Salinity, g/kg
@@ -50,7 +50,6 @@ rho = gsw.rho(SA, CT, p_ref)
 
 # ### If you want to compute in-situ density, just replace p_ref with depth3d
 # rho_insitu = gsw.rho (SA, CT, depth3d)
-
 
 
 # ========== Define a function to compute mixed layer depth Hml ==========

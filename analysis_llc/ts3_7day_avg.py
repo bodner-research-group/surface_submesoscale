@@ -41,7 +41,7 @@ def main():
 
     # ========== Broadcast lon, lat, depth ==========
     lon_b, lat_b = xr.broadcast(lon, lat)
-    depth3d, _, _ = xr.broadcast(depth, lon_b, lat_b)
+    depth3d, _, _ = xr.broadcast(np.abs(depth), lon_b, lat_b)
 
     # ========== Main loop ==========
     tt_files = sorted(glob(os.path.join(input_dir, "tt_24h_*.nc")))
