@@ -9,6 +9,8 @@ import xarray as xr
 import gsw
 from datetime import timedelta
 from dask.distributed import Client, LocalCluster
+from glob import glob
+from tqdm import tqdm
 from set_constant import domain_name, face, i, j
 
 # =====================
@@ -39,10 +41,6 @@ input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 g = 9.81
 rhoConst = 1029.
 p_atm = 101325./1e4   # atmospheric pressure at sea surface, in dbar
-
-# ========== Estimate hydrostatic Pressure ==========
-# Pressure in dbar from depth (positive down), add atmospheric pressure (converted to dbar)
-pressure = gsw.p_from_z(np.abs(depth), lat)  # in dbar
 
 # ========== Load SSH ==========
 # print("Loading daily averaged Eta...")
@@ -110,6 +108,15 @@ for k in range(Nr):
     CT.loc[{kdim: k}] = CT_k
     rho_insitu.loc[{kdim: k}] = rho_k
     pres_hydro.loc[{kdim: k}] = pres_k
+
+    # --- Print debug info ---
+    print(f"Layer {k}:")
+    # print(f"  pres_estimated (dbar) min/max: {pres_k_estimated.min().values:.2f}/{pres_k_estimated.max().values:.2f}")
+    # print(f"  SA min/max: {SA_k.min().values:.3f}/{SA_k.max().values:.3f}")
+    # print(f"  CT min/max: {CT_k.min().values:.3f}/{CT_k.max().values:.3f}")
+    # print(f"  rho_k min/max: {rho_k.min().values:.3f}/{rho_k.max().values:.3f}")
+    # print(f"  pres_hydro min/max: {pres_k.min().values:.2f}/{pres_k.max().values:.2f}")
+    # print("-"*50)
 
 # ========== Specific volume anomaly ==========
 # compute standard specific volume and anomalies
