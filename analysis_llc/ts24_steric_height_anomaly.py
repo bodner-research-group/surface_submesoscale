@@ -11,6 +11,8 @@ from datetime import timedelta
 from dask.distributed import Client, LocalCluster
 from glob import glob
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+
 from set_constant import domain_name, face, i, j
 
 # =====================
@@ -35,7 +37,7 @@ drF = ds1.drF  # vertical grid spacing, 1D
 drF3d, _, _ = xr.broadcast(drF, lon, lat)
 
 # ========== Open 7-day rolling mean of T, S, potential density, alpha, and beta ==========
-input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_7d_rolling_mean"
 
 # ========== Define constants ==========
 g = 9.81
@@ -61,62 +63,15 @@ Eta = Eta_daily.rolling(time=7, center=True).mean()
 eta = Eta.isel(time=10)
 eta.time.values
 
-input_file = os.path.join(input_dir, "rho_Hml_TS_7d_20111111.nc")
+# ========== Load in-situ densiy, SA, CT, and hydrostatic pressure ==========
+input_file = os.path.join(input_dir, "rho_insitu_pres_hydro_20111111.nc")
 date_tag = os.path.basename(input_file).split("_")[-1].replace(".nc", "")
-ds = xr.open_dataset(input_file, chunks={"k": 10, "j": 100, "i": 100})
+ds = xr.open_dataset(input_file, chunks={"k": -1, "j": 50, "i": 50})
 
-# ========== Compute in-situ densiy and hydrostatic pressure ==========
-theta = ds.T_7d
-salt = ds.S_7d
-
-# Prepare empty arrays
-SA = xr.zeros_like(salt)
-CT = xr.zeros_like(theta)
-rho_insitu = xr.zeros_like(theta)
-pres_hydro = xr.zeros_like(theta)  ### hydrostatic pressure (absolute pressure minus 10.1325 dbar), dbar
-P0 = 0  # Surface pressure minus p_atm, in dbar
-
-# Get vertical dimension name and size
-kdim = "k"  # change if your vertical dimension has a different name
-Nr = len(theta[kdim])
-
-# Loop over vertical levels
-### LLC4320 uses cell-centered approach: https://mitgcm.readthedocs.io/en/latest/algorithm/vert-grid.html
-for k in range(Nr):
-    z = np.abs(depth.isel({kdim: k}))  # [m], 2D (y, x)
-    sp = salt.isel({kdim: k})
-    th = theta.isel({kdim: k})
-
-    if k == 0:
-        pres_k_estimated = z
-        SA_k = gsw.SA_from_SP(sp, pres_k_estimated, lon, lat)
-        CT_k = gsw.CT_from_pt(SA_k, th)
-        rho_k = gsw.rho(SA_k, CT_k, pres_k_estimated)
-        pres_k = P0 + g * rho_k * 0.5*drF.isel({kdim: k}) / 1e4  # [dbar]
-    else:
-        rho_prev = rho_insitu.isel({kdim: k-1})
-        pres_prev = pres_hydro.isel({kdim: k-1})
-        #### Use rho_prev to approximate rho_k when estimating pressure at level k
-        pres_k_estimated = pres_prev + g * (rho_prev* 0.5*drF.isel({kdim: k-1}) + rho_prev* 0.5*drF.isel({kdim: k})) / 1e4 
-        SA_k = gsw.SA_from_SP(sp, pres_k_estimated, lon, lat)
-        CT_k = gsw.CT_from_pt(SA_k, th)
-        rho_k = gsw.rho(SA_k, CT_k, pres_k_estimated)
-        pres_k = pres_prev + g * (rho_prev* 0.5*drF.isel({kdim: k-1}) + rho_k* 0.5*drF.isel({kdim: k})) / 1e4 
-
-    # Assign back to xarray objects
-    SA.loc[{kdim: k}] = SA_k
-    CT.loc[{kdim: k}] = CT_k
-    rho_insitu.loc[{kdim: k}] = rho_k
-    pres_hydro.loc[{kdim: k}] = pres_k
-
-    # --- Print debug info ---
-    print(f"Layer {k}:")
-    # print(f"  pres_estimated (dbar) min/max: {pres_k_estimated.min().values:.2f}/{pres_k_estimated.max().values:.2f}")
-    # print(f"  SA min/max: {SA_k.min().values:.3f}/{SA_k.max().values:.3f}")
-    # print(f"  CT min/max: {CT_k.min().values:.3f}/{CT_k.max().values:.3f}")
-    # print(f"  rho_k min/max: {rho_k.min().values:.3f}/{rho_k.max().values:.3f}")
-    # print(f"  pres_hydro min/max: {pres_k.min().values:.2f}/{pres_k.max().values:.2f}")
-    # print("-"*50)
+rho_insitu = ds.rho_insitu
+pres_hydro = ds.pres_hydro
+SA = ds.SA
+CT = ds.CT
 
 # ========== Specific volume anomaly ==========
 # compute standard specific volume and anomalies
@@ -124,7 +79,9 @@ S_Ar = 35.16504    # absolute salinity standard for spec. vol., notated as SSO i
 T_Cr = 0.          # conservative temperature standard
 specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pres_hydro.values)
 
-specvol_anom = 1/rho_insitu - specvol_standard
+specvol_constant = 1/rhoConst
+
+specvol_anom = 1/rho_insitu - specvol_constant
 
 # ========== Steric height anomaly ==========
 # pressure reference level to compute steric height
@@ -138,7 +95,7 @@ p_r = (p_r_sea_dbar) + p_atm     ### dbar
 press_z0 = p_atm + g*rho_insitu.isel(k=0)*eta /1e4
 
 # integrate hydrostatic balance downward to get pressure at bottom of grid cells
-press_ku = press_z0 + (rho_insitu*g*ds1.drF).cumsum("k")
+press_ku = press_z0 + (rho_insitu*g*ds1.drF).cumsum("k")/1e4
 # press_ku.Z.values = ds1.Zu.values
 
 # create array with pressure at top of grid cells
@@ -154,6 +111,59 @@ steric_height_anom = (-(specvol_anom/g)*dp_integrate*1e4).sum("k") ### in meters
 
 # ========== Compare steric height with sea surface height ==========
 ssh_diff = eta - steric_height_anom
+
+
+eta_minus_mean = eta-eta.mean()
+steric_height_anom_minus_mean =  steric_height_anom-steric_height_anom.mean()
+
+### Path to the folder where figures will be saved 
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
+os.makedirs(figdir, exist_ok=True)
+
+i_min = i.start
+i_max = i.stop
+j_min = j.start
+j_max = j.stop
+
+# Plot function
+def plot_map(var, lon, lat, title, cmap, vmin=None, vmax=None, filename='output.png'):
+    plt.figure(figsize=(8, 6))
+    plt.pcolormesh(lon, lat, var, cmap=cmap, shading='auto', vmin=vmin, vmax=vmax)
+    plt.colorbar(label=title)
+    plt.title(title + f"\n(face {face}, i={i_min}-{i_max}, j={j_min}-{j_max})")
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"✅ Saved plot: {filename}")
+
+# Plot SSH
+plot_map(
+    var=eta_minus_mean,
+    lon=lon,
+    lat=lat,
+    title="SSH",
+    cmap="coolwarm",
+    vmin=-0.2,
+    vmax=0.2,
+    filename=f"{figdir}SSH.png"
+)
+
+# Plot steric height anomaly
+plot_map(
+    var=steric_height_anom_minus_mean,
+    lon=lon,
+    lat=lat,
+    title="Steric height anomaly",
+    cmap="coolwarm",
+    vmin=-0.2,
+    vmax=0.2,
+    filename=f"{figdir}steric_height_anom.png"
+)
+
+
 
 # ===============================================================
 # ========== Thermosteric and halosteric contributions ==========

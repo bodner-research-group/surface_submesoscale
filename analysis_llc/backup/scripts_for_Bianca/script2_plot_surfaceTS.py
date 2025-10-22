@@ -3,7 +3,6 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import os
-import matplotlib.pyplot as plt
 
 # Open dataset
 ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320', consolidated=False)
