@@ -60,11 +60,11 @@ Eta = Eta_daily.rolling(time=7, center=True).mean()
 # ========== Compute steric height anomaly ==========
 # ===================================================
 
-eta = Eta.isel(time=10)
+eta = Eta.isel(time=300)
 eta.time.values
 
 # ========== Load in-situ densiy, SA, CT, and hydrostatic pressure ==========
-input_file = os.path.join(input_dir, "rho_insitu_pres_hydro_20111111.nc")
+input_file = os.path.join(input_dir, "rho_insitu_pres_hydro_20120827.nc")
 date_tag = os.path.basename(input_file).split("_")[-1].replace(".nc", "")
 ds = xr.open_dataset(input_file, chunks={"k": -1, "j": 50, "i": 50})
 
@@ -78,10 +78,15 @@ CT = ds.CT
 S_Ar = 35.16504    # absolute salinity standard for spec. vol., notated as SSO in GSW documentation
 T_Cr = 0.          # conservative temperature standard
 specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pres_hydro.values)
-
 specvol_constant = 1/rhoConst
 
-specvol_anom = 1/rho_insitu - specvol_constant
+specvol_mean = (1 / rho_insitu).mean(dim=["i", "j"])
+
+# specvol_ref = specvol_standard
+# specvol_ref = specvol_constant
+specvol_ref = specvol_mean
+
+specvol_anom = 1/rho_insitu - specvol_ref
 
 # ========== Steric height anomaly ==========
 # pressure reference level to compute steric height
@@ -92,11 +97,16 @@ p_r_sea_dbar = 1000.
 p_r = (p_r_sea_dbar) + p_atm     ### dbar
 
 # compute pressure at z = 0 (not exactly the ocean surface)
-press_z0 = p_atm + g*rho_insitu.isel(k=0)*eta /1e4
+# press_z0 = p_atm + g*rho_insitu.isel(k=0)*eta /1e4 #### When computing steric height, we shouldn't use the information of SSH (eta)!
+# press_z0 = g*rho_insitu.isel(k=0)*eta /1e4
+press_z0 = p_atm+0*rho_insitu.isel(k=0)  # use atmospheric pressure as an estimation of the pressure at z=0
 
 # integrate hydrostatic balance downward to get pressure at bottom of grid cells
 press_ku = press_z0 + (rho_insitu*g*ds1.drF).cumsum("k")/1e4
-# press_ku.Z.values = ds1.Zu.values
+press_ku = press_ku.assign_coords(Z=("k", ds1.Zu.values))
+
+press_z0 = press_z0.expand_dims(k=[0])
+press_z0 = press_z0.assign_coords(Z=("k", [ds1.Zl.isel(k_l=0).values]))
 
 # create array with pressure at top of grid cells
 press_kl = xr.concat([press_z0,press_ku.isel(k=np.arange(len(ds1.k) - 1))],dim="k")
@@ -106,14 +116,22 @@ press_kl = press_kl.assign_coords(k=ds1.k.values)
 dp_integrate =  np.fmax(press_kl,p_top*np.ones(press_kl.shape)) - \
                 np.fmin(press_ku,p_r*np.ones(press_ku.shape))        ### dbar 
 
+# # allow integration above z=0 if p_top is less than p at z=0
+# p_top_above_z0_mask = (p_top - press_kl.isel(k=0).values < 0)
+# dp_integrate.isel(k=0).values[p_top_above_z0_mask] = \
+#                                 (p_top - press_ku[:,0,:,:,:].values)[p_top_above_z0_mask]
+dp_integrate.values[dp_integrate.values > 0] = 0
+
 # Integrate specific volume anomaly over depth
-steric_height_anom = (-(specvol_anom/g)*dp_integrate*1e4).sum("k") ### in meters
+k_range = slice(0,52)
+steric_height_anom = (-(specvol_anom.isel(k=k_range)/g)*dp_integrate.isel(k=k_range)*1e4).sum("k") ### in meters
 
 # ========== Compare steric height with sea surface height ==========
 ssh_diff = eta - steric_height_anom
 
-
+# eta_minus_mean = eta
 eta_minus_mean = eta-eta.mean()
+# steric_height_anom_minus_mean = steric_height_anom
 steric_height_anom_minus_mean =  steric_height_anom-steric_height_anom.mean()
 
 ### Path to the folder where figures will be saved 
@@ -165,49 +183,49 @@ plot_map(
 
 
 
-# ===============================================================
-# ========== Thermosteric and halosteric contributions ==========
-# ===============================================================
+# # ===============================================================
+# # ========== Thermosteric and halosteric contributions ==========
+# # ===============================================================
 
-# Thermosteric: keep salinity constant at mean value
-salt_mean = salt.mean(dim='k')
-SA_mean = gsw.SA_from_SP(salt_mean, pres_hydro, lon, lat)
-CT_temp = gsw.CT_from_pt(SA_mean, theta)
-rho_temp = gsw.rho(SA_mean, CT_temp, pres_hydro)
-specvol_anom_temp = (1 / rho_temp) - (1 / rhoConst)
-thermosteric_height = (specvol_anom_temp * drF3d).sum(dim='k')
+# # Thermosteric: keep salinity constant at mean value
+# salt_mean = salt.mean(dim='k')
+# SA_mean = gsw.SA_from_SP(salt_mean, pres_hydro, lon, lat)
+# CT_temp = gsw.CT_from_pt(SA_mean, theta)
+# rho_temp = gsw.rho(SA_mean, CT_temp, pres_hydro)
+# specvol_anom_temp = (1 / rho_temp) - (1 / rhoConst)
+# thermosteric_height = (specvol_anom_temp * drF3d).sum(dim='k')
 
-# Halosteric: keep temperature constant at mean value
-theta_mean = theta.mean(dim='k')
-CT_salt = gsw.CT_from_pt(SA, theta_mean)
-rho_salt = gsw.rho(SA, CT_salt, pres_hydro)
-specvol_anom_salt = (1 / rho_salt) - (1 / rhoConst)
-halosteric_height = (specvol_anom_salt * drF3d).sum(dim='k')
+# # Halosteric: keep temperature constant at mean value
+# theta_mean = theta.mean(dim='k')
+# CT_salt = gsw.CT_from_pt(SA, theta_mean)
+# rho_salt = gsw.rho(SA, CT_salt, pres_hydro)
+# specvol_anom_salt = (1 / rho_salt) - (1 / rhoConst)
+# halosteric_height = (specvol_anom_salt * drF3d).sum(dim='k')
 
-# ========== Save output ==========
-out_ds = xr.Dataset(
-    {
-        "steric_height_anomaly": steric_height_anom,
-        "thermosteric_height": thermosteric_height,
-        "halosteric_height": halosteric_height,
-    },
-    coords={
-        "i": ds.i,
-        "j": ds.j,
-        "face": face,
-        "XC": lon,
-        "YC": lat,
-    },
-    attrs={
-        "description": "Steric height anomaly and thermosteric/halosteric contributions",
-        "rhoConst": rhoConst,
-        "date": date_tag,
-    }
-)
+# # ========== Save output ==========
+# out_ds = xr.Dataset(
+#     {
+#         "steric_height_anomaly": steric_height_anom,
+#         "thermosteric_height": thermosteric_height,
+#         "halosteric_height": halosteric_height,
+#     },
+#     coords={
+#         "i": ds.i,
+#         "j": ds.j,
+#         "face": face,
+#         "XC": lon,
+#         "YC": lat,
+#     },
+#     attrs={
+#         "description": "Steric height anomaly and thermosteric/halosteric contributions",
+#         "rhoConst": rhoConst,
+#         "date": date_tag,
+#     }
+# )
 
-output_file = os.path.join(output_dir, f"steric_height_anomaly_{date_tag}.nc")
-out_ds.to_netcdf(output_file)
+# output_file = os.path.join(output_dir, f"steric_height_anomaly_{date_tag}.nc")
+# out_ds.to_netcdf(output_file)
 
-print(f"💡 Saved steric height anomaly data to {output_file}")
+# print(f"💡 Saved steric height anomaly data to {output_file}")
 
 
