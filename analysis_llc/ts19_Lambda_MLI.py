@@ -11,14 +11,7 @@ from scipy.io import savemat
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
 
-# from set_constant import domain_name, face, i, j
-
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
-
+from set_constant import domain_name, face, i, j
 
 # from dask.distributed import Client, LocalCluster
 
@@ -206,7 +199,7 @@ for fpath in hml_files:
     inverseRib = weighted_sum_inverseRib/total_thickness
     Rib = 1/inverseRib
 
-    Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
+    Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / np.abs(f_cor)
 
     # --- Plot ---
     # plt.figure(figsize=(8, 6))

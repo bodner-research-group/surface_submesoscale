@@ -10,6 +10,11 @@ import tempfile
 import shutil
 
 from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # =======================
 # Setup Dask cluster
@@ -23,8 +28,11 @@ g = 9.81
 p0 = 0  # surface pressure offset in dbar
 
 # ========== Input Paths ==========
-input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_7d_rolling_mean"
+# input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
+# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_7d_rolling_mean"
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_daily"
+
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Load static variables from LLC dataset ==========
@@ -87,7 +95,8 @@ def process_column(salt_col, theta_col, depth_col, drF_col, lon, lat):
     return SA_col, CT_col, rho_col, pres_col
 
 # ========= Batch Process All Files ==========
-input_files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_7d_*.nc")))
+# input_files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_7d_*.nc")))
+input_files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_daily_*.nc")))
 
 for input_file in tqdm(input_files, desc="Processing time steps"):
     # input_file = os.path.join(input_dir, "rho_Hml_TS_7d_20120421.nc")
@@ -99,8 +108,10 @@ for input_file in tqdm(input_files, desc="Processing time steps"):
         continue
 
     ds = xr.open_dataset(input_file, chunks={"i": 50, "j": 50, "k": -1})
-    salt = ds["S_7d"]
-    theta = ds["T_7d"]
+    # salt = ds["S_7d"]
+    # theta = ds["T_7d"]
+    salt = ds["S_daily"]
+    theta = ds["T_daily"]
 
     # Broadcast static fields
     drF3d, _, _ = xr.broadcast(drF, salt, salt)

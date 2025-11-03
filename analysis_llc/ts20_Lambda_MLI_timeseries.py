@@ -8,11 +8,9 @@ from set_constant import domain_name, face, i, j
 plt.rcParams.update({'font.size': 16})  # Global font size setting for figures
 
 # --- Paths ---
-# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_notInverseRib"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
 out_timeseries_path = os.path.join(f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}", "Lambda_MLI_timeseries_7d_rolling.nc")
-# fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
-fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_notInverseRib"
+fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
 os.makedirs(fig_dir, exist_ok=True)
 
 # --- Get list of output files ---
@@ -41,7 +39,7 @@ for fpath in nc_files:
     # Subset inner domain: exclude 2 points on each side
     inner_slice = dict(i=slice(2, -2), j=slice(2, -2))
 
-    Lambda_MLI_inner = ds.Lambda_MLI.isel(**inner_slice)
+    Lambda_MLI_inner = np.abs(ds.Lambda_MLI.isel(**inner_slice))
     Mml4_mean_inner = ds.Mml4_mean.isel(**inner_slice)
     N2ml_mean_inner = ds.N2ml_mean.isel(**inner_slice)
     Hml_inner = ds.Hml.isel(**inner_slice)

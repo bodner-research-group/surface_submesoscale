@@ -170,7 +170,6 @@ eta_grad_mag, eta_laplace = compute_grad_laplace(eta_minus_mean, grid)
 eta_prime_grad_mag, eta_prime_laplace = compute_grad_laplace(eta_prime_minus_mean, grid)
 
 
-
 ### Path to the folder where figures will be saved 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
 os.makedirs(figdir, exist_ok=True)
@@ -217,8 +216,6 @@ plot_map(
     vmax=0.2,
     filename=f"{figdir}steric_height_anom_Apr_wang25.png"
 )
-
-
 
 
 
