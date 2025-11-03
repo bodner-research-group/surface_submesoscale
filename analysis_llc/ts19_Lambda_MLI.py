@@ -8,9 +8,17 @@ from xgcm import Grid
 from dask.diagnostics import ProgressBar
 from scipy.io import savemat
 
-from set_constant import domain_name, face, i, j
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
+
+# from set_constant import domain_name, face, i, j
+
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
 
 # from dask.distributed import Client, LocalCluster
 
@@ -30,7 +38,7 @@ omega = 7.2921e-5  # Earth rotation rate
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_notInverseRib"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
 hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
 
 os.makedirs(figdir, exist_ok=True)
@@ -39,6 +47,10 @@ os.makedirs(output_dir, exist_ok=True)
 
 # --- Load Grid & Setup xgcm ---
 ds1 = xr.open_zarr(grid_path, consolidated=False)
+drF = ds1.drF  # vertical grid spacing, 1D
+lon = ds1['XC'].isel(face=face, i=i, j=j)
+lat = ds1['YC'].isel(face=face, i=i, j=j)
+drF3d, _, _ = xr.broadcast(drF, lon, lat)
 
 # ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
 ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k_u=0)
@@ -135,31 +147,34 @@ for fpath in hml_files:
     k_hml_base = np.abs(depth[:, None, None] - Hml.values[None, :, :]).argmin(axis=0)
     k_hml_base_da = xr.DataArray(k_hml_base, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
 
-    # Create mask
-    # k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
-    # k_indices = k_indices.astype(int)
-    # in_range_mask = k_indices <= k_hml_base_da
-    # N2_masked = N2.where(in_range_mask)
-    # N2ml_mean = N2_masked.mean(dim="k", skipna=True)
-
-    # Compute depth bounds (50%-90%) of mixed layer
-    Hml_50 = Hml * 0.5
-    Hml_90 = Hml * 0.9
-    # Interpolate to nearest depth levels
-    k_50 = np.abs(depth[:, None, None] - Hml_50.values[None, :, :]).argmin(axis=0)
-    k_90 = np.abs(depth[:, None, None] - Hml_90.values[None, :, :]).argmin(axis=0)
-    # Convert to xarray DataArrays
-    k_50_da = xr.DataArray(k_50, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
-    k_90_da = xr.DataArray(k_90, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
-    # Create k indices aligned with N2
+    ### Compute depth bounds (0%-100%) of mixed layer
+    ### Create mask
     k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
     k_indices = k_indices.astype(int)
-    # Mask for k within 50%-90% of Hml
-    in_range_mask = (k_indices >= k_50_da) & (k_indices <= k_90_da)
+    in_range_mask = k_indices <= k_hml_base_da
+
+
+    ### Compute depth bounds (50%-90%) of mixed layer
+    # Hml_upper = Hml * 0.5
+    # Hml_lower = Hml * 0.9
+    # # Interpolate to nearest depth levels
+    # k_upper = np.abs(depth[:, None, None] - Hml_upper.values[None, :, :]).argmin(axis=0)
+    # k_lower = np.abs(depth[:, None, None] - Hml_lower.values[None, :, :]).argmin(axis=0)
+    # # Convert to xarray DataArrays
+    # k_upper_da = xr.DataArray(k_upper, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    # k_lower_da = xr.DataArray(k_lower, dims=("j", "i"), coords={"j": rho.j, "i": rho.i})
+    # # Create k indices aligned with N2
+    # k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
+    # k_indices = k_indices.astype(int)
+    # # Mask for k within 50%-90% of Hml
+    # in_range_mask = (k_indices >= k_upper_da) & (k_indices <= k_lower_da)
+
     # Apply mask
     N2_masked = N2.where(in_range_mask)
     # Mean over vertical dimension (k)
-    N2ml_mean = N2_masked.mean(dim="k", skipna=True)
+    weighted_sum_N2 = (N2_masked * drF3d.where(in_range_mask)).sum(dim="k", skipna=True)
+    total_thickness = drF3d.where(in_range_mask).sum(dim="k", skipna=True)
+    N2ml_mean = weighted_sum_N2 / total_thickness
 
     # --- Compute horizontal buoyancy gradient squared Mml² using xgcm ---
     rho_x = grid.derivative(rho, axis="X")
@@ -168,7 +183,8 @@ for fpath in hml_files:
     rho_y_center = grid.interp(rho_y, axis="Y", to="center")
     M4_full = ((g / rho0) ** 2) * (rho_x_center**2 + rho_y_center**2)
     M4_masked = M4_full.where(in_range_mask)
-    Mml4_mean = M4_masked.mean(dim="k", skipna=True)
+    weighted_sum_M4 = (M4_masked * drF3d.where(in_range_mask)).sum(dim="k", skipna=True)
+    Mml4_mean = weighted_sum_M4 / total_thickness
 
     # --- Compute Rib and Lambda_MLI ---
     f_cor_3D_squared = xr.DataArray(
@@ -180,12 +196,15 @@ for fpath in hml_files:
     ### Compute local balanced Richardson Number
     Rib_local = (N2 * f_cor_3D_squared) / M4_full
     Rib_local = Rib_local.where(Rib_local > 0)
-    Rib_masked = Rib_local.where(in_range_mask)
-    Rib = Rib_masked.mean(dim="k", skipna=True)
-    # ### Compute the harmonic mean of balanced Richardson Number (to highlight the influence of small local Richardson numbers)
-    # inverseRib_masked = 1/Rib_masked
-    # inverseRib = inverseRib_masked.mean(dim="k", skipna=True)
-    # Rib = 1/inverseRib
+    # Rib_masked = Rib_local.where(in_range_mask)
+    # Rib = Rib_masked.mean(dim="k", skipna=True) ### incorrect
+
+    ### Compute the harmonic mean of balanced Richardson Number (to highlight the influence of small local Richardson numbers)
+    inverseRib_masked = 1/Rib_local
+    inverseRib_masked = inverseRib_masked.where(in_range_mask)
+    weighted_sum_inverseRib = (inverseRib_masked * drF3d.where(in_range_mask)).sum(dim="k", skipna=True)
+    inverseRib = weighted_sum_inverseRib/total_thickness
+    Rib = 1/inverseRib
 
     Lambda_MLI = (2 * np.pi / np.sqrt(5 / 2)) * np.sqrt(1 + 1 / Rib) * np.sqrt(N2ml_mean) * np.abs(Hml) / f_cor
 

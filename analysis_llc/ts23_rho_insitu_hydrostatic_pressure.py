@@ -5,6 +5,9 @@ import gsw
 from dask.distributed import Client, LocalCluster
 from glob import glob
 from tqdm import tqdm
+import time
+import tempfile
+import shutil
 
 from set_constant import domain_name, face, i, j
 
@@ -134,6 +137,24 @@ for input_file in tqdm(input_files, desc="Processing time steps"):
         coords=ds.coords,
         attrs={"description": "Dask-parallelized vertical integration in-situ density and hydrostatic pressure"}
     )
+    # ds_out.to_netcdf(output_file)
+    # print(f"Saved: {output_file}")
 
-    ds_out.to_netcdf(output_file)
-    print(f"Saved: {output_file}")
+    # Safe save (updated)
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".nc", dir="/tmp").name
+    try:
+        ds_out.load()
+        ds_out.to_netcdf(tmp_file, engine="netcdf4", mode="w", compute=True)
+        shutil.move(tmp_file, output_file)
+        print(f"[OK] Saved: {output_file}")
+    except Exception as e:
+        print(f"[Error saving {output_file}]: {e}")
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+    finally:
+        ds_out.close()
+        ds.close()
+        time.sleep(0.5)
+        
+    del SA, CT, rho_insitu, pres_hydro, results, salt, theta, drF3d, depth3d
+
