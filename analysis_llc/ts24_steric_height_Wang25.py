@@ -1,5 +1,4 @@
-#### Compute the steric height anomaly, following ECCO V4 Python Tutorial created by Andrew Delman:
-#### https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+#### Compute the steric height anomaly, following Eq.(1) of Jinbo Wang et al. (2025)
 
 
 # ===== Imports =====
@@ -21,7 +20,6 @@ domain_name = "icelandic_basin"
 face = 2
 i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
-
 
 # # =====================
 # # Setup Dask cluster
@@ -78,8 +76,212 @@ ds = xr.open_dataset(input_file, chunks={"k": -1, "j": 50, "i": 50})
 
 rho_insitu = ds.rho_insitu
 pres_hydro = ds.pres_hydro
+
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # Hml_weekly_mean.nc
+Hml_mean = xr.open_dataset(fname).Hml_mean
+Hml = Hml_mean.isel(time=167)
+
+
+# --- density anomaly ---
+rho_prime = rho_insitu - rho_insitu.mean(dim=("i", "j"))
+
+# --- mixed layer depth (Hml) ---
+Hml_val = float(Hml.values)   # e.g. -397 m
+
+# --- mask layers below Hml ---
+# depth is negative, so we want layers where Z >= Hml (shallower than Hml)
+mask = depth >= Hml_val
+mask3d = mask.broadcast_like(rho_prime)
+
+# --- apply mask and integrate ---
+rho_prime_masked = rho_prime.where(mask3d)
+drF_masked = drF3d.where(mask3d)
+
+# integrate from Hml to surface
+# careful: depth increases downward, so we need to integrate "upward"
+# the integration variable should be positive distance (|dz|).
+eta_prime = - (1 / rhoConst) * (rho_prime_masked * drF_masked).sum(dim="k")
+
+
+# # --- result ---
+# eta_prime.name = "steric_height_anomaly"
+# eta_prime.attrs.update({
+#     "units": "m",
+#     "long_name": "Steric height anomaly (η′)",
+#     "note": "computed as -1/rho0 * ∫_{Hml}^0 rho′(z) dz"
+# })
+
+# eta_prime.to_netcdf(os.path.join(output_dir, f"eta_prime_{date_tag}.nc"))
+# print("Steric height anomaly computed:", eta_prime)
+
+
+eta_minus_mean = eta-eta.mean(dim=["i", "j"])
+eta_prime_minus_mean =  eta_prime-eta_prime.mean(dim=["i", "j"])
+
+
+
+# ========= Load grid data =========
+# print("Loading grid...")
+ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
+
+# Drop time dimension if exists
+if 'time' in ds_grid_face.dims:
+    ds_grid_face = ds_grid_face.isel(time=0, drop=True)  # or .squeeze('time')
+
+# ========= Setup xgcm grid =========
+coords = {
+    "X": {"center": "i", "left": "i_g"},
+    "Y": {"center": "j", "left": "j_g"},
+}
+metrics = {
+    ("X",): ["dxC", "dxG"],
+    ("Y",): ["dyC", "dyG"],
+}
+grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
+
+# ========= Compute derivatives and Laplacian =========
+def compute_grad_laplace(var, grid):
+    
+    # First derivatives on grid edges
+    var_x = grid.derivative(var, axis="X")  # ∂var/∂x
+    var_y = grid.derivative(var, axis="Y")  # ∂var/∂y
+    # Interpolate first derivatives back to cell centers for gradient magnitude
+    var_x_c = grid.interp(var_x, axis="X", to="center")
+    var_y_c = grid.interp(var_y, axis="Y", to="center")
+    grad_mag = np.sqrt(var_x_c**2 + var_y_c**2)
+    grad_mag = grad_mag.assign_coords(time=var.time)
+
+    # Second derivatives for Laplacian
+    var_xx = grid.derivative(var_x_c, axis="X") # ∂²var/∂x²
+    var_yy = grid.derivative(var_y_c, axis="Y") # ∂²var/∂y²
+    # Interpolate second derivatives to cell centers
+    var_xx_c = grid.interp(var_xx, axis="X", to="center")
+    var_yy_c = grid.interp(var_yy, axis="Y", to="center")
+    laplace = var_xx_c + var_yy_c
+    laplace = laplace.assign_coords(time=var.time)
+
+    return grad_mag, laplace
+
+
+# Compute for SSH
+eta_grad_mag, eta_laplace = compute_grad_laplace(eta_minus_mean, grid)
+
+# Compute for steric height anomaly
+eta_prime_grad_mag, eta_prime_laplace = compute_grad_laplace(eta_prime_minus_mean, grid)
+
+
+
+### Path to the folder where figures will be saved 
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
+os.makedirs(figdir, exist_ok=True)
+
+i_min = i.start
+i_max = i.stop
+j_min = j.start
+j_max = j.stop
+
+# Plot function
+def plot_map(var, lon, lat, title, cmap, vmin=None, vmax=None, filename='output.png'):
+    plt.figure(figsize=(8, 6))
+    plt.pcolormesh(lon, lat, var, cmap=cmap, shading='auto', vmin=vmin, vmax=vmax)
+    plt.colorbar(label=title)
+    plt.title(title + f"\n(face {face}, i={i_min}-{i_max}, j={j_min}-{j_max})")
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"✅ Saved plot: {filename}")
+
+# Plot SSH
+plot_map(
+    var=eta_minus_mean,
+    lon=lon,
+    lat=lat,
+    title="SSH",
+    cmap="coolwarm",
+    vmin=-0.2,
+    vmax=0.2,
+    filename=f"{figdir}SSH_Apr.png"
+)
+
+# Plot steric height anomaly
+plot_map(
+    var=eta_prime_minus_mean,
+    lon=lon,
+    lat=lat,
+    title="Steric height anomaly",
+    cmap="coolwarm",
+    vmin=-0.2,
+    vmax=0.2,
+    filename=f"{figdir}steric_height_anom_Apr_wang25.png"
+)
+
+
+
+
+
+# =====================================================
+# Plot results
+# =====================================================
+
+plot_map(
+    var=eta_grad_mag,
+    lon=lon,
+    lat=lat,
+    title="|∇ SSH| (m/m)",
+    vmin=0,
+    vmax=5e-6,
+    cmap="viridis",
+    filename=f"{figdir}SSH_gradmag_Apr.png"
+)
+
+plot_map(
+    var=eta_laplace,
+    lon=lon,
+    lat=lat,
+    title="∇² SSH (1/m²)",
+    vmin=-1e-9,
+    vmax=1e-9,
+    cmap="coolwarm",
+    filename=f"{figdir}SSH_laplace_Apr.png"
+)
+
+plot_map(
+    var=eta_prime_grad_mag,
+    lon=lon,
+    lat=lat,
+    title="|∇ Steric Height Anomaly| (m/m)",
+    vmin=0,
+    vmax=5e-6,
+    cmap="viridis",
+    filename=f"{figdir}steric_gradmag_Apr.png"
+)
+
+plot_map(
+    var=eta_prime_laplace,
+    lon=lon,
+    lat=lat,
+    title="∇² Steric Height Anomaly (1/m²)",
+    vmin=-1e-9,
+    vmax=1e-9,
+    cmap="coolwarm",
+    filename=f"{figdir}steric_laplace_Apr.png"
+)
+
+print("✅ Gradient magnitude and Laplacian maps saved.")
+
+
+
+
+
+
+
+
 SA = ds.SA
 CT = ds.CT
+
 
 # ========== Specific volume anomaly ==========
 # compute standard specific volume and anomalies
@@ -136,216 +338,5 @@ steric_height_anom = (-(specvol_anom.isel(k=k_range)/g)*dp_integrate.isel(k=k_ra
 
 # ========== Compare steric height with sea surface height ==========
 ssh_diff = eta - steric_height_anom
-
-# eta_minus_mean = eta
-eta_minus_mean = eta-eta.mean(dim=["i", "j"])
-# steric_height_anom_minus_mean = steric_height_anom
-steric_height_anom_minus_mean =  steric_height_anom-steric_height_anom.mean(dim=["i", "j"])
-
-
-
-# ========= Load grid data =========
-# print("Loading grid...")
-ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
-
-# Drop time dimension if exists
-if 'time' in ds_grid_face.dims:
-    ds_grid_face = ds_grid_face.isel(time=0, drop=True)  # or .squeeze('time')
-
-# ========= Setup xgcm grid =========
-coords = {
-    "X": {"center": "i", "left": "i_g"},
-    "Y": {"center": "j", "left": "j_g"},
-}
-metrics = {
-    ("X",): ["dxC", "dxG"],
-    ("Y",): ["dyC", "dyG"],
-}
-grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
-
-# ========= Compute derivatives and Laplacian =========
-def compute_grad_laplace(var, grid):
-    
-    # First derivatives on grid edges
-    var_x = grid.derivative(var, axis="X")  # ∂var/∂x
-    var_y = grid.derivative(var, axis="Y")  # ∂var/∂y
-    # Interpolate first derivatives back to cell centers for gradient magnitude
-    var_x_c = grid.interp(var_x, axis="X", to="center")
-    var_y_c = grid.interp(var_y, axis="Y", to="center")
-    grad_mag = np.sqrt(var_x_c**2 + var_y_c**2)
-    grad_mag = grad_mag.assign_coords(time=var.time)
-
-    # Second derivatives for Laplacian
-    var_xx = grid.derivative(var_x_c, axis="X") # ∂²var/∂x²
-    var_yy = grid.derivative(var_y_c, axis="Y") # ∂²var/∂y²
-    # Interpolate second derivatives to cell centers
-    var_xx_c = grid.interp(var_xx, axis="X", to="center")
-    var_yy_c = grid.interp(var_yy, axis="Y", to="center")
-    laplace = var_xx_c + var_yy_c
-    laplace = laplace.assign_coords(time=var.time)
-
-    return grad_mag, laplace
-
-# Compute for SSH
-eta_grad_mag, eta_laplace = compute_grad_laplace(eta_minus_mean, grid)
-
-# Compute for steric height anomaly
-steric_grad_mag, steric_laplace = compute_grad_laplace(steric_height_anom_minus_mean, grid)
-
-
-
-### Path to the folder where figures will be saved 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
-os.makedirs(figdir, exist_ok=True)
-
-i_min = i.start
-i_max = i.stop
-j_min = j.start
-j_max = j.stop
-
-# Plot function
-def plot_map(var, lon, lat, title, cmap, vmin=None, vmax=None, filename='output.png'):
-    plt.figure(figsize=(8, 6))
-    plt.pcolormesh(lon, lat, var, cmap=cmap, shading='auto', vmin=vmin, vmax=vmax)
-    plt.colorbar(label=title)
-    plt.title(title + f"\n(face {face}, i={i_min}-{i_max}, j={j_min}-{j_max})")
-    plt.xlabel("Longitude")
-    plt.ylabel("Latitude")
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.tight_layout()
-    plt.savefig(filename, dpi=150)
-    plt.close()
-    print(f"✅ Saved plot: {filename}")
-
-# Plot SSH
-plot_map(
-    var=eta_minus_mean,
-    lon=lon,
-    lat=lat,
-    title="SSH",
-    cmap="coolwarm",
-    vmin=-0.2,
-    vmax=0.2,
-    filename=f"{figdir}SSH.png"
-)
-
-# Plot steric height anomaly
-plot_map(
-    var=steric_height_anom_minus_mean,
-    lon=lon,
-    lat=lat,
-    title="Steric height anomaly",
-    cmap="coolwarm",
-    vmin=-0.2,
-    vmax=0.2,
-    filename=f"{figdir}steric_height_anom.png"
-)
-
-
-
-# =====================================================
-# Plot results
-# =====================================================
-
-plot_map(
-    var=eta_grad_mag,
-    lon=lon,
-    lat=lat,
-    title="|∇ SSH| (m/m)",
-    vmin=0,
-    vmax=5e-6,
-    cmap="viridis",
-    filename=f"{figdir}SSH_gradmag_Apr_old.png"
-)
-
-plot_map(
-    var=eta_laplace,
-    lon=lon,
-    lat=lat,
-    title="∇² SSH (1/m²)",
-    vmin=-1e-9,
-    vmax=1e-9,
-    cmap="coolwarm",
-    filename=f"{figdir}SSH_laplace_Apr_old.png"
-)
-
-plot_map(
-    var=steric_grad_mag,
-    lon=lon,
-    lat=lat,
-    title="|∇ Steric Height Anomaly| (m/m)",
-    vmin=0,
-    vmax=5e-6,
-    cmap="viridis",
-    filename=f"{figdir}steric_gradmag_Apr_inverse.png"
-)
-
-plot_map(
-    var=steric_laplace,
-    lon=lon,
-    lat=lat,
-    title="∇² Steric Height Anomaly (1/m²)",
-    vmin=-1e-9,
-    vmax=1e-9,
-    cmap="coolwarm",
-    filename=f"{figdir}steric_laplace_Apr_inverse.png"
-)
-
-print("✅ Gradient magnitude and Laplacian maps saved.")
-
-
-
-
-
-
-
-
-
-
-
-# # ===============================================================
-# # ========== Thermosteric and halosteric contributions ==========
-# # ===============================================================
-
-# # Thermosteric: keep salinity constant at mean value
-# salt_mean = salt.mean(dim='k')
-# SA_mean = gsw.SA_from_SP(salt_mean, pres_hydro, lon, lat)
-# CT_temp = gsw.CT_from_pt(SA_mean, theta)
-# rho_temp = gsw.rho(SA_mean, CT_temp, pres_hydro)
-# specvol_anom_temp = (1 / rho_temp) - (1 / rhoConst)
-# thermosteric_height = (specvol_anom_temp * drF3d).sum(dim='k')
-
-# # Halosteric: keep temperature constant at mean value
-# theta_mean = theta.mean(dim='k')
-# CT_salt = gsw.CT_from_pt(SA, theta_mean)
-# rho_salt = gsw.rho(SA, CT_salt, pres_hydro)
-# specvol_anom_salt = (1 / rho_salt) - (1 / rhoConst)
-# halosteric_height = (specvol_anom_salt * drF3d).sum(dim='k')
-
-# # ========== Save output ==========
-# out_ds = xr.Dataset(
-#     {
-#         "steric_height_anomaly": steric_height_anom,
-#         "thermosteric_height": thermosteric_height,
-#         "halosteric_height": halosteric_height,
-#     },
-#     coords={
-#         "i": ds.i,
-#         "j": ds.j,
-#         "face": face,
-#         "XC": lon,
-#         "YC": lat,
-#     },
-#     attrs={
-#         "description": "Steric height anomaly and thermosteric/halosteric contributions",
-#         "rhoConst": rhoConst,
-#         "date": date_tag,
-#     }
-# )
-
-# output_file = os.path.join(output_dir, f"steric_height_anomaly_{date_tag}.nc")
-# out_ds.to_netcdf(output_file)
-
-# print(f"💡 Saved steric height anomaly data to {output_file}")
 
 

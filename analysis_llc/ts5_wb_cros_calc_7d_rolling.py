@@ -98,7 +98,7 @@ def compute_one_spec(tt, ss, ww):
 # ========== Main processing ==========
 def main():
     # ========== Setup Dask distributed cluster ==========
-    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit='5.5GB')
+    cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit='11GB')
     client = Client(cluster)
     print("Dask dashboard:", client.dashboard_link)
 

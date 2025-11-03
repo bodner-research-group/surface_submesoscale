@@ -10,9 +10,13 @@ YC = ds1['YC']  # latitude: dimensions (face, j, i)
 
 # Define bounding box for selected site
 
-# West Coast of the United States
-lat_min, lat_max = 33.0, 40.0
-lon_min, lon_max = -128.0, -122.0  # West longitudes as negative
+# Kerguelen Plateau:
+lat_min, lat_max = -57.0, -46.2
+lon_min, lon_max = 74.01, 91.5 
+
+# # West Coast of the United States
+# lat_min, lat_max = 33.0, 40.0
+# lon_min, lon_max = -128.0, -122.0  # West longitudes as negative
 
 # # Ocean Weather Station Papa 
 # lat_min, lat_max = 48.0, 52.0
@@ -82,6 +86,12 @@ ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320', consolidated=False)
 
 # Define region info (replace these with your actual results)
 
+# ========== Domain ==========
+domain_name = "Kerguelen_Plateau"
+face = 4
+i = slice(1056,1894+1,1)  
+j = slice(0,884+1,1) 
+
 # # ========== Domain ==========
 # domain_name = "Station_Papa"
 # face = 7
@@ -103,8 +113,19 @@ ds1 = xr.open_zarr('/orcd/data/abodner/003/LLC4320/LLC4320', consolidated=False)
 # i = slice(183-40,586+40,1) 
 # j = slice(3168,3743,1)
 
-k = 0        # surface
+k = 0        # surface level
 t = 0        # first time step
+
+
+lon = ds1['XC'].isel(face=face, i=i, j=j)
+lat = ds1['YC'].isel(face=face, i=i, j=j)
+
+dx_mean = ds1.dxC.isel(i_g=i, j=j, face=face).values.mean()  # mean grid spacin (unit: m)
+Lx = dx_mean / 1000 * (i.stop - i.start)  # Domain size（km）
+Lx
+dy_mean = ds1.dyC.isel(i=i, j_g=j, face=face).values.mean()  # mean grid spacin (unit: m)
+Ly = dy_mean / 1000 * (j.stop - j.start)  # Domain size（km）
+Ly
 
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/"
@@ -114,8 +135,6 @@ os.makedirs(figdir, exist_ok=True)
 # Extract subregion for T and S
 theta = ds1['Theta'].isel(face=face, i=i, j=j, k=k, time=t)
 salt  = ds1['Salt'].isel(face=face, i=i, j=j, k=k, time=t)
-lon = ds1['XC'].isel(face=face, i=i, j=j)
-lat = ds1['YC'].isel(face=face, i=i, j=j)
 
 # Plot function
 def plot_station_papa_region(var, lon, lat, title, cmap, vmin=None, vmax=None, filename='output.png'):
@@ -136,7 +155,7 @@ plot_station_papa_region(
     var=theta,
     lon=lon,
     lat=lat,
-    title="Surface Temperature at Antarctic Peninsula",
+    title="Surface Temperature at Kerguelen Plateau",
     cmap="coolwarm",
     vmin=theta.min().values,
     vmax=theta.max().values,
@@ -148,7 +167,7 @@ plot_station_papa_region(
     var=salt,
     lon=lon,
     lat=lat,
-    title="Surface Salinity at Antarctic Peninsula",
+    title="Surface Salinity at Kerguelen Plateau",
     cmap="viridis",
     vmin=salt.min().values,
     vmax=salt.max().values,

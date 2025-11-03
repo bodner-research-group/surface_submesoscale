@@ -11,7 +11,7 @@ from set_constant import domain_name, face, i, j
 # =======================
 # Setup Dask cluster
 # =======================
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
