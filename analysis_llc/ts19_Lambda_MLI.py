@@ -11,15 +11,21 @@ from scipy.io import savemat
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
 
-from set_constant import domain_name, face, i, j
+# from set_constant import domain_name, face, i, j
 
-# from dask.distributed import Client, LocalCluster
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
-# # Dask Cluster Setup
-# cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-# client = Client(cluster)
-# print("✅ Dask cluster started")
-# print("Dask dashboard:", client.dashboard_link)
+from dask.distributed import Client, LocalCluster
+
+# Dask Cluster Setup
+cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
+client = Client(cluster)
+print("✅ Dask cluster started")
+print("Dask dashboard:", client.dashboard_link)
 
 
 # --- Physical constants ---
@@ -29,10 +35,14 @@ omega = 7.2921e-5  # Earth rotation rate
 
 # --- Paths ---
 grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
-hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
-hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
+# hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_7d_rolling_mean"
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI"
+# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
+# hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
+hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_daily"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily"
+hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_daily_*.nc")))
 
 os.makedirs(figdir, exist_ok=True)
 os.makedirs(output_dir, exist_ok=True)
@@ -121,8 +131,10 @@ for fpath in hml_files:
         print(f"⏭️  Skipping {date_tag}, output already exists.")
         continue
 
-    Hml = ds["Hml_7d"].load()
-    rho = ds["rho_7d"].load()  # (k, j, i)
+    # Hml = ds["Hml_7d"].load()
+    # rho = ds["rho_7d"].load()  # (k, j, i)
+    Hml = ds["Hml_daily"].load()
+    rho = ds["rho_daily"].load()  # (k, j, i)
 
 
     # Depth broadcast

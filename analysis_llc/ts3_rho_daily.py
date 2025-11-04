@@ -9,11 +9,7 @@ from glob import glob
 from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
 
 # ========== Hml computation function ==========
 def compute_Hml(rho_profile, depth_profile, threshold=0.03):
@@ -66,6 +62,11 @@ def main():
 
         date_tag = str(tt_all.time[t].dt.strftime("%Y%m%d").values)
         print(f"\nProcessing daily mean for: {date_tag}")
+
+        out_path = os.path.join(output_dir, f"rho_Hml_TS_daily_{date_tag}.nc")
+        if os.path.exists(out_path):
+            print(f"⏭️  Skipping {date_tag}, output already exists.")
+            continue
 
         # ========== Calculate SA and CT ==========
         SA = xr.apply_ufunc(
@@ -137,7 +138,6 @@ def main():
             "Hml_daily": Hml
         })
 
-        out_path = os.path.join(output_dir, f"rho_Hml_TS_daily_{date_tag}.nc")
         out_ds.to_netcdf(out_path)
         print(f"Saved: {out_path}")
 
