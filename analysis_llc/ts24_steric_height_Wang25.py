@@ -42,8 +42,9 @@ depth = ds1.Z                    # 1D vertical coordinate
 drF = ds1.drF  # vertical grid spacing, 1D
 drF3d, _, _ = xr.broadcast(drF, lon, lat)
 
-# ========== Open 7-day rolling mean of T, S, potential density, alpha, and beta ==========
-input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_7d_rolling_mean"
+# ========== Open T, S, potential density, alpha, and beta ==========
+# input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_7d_rolling_mean"
+input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_insitu_hydrostatic_pressure_daily"
 
 # ========== Define constants ==========
 g = 9.81
@@ -60,7 +61,8 @@ ds_eta = xr.open_mfdataset(eta_path, combine='by_coords')
 Eta_daily = ds_eta["Eta"] # Align datasets and select face/i/j region
 
 # Compute 7-day rolling mean of SSH
-Eta = Eta_daily.rolling(time=7, center=True).mean() 
+# Eta = Eta_daily.rolling(time=7, center=True).mean() 
+Eta = Eta_daily
 
 # ===================================================
 # ========== Compute steric height anomaly ==========
@@ -77,7 +79,8 @@ ds = xr.open_dataset(input_file, chunks={"k": -1, "j": 50, "i": 50})
 rho_insitu = ds.rho_insitu
 pres_hydro = ds.pres_hydro
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # Hml_weekly_mean.nc
+# fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc" # Hml_weekly_mean.nc
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily.nc" 
 Hml_mean = xr.open_dataset(fname).Hml_mean
 Hml = Hml_mean.isel(time=167)
 
@@ -271,69 +274,5 @@ print("✅ Gradient magnitude and Laplacian maps saved.")
 
 
 
-
-
-
-
-
-SA = ds.SA
-CT = ds.CT
-
-
-# ========== Specific volume anomaly ==========
-# compute standard specific volume and anomalies
-S_Ar = 35.16504    # absolute salinity standard for spec. vol., notated as SSO in GSW documentation
-T_Cr = 0.          # conservative temperature standard
-specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pres_hydro.values)
-specvol_constant = 1/rhoConst
-
-specvol_mean = (1 / rho_insitu).mean(dim=["i", "j"])
-
-# specvol_ref = specvol_standard
-# specvol_ref = specvol_constant
-specvol_ref = specvol_mean
-
-specvol_anom = 1/rho_insitu - specvol_ref
-
-# ========== Steric height anomaly ==========
-# pressure reference level to compute steric height
-# (in units of dbar, minus 10.1325 dbar atmospheric pressure)
-p_top_sea_dbar = 0.
-p_top = (p_top_sea_dbar) + p_atm ### dbar
-p_r_sea_dbar = 1000.
-p_r = (p_r_sea_dbar) + p_atm     ### dbar
-
-# compute pressure at z = 0 (not exactly the ocean surface)
-# press_z0 = p_atm + g*rho_insitu.isel(k=0)*eta /1e4 #### When computing steric height, we shouldn't use the information of SSH (eta)!
-# press_z0 = g*rho_insitu.isel(k=0)*eta /1e4
-press_z0 = p_atm+0*rho_insitu.isel(k=0)  # use atmospheric pressure as an estimation of the pressure at z=0
-
-# integrate hydrostatic balance downward to get pressure at bottom of grid cells
-press_ku = press_z0 + (rho_insitu*g*ds1.drF).cumsum("k")/1e4
-press_ku = press_ku.assign_coords(Z=("k", ds1.Zu.values))
-
-press_z0 = press_z0.expand_dims(k=[0])
-press_z0 = press_z0.assign_coords(Z=("k", [ds1.Zl.isel(k_l=0).values]))
-
-# create array with pressure at top of grid cells
-press_kl = xr.concat([press_z0,press_ku.isel(k=np.arange(len(ds1.k) - 1))],dim="k")
-press_kl = press_kl.assign_coords(k=ds1.k.values)
-
-# compute dp for this integration
-dp_integrate =  np.fmax(press_kl,p_top*np.ones(press_kl.shape)) - \
-                np.fmin(press_ku,p_r*np.ones(press_ku.shape))        ### dbar 
-
-# # allow integration above z=0 if p_top is less than p at z=0
-# p_top_above_z0_mask = (p_top - press_kl.isel(k=0).values < 0)
-# dp_integrate.isel(k=0).values[p_top_above_z0_mask] = \
-#                                 (p_top - press_ku[:,0,:,:,:].values)[p_top_above_z0_mask]
-dp_integrate.values[dp_integrate.values > 0] = 0
-
-# Integrate specific volume anomaly over depth
-k_range = slice(0,52)
-steric_height_anom = (-(specvol_anom.isel(k=k_range)/g)*dp_integrate.isel(k=k_range)*1e4).sum("k") ### in meters
-
-# ========== Compare steric height with sea surface height ==========
-ssh_diff = eta - steric_height_anom
 
 

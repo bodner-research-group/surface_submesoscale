@@ -33,28 +33,27 @@ Ce = 0.08
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily.nc" # Hml_weekly_mean.nc
 Hml_mean = abs(xr.open_dataset(fname).Hml_mean)
 dHml_dt = Hml_mean.differentiate(coord="time")*1e9*86400  # dHml/dt, central difference, convert unit from m/ns to m/s and to m/day
+dHml_dt= dHml_dt.assign_coords(time=dHml_dt.time.dt.floor("D"))
+
 
 ##### 2. The change in Hml due to net surface buoyancy flux (vertical process)
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/qnet_fwflx_daily_7day_Bflux.nc"
 Bflux_daily_avg = xr.open_dataset(fname).Bflux_daily_avg
 Bflux_daily_avg = - Bflux_daily_avg
-vert = -Bflux_daily_avg*rho0/g/delta_rho *86400 # unit: m/day
+Bflux_daily_avg= Bflux_daily_avg.assign_coords(time=dHml_dt.time.dt.floor("D"))
+# vert = -Bflux_daily_avg*rho0/g/delta_rho *86400 # unit: m/day
+vert = -Bflux_daily_avg*rho0/g/delta_rho*(Hml_mean-10)**2/(Hml_mean**2) *86400 # unit: m/day
 
-
-# Convert time coordinates to dates (drop the time-of-day)
-dHml_dt_dates = dHml_dt.assign_coords(time=dHml_dt.time.dt.floor("D"))
-vert_dates = vert.assign_coords(time=vert.time.dt.floor("D"))
-# Align by date
-dHml_dt_aligned, vert_aligned = xr.align(dHml_dt_dates, vert_dates, join='inner')
-# Subtract
-diff = dHml_dt_aligned - vert_aligned
+diff = dHml_dt - vert
 
 
 ##### 3. The change in Hml due to mixed-layer eddy-induced frontal slumping (horizontal process)
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily.nc"
 M2_mean = xr.open_dataset(fname).M2_mean  
-# hori = -104/21*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 *2e4
-hori = -1*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * Hml_mean**2  # unit: m/day
+# sigma_avg = 208/21 ### sigma_avg~9.9
+sigma_avg = 1
+# hori = -sigma_avg*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * Hml_mean**2  # unit: m/day
+hori = -sigma_avg*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * (Hml_mean-10)**2  # unit: m/day
 
 # grad_mag_rho_squared = (M2_mean*rho0/g)**2
 # hori = 104/21*Ce/abs_f/delta_rho * grad_mag_rho_squared*86400 # unit: m/day
@@ -64,24 +63,20 @@ hori = -1*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * Hml_mean**2  # unit: m
 
 
 
-##### Apply a 7-day rolling mean
+
+
+
+##### 5. Apply a 7-day rolling mean
 
 dHml_dt_rolling = dHml_dt.rolling(time=7, center=True).mean()
 vert_rolling = vert.rolling(time=7, center=True).mean()
 hori_rolling = hori.rolling(time=7, center=True).mean()
 
-# Convert time coordinates to dates (drop the time-of-day)
-dHml_dt_dates_rolling = dHml_dt_rolling.assign_coords(time=dHml_dt_rolling.time.dt.floor("D"))
-vert_dates_rolling = vert_rolling.assign_coords(time=vert_rolling.time.dt.floor("D"))
-# Align by date
-dHml_dt_aligned_rolling, vert_aligned_rolling = xr.align(dHml_dt_dates_rolling, vert_dates_rolling, join='inner')
-# Subtract
-diff_rolling = dHml_dt_aligned_rolling - vert_aligned_rolling
-
+diff_rolling = dHml_dt_rolling - vert_rolling
 
 
 # ==============================================================
-# Plot comparison
+# 6. Plot comparison
 # ==============================================================
 
 ### Path to the folder where figures will be saved 
