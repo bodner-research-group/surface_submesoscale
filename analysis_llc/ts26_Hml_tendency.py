@@ -8,13 +8,13 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-from set_constant import domain_name, face, i, j
+# from set_constant import domain_name, face, i, j
 
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 ##### Load LLC dataset
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
@@ -60,10 +60,16 @@ hori = -sigma_avg*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * (Hml_mean-10)*
 
 ##### 4. Connect the gradient magnitude of mixed-layer steric height to mixed-layer horizontal density gradient
 
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_timeseries.nc"
+eta_grad2_mean = xr.open_dataset(fname).eta_grad2_mean.isel(time=slice(1, None))
+eta_prime_grad2_mean = xr.open_dataset(fname).eta_prime_grad2_mean.isel(time=slice(1, None)) 
 
+hori_steric = -sigma_avg*Ce/abs_f* eta_prime_grad2_mean *g*rho0/delta_rho *86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_timeseries.nc"
+eta_submeso_grad2_mean = xr.open_dataset(fname).eta_submeso_grad2_mean.isel(time=slice(1, None)) 
 
-
+hori_submeso = -sigma_avg*Ce/abs_f* eta_submeso_grad2_mean *g*rho0/delta_rho *86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
 
 ##### 5. Apply a 7-day rolling mean
@@ -71,6 +77,8 @@ hori = -sigma_avg*Ce/abs_f*(M2_mean**2)*rho0/g/delta_rho *86400 * (Hml_mean-10)*
 dHml_dt_rolling = dHml_dt.rolling(time=7, center=True).mean()
 vert_rolling = vert.rolling(time=7, center=True).mean()
 hori_rolling = hori.rolling(time=7, center=True).mean()
+hori_steric_rolling = hori_steric.rolling(time=7, center=True).mean()
+hori_submeso_rolling = hori_submeso.rolling(time=7, center=True).mean()
 
 diff_rolling = dHml_dt_rolling - vert_rolling
 
@@ -84,30 +92,34 @@ figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{do
 os.makedirs(figdir, exist_ok=True)
 
 filename=f"{figdir}Hml_tendency_new.png"
-plt.figure(figsize=(10, 5))
+plt.figure(figsize=(15, 8))
 plt.plot(dHml_dt["time"], dHml_dt, label=r"$dH_{ml}/dt$ (total)", color='k')
 plt.plot(vert["time"], vert, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff["time"], diff, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
-plt.plot(hori["time"], hori, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
+plt.plot(hori["time"], hori, label=r"Hori. process (eddy-induced frontal slumping)", color='tab:orange')
+plt.plot(hori_steric["time"], hori_steric/4, label=r"Hori. (using steric |∇η′|)", color='yellow')
+plt.plot(hori_submeso["time"], hori_submeso, label=r"Hori. (using submeso |∇η′|)", color='red')
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
-plt.legend()
+plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
 plt.grid(True, linestyle='--', alpha=0.5)
-plt.tight_layout()
-plt.savefig(filename, dpi=150)
+# plt.tight_layout()
+plt.savefig(filename, dpi=200)
 
 
 filename=f"{figdir}Hml_tendency_new_rolling.png"
-plt.figure(figsize=(10, 5))
+plt.figure(figsize=(15, 8))
 plt.plot(dHml_dt_rolling["time"], dHml_dt_rolling, label=r"$dH_{ml}/dt$ (total)", color='k')
 plt.plot(vert_rolling["time"], vert_rolling, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff_rolling["time"], diff_rolling, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
 plt.plot(hori_rolling["time"], hori_rolling, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
+plt.plot(hori_steric_rolling["time"], hori_steric_rolling/4, label=r"Horizontal (using steric |∇η′|)", color='yellow')
+plt.plot(hori_submeso_rolling["time"], hori_submeso_rolling, label=r"Horizontal (using submeso |∇η′|)", color='red')
 plt.title("Mixed Layer Depth Tendency (7-day rolling mean)")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
-plt.legend()
+plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
-plt.savefig(filename, dpi=150)
+plt.savefig(filename, dpi=200)

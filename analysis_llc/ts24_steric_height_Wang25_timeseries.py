@@ -1,3 +1,5 @@
+#### Compute and save the steric height anomaly following Wang et al. 2025.
+
 import os
 import numpy as np
 import xarray as xr
@@ -6,22 +8,13 @@ from glob import glob
 import matplotlib.pyplot as plt
 from xgcm import Grid
 from tqdm import tqdm
-from dask.distributed import Client, LocalCluster
 
-# from set_constant import domain_name, face, i, j
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
-
-# =====================
-# Setup Dask cluster
-# =====================
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
-client = Client(cluster)
-print("Dask dashboard:", client.dashboard_link)
-
+from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ==============================================================
 # Set parameters
@@ -75,6 +68,7 @@ Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 Hml_mean = xr.open_dataset(Hml_file).Hml_mean
 Hml_mean= Hml_mean.assign_coords(time=Hml_mean.time.dt.floor("D"))
 
+
 # ==============================================================
 # Define helper functions
 # ==============================================================
@@ -108,16 +102,18 @@ times = []
 eta_grad2_list = []
 eta_prime_grad2_list = []
 
-eta_grad_mag_all = []
-eta_prime_grad_mag_all = []
-eta_laplace_all = []
-eta_prime_laplace_all = []
-
 # ==============================================================
 # Main loop over time steps
 # ==============================================================
 for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     time_val = Eta.time.isel(time=t).values
+    date_tag = np.datetime_as_string(time_val, unit="D").replace("-", "")
+
+    day_file = os.path.join(out_dir, f"grad_laplace_eta_steric_{date_tag}.nc")
+    if os.path.exists(day_file):
+        print(f"Already processed: {day_file}")
+        continue
+
     eta = Eta.isel(time=t)
     eta_minus_mean = eta - eta.mean(dim=["i", "j"])
 
@@ -148,12 +144,6 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     eta_grad_mag, eta_laplace = compute_grad_laplace(eta_minus_mean, grid)
     eta_prime_grad_mag, eta_prime_laplace = compute_grad_laplace(eta_prime_minus_mean, grid)
 
-    # Store arrays for time stacking
-    eta_grad_mag_all.append(eta_grad_mag)
-    eta_prime_grad_mag_all.append(eta_prime_grad_mag)
-    eta_laplace_all.append(eta_laplace)
-    eta_prime_laplace_all.append(eta_prime_laplace)
-
     # Domain-mean |∇η|² and |∇η′|²
     eta_grad2_mean = (eta_grad_mag**2).mean(dim=["i", "j"])
     eta_prime_grad2_mean = (eta_prime_grad_mag**2).mean(dim=["i", "j"])
@@ -161,30 +151,28 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     eta_prime_grad2_list.append(eta_prime_grad2_mean)
     times.append(time_val)
 
-# ==============================================================
-# Stack over time
-# ==============================================================
+    # ==============================================================
+    # Save per-day output file
+    # ==============================================================
+    ds_day = xr.Dataset(
+        {
+            "eta": eta,
+            "eta_prime": eta_prime,
+            "eta_grad_mag": eta_grad_mag,
+            "eta_laplace": eta_laplace,
+            "eta_prime_grad_mag": eta_prime_grad_mag,
+            "eta_prime_laplace": eta_prime_laplace,
+        },
+        coords={
+            "lon": lon,
+            "lat": lat,
+            "time": ("time", [time_val]),
+        },
+    )
 
-eta_grad_mag_all = xr.concat(eta_grad_mag_all, dim="time")
-eta_prime_grad_mag_all = xr.concat(eta_prime_grad_mag_all, dim="time")
-eta_laplace_all = xr.concat(eta_laplace_all, dim="time")
-eta_prime_laplace_all = xr.concat(eta_prime_laplace_all, dim="time")
+    ds_day.to_netcdf(day_file)
+    print(f"✅ Saved {day_file}")
 
-ds_out = xr.Dataset(
-    {
-        "eta": eta,
-        "eta_grad_mag": eta_grad_mag_all,
-        "eta_laplace": eta_laplace_all,
-        "eta_prime": eta_prime,
-        "eta_prime_grad_mag": eta_prime_grad_mag_all,
-        "eta_prime_laplace": eta_prime_laplace_all,
-    }
-)
-ds_out["lon"] = lon
-ds_out["lat"] = lat
-ds_out["time"] = ("time", times)
-ds_out.to_netcdf(os.path.join(out_dir, "grad_laplace_eta_steric_daily.nc"), compute=True)
-print("✅ Saved spatial gradients and Laplacians: grad_laplace_eta_steric_daily.nc")
 
 # ==============================================================
 # Domain-mean time series
@@ -203,13 +191,17 @@ print("✅ Saved domain-mean |∇η|² and |∇η′|² timeseries: grad2_timese
 # Plot timeseries
 # ==============================================================
 
+# ts_ds = ts_ds.chunk({"time": -1})  # or any chunk >= 7
+
 plt.figure(figsize=(8, 4))
-ts_ds["eta_grad2_mean"].plot(label="⟨|∇η|²⟩", color="tab:blue")
-ts_ds["eta_prime_grad2_mean"].plot(label="⟨|∇η′|²⟩", color="tab:orange")
+# ts_ds["eta_grad2_mean"].plot(label="⟨|∇η|²⟩", color="tab:blue")
+# ts_ds["eta_prime_grad2_mean"].plot(label="⟨|∇η′|²⟩", color="tab:orange")
+eta_grad2_mean.plot(label="⟨|∇η|²⟩", color="tab:blue")
+eta_prime_grad2_mean.plot(label="⟨|∇η′|²⟩", color="tab:orange")
 
 # 7-day rolling mean
-ts_ds["eta_grad2_mean"].rolling(time=7, center=True).mean().plot(label="⟨|∇η|²⟩ (7d)", color="tab:blue", linestyle="--")
-ts_ds["eta_prime_grad2_mean"].rolling(time=7, center=True).mean().plot(label="⟨|∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
+eta_grad2_mean.rolling(time=7, center=True).mean().plot(label="⟨|∇η|²⟩ (7d)", color="tab:blue", linestyle="--")
+eta_prime_grad2_mean.rolling(time=7, center=True).mean().plot(label="⟨|∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
 
 plt.title("Domain-mean |∇η|² and |∇η′|² Timeseries")
 plt.ylabel("Mean(|∇η|²) [m²/m²]")
