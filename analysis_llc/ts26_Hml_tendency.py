@@ -69,7 +69,7 @@ hori_steric = -sigma_avg*Ce/abs_f* eta_prime_grad2_mean *g*rho0/delta_rho *86400
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_timeseries.nc"
 eta_submeso_grad2_mean = xr.open_dataset(fname).eta_submeso_grad2_mean.isel(time=slice(1, None)) 
 
-hori_submeso = -sigma_avg*Ce/abs_f* eta_submeso_grad2_mean *g*rho0/delta_rho *86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
+hori_submeso= -sigma_avg*Ce/abs_f* eta_submeso_grad2_mean *g*rho0/delta_rho*86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
 
 ##### 5. Apply a 7-day rolling mean
@@ -97,14 +97,14 @@ plt.plot(dHml_dt["time"], dHml_dt, label=r"$dH_{ml}/dt$ (total)", color='k')
 plt.plot(vert["time"], vert, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff["time"], diff, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
 plt.plot(hori["time"], hori, label=r"Hori. process (eddy-induced frontal slumping)", color='tab:orange')
-plt.plot(hori_steric["time"], hori_steric/4, label=r"Hori. (using steric |∇η′|)", color='yellow')
+plt.plot(hori_steric["time"], hori_steric, label=r"Hori. (using steric |∇η′|)", color='yellow')
 plt.plot(hori_submeso["time"], hori_submeso, label=r"Hori. (using submeso |∇η′|)", color='red')
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
 plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
 plt.grid(True, linestyle='--', alpha=0.5)
-# plt.tight_layout()
+plt.tight_layout()
 plt.savefig(filename, dpi=200)
 
 
@@ -114,10 +114,24 @@ plt.plot(dHml_dt_rolling["time"], dHml_dt_rolling, label=r"$dH_{ml}/dt$ (total)"
 plt.plot(vert_rolling["time"], vert_rolling, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff_rolling["time"], diff_rolling, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
 plt.plot(hori_rolling["time"], hori_rolling, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
-plt.plot(hori_steric_rolling["time"], hori_steric_rolling/4, label=r"Horizontal (using steric |∇η′|)", color='yellow')
+plt.plot(hori_steric_rolling["time"], hori_steric_rolling, label=r"Horizontal (using steric |∇η′|)", color='yellow')
 plt.plot(hori_submeso_rolling["time"], hori_submeso_rolling, label=r"Horizontal (using submeso |∇η′|)", color='red')
 plt.title("Mixed Layer Depth Tendency (7-day rolling mean)")
 plt.ylabel("Rate of change of MLD [m/day]")
+plt.xlabel("Time")
+plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.savefig(filename, dpi=200)
+
+
+
+filename=f"{figdir}Hml_debug.png"
+plt.figure(figsize=(15, 8))
+plt.plot(eta_prime_grad2_mean["time"], eta_prime_grad2_mean, label=r"steric |∇η′|^2", color='yellow')
+plt.plot(eta_submeso_grad2_mean["time"], eta_submeso_grad2_mean, label=r"submeso |∇η′|^2", color='red')
+# plt.title("Mixed Layer Depth Tendency")
+# plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
 plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
 plt.grid(True, linestyle='--', alpha=0.5)

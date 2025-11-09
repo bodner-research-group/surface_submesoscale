@@ -144,9 +144,9 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     eta_grad_mag, eta_laplace = compute_grad_laplace(eta_minus_mean, grid)
     eta_prime_grad_mag, eta_prime_laplace = compute_grad_laplace(eta_prime_minus_mean, grid)
 
-    # Domain-mean |∇η|² and |∇η′|²
-    eta_grad2_mean = (eta_grad_mag**2).mean(dim=["i", "j"])
-    eta_prime_grad2_mean = (eta_prime_grad_mag**2).mean(dim=["i", "j"])
+    # Domain-mean |∇η|² and |∇η′|². Exclude 2 grid points on each boundary (mask edges)
+    eta_grad2_mean = (eta_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))**2).mean(dim=["i", "j"])
+    eta_prime_grad2_mean = (eta_prime_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))**2).mean(dim=["i", "j"])
     eta_grad2_list.append(eta_grad2_mean)
     eta_prime_grad2_list.append(eta_prime_grad2_mean)
     times.append(time_val)
@@ -212,3 +212,131 @@ plt.tight_layout()
 plt.savefig(f"{figdir}grad2_timeseries.png", dpi=150)
 plt.close()
 print(f"✅ Saved figure: {figdir}grad2_timeseries.png")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# #### Post-process steric height anomaly gradients
+# #### Compute domain-mean ⟨|∇η|²⟩ and ⟨|∇η′|²⟩ excluding boundaries
+# #### following Wang et al. 2025
+
+# import os
+# import numpy as np
+# import xarray as xr
+# import matplotlib.pyplot as plt
+# from glob import glob
+# from tqdm import tqdm
+
+# from set_constant import domain_name  # assumes same constants file
+# # # ========== Domain ==========
+# # domain_name = "icelandic_basin"
+# # face = 2
+# # i = slice(527, 1007)   # icelandic_basin -- larger domain
+# # j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# # ==============================================================
+# # Paths
+# # ==============================================================
+# base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
+# out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+# os.makedirs(out_dir, exist_ok=True)
+
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
+# os.makedirs(figdir, exist_ok=True)
+
+# # ==============================================================
+# # Find all daily output files
+# # ==============================================================
+# file_list = sorted(glob(os.path.join(out_dir, "grad_laplace_eta_steric_*.nc")))
+# if len(file_list) == 0:
+#     raise FileNotFoundError(f"No grad_laplace_eta_steric_*.nc files found in {out_dir}")
+
+# print(f"Found {len(file_list)} daily files.")
+
+# # ==============================================================
+# # Initialize output lists
+# # ==============================================================
+# times = []
+# eta_grad2_mean_list = []
+# eta_prime_grad2_mean_list = []
+
+# # ==============================================================
+# # Loop through daily files
+# # ==============================================================
+# for f in tqdm(file_list, desc="Computing daily domain means"):
+#     ds = xr.open_dataset(f)
+#     time_val = ds.time.values[0] if "time" in ds else np.nan
+
+#     # Read variables
+#     eta_grad_mag = ds["eta_grad_mag"]
+#     eta_prime_grad_mag = ds["eta_prime_grad_mag"]
+
+#     # Exclude 2 grid points on each boundary
+#     eta_grad_mag_cropped = eta_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))
+#     eta_prime_grad_mag_cropped = eta_prime_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))
+
+#     # Compute mean(|∇η|²) and mean(|∇η′|²)
+#     eta_grad2_mean = (eta_grad_mag_cropped ** 2).mean(dim=["i", "j"])
+#     eta_prime_grad2_mean = (eta_prime_grad_mag_cropped ** 2).mean(dim=["i", "j"])
+
+#     eta_grad2_mean_list.append(eta_grad2_mean)
+#     eta_prime_grad2_mean_list.append(eta_prime_grad2_mean)
+#     times.append(time_val)
+
+#     ds.close()
+
+# # ==============================================================
+# # Combine into one dataset
+# # ==============================================================
+# ts_ds = xr.Dataset(
+#     {
+#         "eta_grad2_mean": xr.concat(eta_grad2_mean_list, dim="time"),
+#         "eta_prime_grad2_mean": xr.concat(eta_prime_grad2_mean_list, dim="time"),
+#     },
+#     coords={"time": ("time", times)},
+# )
+
+# out_ts_file = os.path.join(out_dir, "grad2_timeseries.nc")
+# ts_ds.to_netcdf(out_ts_file)
+# print(f"✅ Saved domain-mean |∇η|² and |∇η′|² timeseries: {out_ts_file}")
+
+# # ==============================================================
+# # Plot time series
+# # ==============================================================
+# plt.figure(figsize=(8, 4))
+
+# ts_ds["eta_grad2_mean"].plot(label="⟨|∇η|²⟩", color="tab:blue")
+# ts_ds["eta_prime_grad2_mean"].plot(label="⟨|∇η′|²⟩", color="tab:orange")
+
+# # Add 7-day rolling mean
+# ts_ds["eta_grad2_mean"].rolling(time=7, center=True).mean().plot(
+#     label="⟨|∇η|²⟩ (7d)", color="tab:blue", linestyle="--"
+# )
+# ts_ds["eta_prime_grad2_mean"].rolling(time=7, center=True).mean().plot(
+#     label="⟨|∇η′|²⟩ (7d)", color="tab:orange", linestyle="--"
+# )
+
+# plt.title("Domain-mean |∇η|² and |∇η′|² (Boundary-excluded)")
+# plt.ylabel("Mean(|∇η|²) [m²/m²]")
+# plt.xlabel("Time")
+# plt.legend()
+# plt.grid(True, linestyle="--", alpha=0.5)
+# plt.tight_layout()
+
+# fig_file = os.path.join(figdir, "grad2_timeseries.png")
+# plt.savefig(fig_file, dpi=150)
+# plt.close()
+
+# print(f"✅ Saved figure: {fig_file}")
