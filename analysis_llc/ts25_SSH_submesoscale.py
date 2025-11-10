@@ -9,11 +9,11 @@ from dask import delayed, compute
 
 from set_constant import domain_name, face, i, j
 
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Time settings ==========
 nday_avg = 364
@@ -29,9 +29,9 @@ step_hours = delta_days * 24
 # Setup Dask cluster
 # =====================
 cluster = LocalCluster(
-    n_workers=64,
+    n_workers=32,
     threads_per_worker=1,
-    memory_limit="5.5GB",
+    memory_limit="11GB",
     processes=True
 )
 client = Client(cluster)
@@ -41,7 +41,7 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_30kmCutoff.nc"
+out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_20kmCutoff.nc"
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
 
@@ -77,26 +77,26 @@ print(f"Grid spacing = {dx_km:.2f} km, Nyquist λ = {nyquist_wavelength:.2f} km"
 @delayed
 def process_one_timestep(t_index, date_str, eta_day, dx_km):
     """
-    Remove >30 km large-scale background using rolling mean.
+    Remove >20 km large-scale background using rolling mean.
     Returns (date, SSH_submesoscale)
     """
     try:
         # Remove domain mean
         eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
 
-        # Compute rolling window size in grid points for 30 km
-        window_size = int(np.ceil(30.0 / dx_km))
+        # Compute rolling window size in grid points for 20 km
+        window_size = int(np.ceil(20.0 / dx_km))
         if window_size % 2 == 0:
             window_size += 1  # ensure odd window size for centered rolling
 
-        # Remove large-scale (>30 km) background
+        # Remove large-scale (>20 km) background
         eta_large = eta_mean_removed.rolling(i=window_size, j=window_size, center=True).mean()
         eta_submeso = eta_mean_removed - eta_large
 
         # Return as DataArray with proper metadata
         eta_submeso.name = "SSH_submesoscale"
-        eta_submeso.attrs["description"] = "SSH with >30 km scales removed"
-        eta_submeso.attrs["filter_cutoff_km"] = 30.0
+        eta_submeso.attrs["description"] = "SSH with >20 km scales removed"
+        eta_submeso.attrs["filter_cutoff_km"] = 20.0
 
         return date_str, eta_submeso
     except Exception as e:

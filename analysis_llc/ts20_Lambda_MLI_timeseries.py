@@ -4,7 +4,13 @@ import numpy as np
 from glob import glob
 import matplotlib.pyplot as plt
 
-from set_constant import domain_name, face, i, j
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
 plt.rcParams.update({'font.size': 16})  # Global font size setting for figures
 
 # --- Paths ---
@@ -23,6 +29,7 @@ nc_files = sorted(glob(os.path.join(output_dir, "Lambda_MLI_*.nc")))
 dates = []
 Lambda_MLI_mean_list = []
 M2_mean_list = []
+M2_mean_new_list = []
 N2ml_mean_list = []
 Hml_mean_list = []
 
@@ -44,6 +51,7 @@ for fpath in nc_files:
 
     Lambda_MLI_inner = np.abs(ds.Lambda_MLI.isel(**inner_slice))
     Mml4_mean_inner = ds.Mml4_mean.isel(**inner_slice)
+    Mml2_mean_inner = ds.Mml2_mean.isel(**inner_slice)
     N2ml_mean_inner = ds.N2ml_mean.isel(**inner_slice)
     Hml_inner = ds.Hml.isel(**inner_slice)
 
@@ -53,6 +61,7 @@ for fpath in nc_files:
     # Compute domain mean
     Lambda_MLI_mean = Lambda_MLI_inner.mean(dim=("j", "i"), skipna=True)
     M2_mean = M2_inner.mean(dim=("j", "i"), skipna=True)
+    M2_mean_new = Mml2_mean_inner.mean(dim=("j", "i"), skipna=True)
     N2ml_mean = N2ml_mean_inner.mean(dim=("j", "i"), skipna=True)
     Hml_mean = Hml_inner.mean(dim=("j", "i"), skipna=True)
 
@@ -60,6 +69,7 @@ for fpath in nc_files:
     dates.append(time_val)
     Lambda_MLI_mean_list.append(Lambda_MLI_mean.values)
     M2_mean_list.append(M2_mean.values)
+    M2_mean_new_list.append(M2_mean_new.values)
     N2ml_mean_list.append(N2ml_mean.values)
     Hml_mean_list.append(Hml_mean.values)
 
@@ -69,6 +79,7 @@ ds_out = xr.Dataset(
     {
         "Lambda_MLI_mean": (("time",), Lambda_MLI_mean_list),
         "M2_mean": (("time",), M2_mean_list),
+        "M2_mean_new": (("time",), M2_mean_new_list),
         "N2ml_mean": (("time",), N2ml_mean_list),
         "Hml_mean": (("time",), Hml_mean_list),
     },
@@ -91,6 +102,8 @@ axs[0].set_ylabel("Lambda_MLI (km)")
 axs[0].set_title("Domain-Averaged MLI Diagnostics")
 
 axs[1].plot(ds.time, ds["M2_mean"], color='green')
+axs[1].plot(ds.time, ds["M2_mean_new"], color='red')
+axs[1].legend(["M2_mean", "M2_mean_new"])
 axs[1].set_ylabel("M² (s⁻²)")
 
 axs[2].plot(ds.time, ds["N2ml_mean"], color='purple')

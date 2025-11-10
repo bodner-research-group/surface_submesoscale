@@ -11,13 +11,13 @@ from scipy.io import savemat
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
 
-# from set_constant import domain_name, face, i, j
+from set_constant import domain_name, face, i, j
 
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 from dask.distributed import Client, LocalCluster
 
@@ -188,8 +188,8 @@ for fpath in hml_files:
     rho_y_center = grid.interp(rho_y, axis="Y", to="center")
     M4_full = ((g / rho0) ** 2) * (rho_x_center**2 + rho_y_center**2)
     M4_masked = M4_full.where(in_range_mask)
-    weighted_sum_M4 = (M4_masked * drF3d.where(in_range_mask)).sum(dim="k", skipna=True)
-    Mml4_mean = weighted_sum_M4 / total_thickness
+    Mml4_mean = (M4_masked * drF3d.where(in_range_mask)).sum(dim="k", skipna=True) / total_thickness
+    Mml2_mean = (np.sqrt(M4_masked) * drF3d.where(in_range_mask)).sum(dim="k", skipna=True)/total_thickness
 
     # --- Compute Rib and Lambda_MLI ---
     f_cor_3D_squared = xr.DataArray(
@@ -257,6 +257,7 @@ for fpath in hml_files:
             "Rib": Rib,
             "N2ml_mean": N2ml_mean,
             "Mml4_mean": Mml4_mean,
+            "Mml2_mean": Mml2_mean,
             "Hml": Hml,
             "f_cor": (("j", "i"), f_cor),  # make it compatible with j/i dims
         }

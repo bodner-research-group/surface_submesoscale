@@ -63,7 +63,7 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_30kmCutoff.nc" 
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_20kmCutoff.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
 eta_submeso= eta_submeso.assign_coords(time=eta_submeso.time.dt.floor("D"))
 
@@ -98,10 +98,10 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     time_val = Eta.time.isel(time=t).values
     date_tag = np.datetime_as_string(time_val, unit="D").replace("-", "")
 
-    day_file = os.path.join(out_dir, f"grad_laplace_eta_submeso_{date_tag}.nc")
-    if os.path.exists(day_file):
-        print(f"Already processed: {day_file}")
-        continue
+    # day_file = os.path.join(out_dir, f"grad_laplace_eta_submeso_{date_tag}.nc")
+    # if os.path.exists(day_file):
+    #     print(f"Already processed: {day_file}")
+    #     continue
 
     eta = Eta.isel(time=t)
     eta_minus_mean = eta - eta.mean(dim=["i", "j"])
@@ -116,24 +116,24 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     eta_submeso_grad2_list.append(eta_submeso_grad2_mean)
     times.append(time_val)
 
-    # ==============================================================
-    # Save per-day output file
-    # ==============================================================
-    ds_day = xr.Dataset(
-        {
-            "eta_submeso": eta_submeso,
-            "eta_submeso_grad_mag": eta_submeso_grad_mag,
-            "eta_submeso_laplace": eta_submeso_laplace,
-        },
-        coords={
-            "lon": lon,
-            "lat": lat,
-            "time": ("time", [time_val]),
-        },
-    )
+    # # ==============================================================
+    # # Save per-day output file
+    # # ==============================================================
+    # ds_day = xr.Dataset(
+    #     {
+    #         "eta_submeso": eta_submeso,
+    #         "eta_submeso_grad_mag": eta_submeso_grad_mag,
+    #         "eta_submeso_laplace": eta_submeso_laplace,
+    #     },
+    #     coords={
+    #         "lon": lon,
+    #         "lat": lat,
+    #         "time": ("time", [time_val]),
+    #     },
+    # )
 
-    ds_day.to_netcdf(day_file)
-    print(f"✅ Saved {day_file}")
+    # ds_day.to_netcdf(day_file)
+    # print(f"✅ Saved {day_file}")
 
 
 # ==============================================================
@@ -145,8 +145,8 @@ ts_ds = xr.Dataset(
     },
     coords={"time": ("time", times)},
 )
-ts_ds.to_netcdf(os.path.join(out_dir, "grad2_submeso_timeseries.nc"))
-print("✅ Saved domain-mean |∇η_submeso|² timeseries: grad2_submeso_timeseries.nc")
+ts_ds.to_netcdf(os.path.join(out_dir, "grad2_submeso_20kmCutOff_timeseries.nc"))
+print("✅ Saved domain-mean |∇η_submeso|² timeseries: grad2_submeso_20kmCutOff_timeseries.nc")
 
 # ==============================================================
 # Plot timeseries
@@ -158,7 +158,7 @@ plt.figure(figsize=(8, 4))
 ts_ds["eta_submeso_grad2_mean"].plot(label="⟨submesoscale |∇η′|²⟩", color="tab:orange")
 
 # 7-day rolling mean
-ts_ds["eta_submeso_grad2_mean"].rolling(time=7, center=True).mean().plot(label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
+ts_ds["eta_submeso_grad2_mean"].compute().rolling(time=7, center=True).mean().plot(label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
 
 plt.title("Domain-mean submesoscale |∇η′|² Timeseries")
 plt.ylabel("Mean(submesoscale |∇η′|²) [m²/m²]")
@@ -166,9 +166,9 @@ plt.xlabel("Time")
 plt.legend()
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.tight_layout()
-plt.savefig(f"{figdir}grad2_submeso_timeseries.png", dpi=150)
+plt.savefig(f"{figdir}grad2_submeso_20kmCutOff_timeseries.png", dpi=150)
 plt.close()
-print(f"✅ Saved figure: {figdir}grad2_submeso_timeseries.png")
+print(f"✅ Saved figure: {figdir}grad2_submeso_20kmCutOff_timeseries.png")
 
 
 
@@ -181,97 +181,97 @@ print(f"✅ Saved figure: {figdir}grad2_submeso_timeseries.png")
 
 
 
-#### Compute and save the domain-mean ⟨|∇η′|²⟩ time series (using saved eta_submeso_grad_mag)
-#### following Wang et al. 2025
+# #### Compute and save the domain-mean ⟨|∇η′|²⟩ time series (using saved eta_submeso_grad_mag)
+# #### following Wang et al. 2025
 
-import os
-import numpy as np
-import xarray as xr
-import matplotlib.pyplot as plt
-from glob import glob
-from tqdm import tqdm
+# import os
+# import numpy as np
+# import xarray as xr
+# import matplotlib.pyplot as plt
+# from glob import glob
+# from tqdm import tqdm
 
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# from set_constant import domain_name, face, i, j
+# # # ========== Domain ==========
+# # domain_name = "icelandic_basin"
+# # face = 2
+# # i = slice(527, 1007)   # icelandic_basin -- larger domain
+# # j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
-# ==============================================================
-# Paths and constants
-# ==============================================================
-base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
-out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
-os.makedirs(out_dir, exist_ok=True)
+# # ==============================================================
+# # Paths and constants
+# # ==============================================================
+# base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
+# out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+# os.makedirs(out_dir, exist_ok=True)
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
-os.makedirs(figdir, exist_ok=True)
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
+# os.makedirs(figdir, exist_ok=True)
 
-# ==============================================================
-# Find all daily files containing eta_submeso_grad_mag
-# ==============================================================
-file_list = sorted(glob(os.path.join(out_dir, "grad_laplace_eta_submeso_*.nc")))
-if len(file_list) == 0:
-    raise FileNotFoundError(f"No grad_laplace_eta_submeso_*.nc files found in {out_dir}")
+# # ==============================================================
+# # Find all daily files containing eta_submeso_grad_mag
+# # ==============================================================
+# file_list = sorted(glob(os.path.join(out_dir, "grad_laplace_eta_submeso_*.nc")))
+# if len(file_list) == 0:
+#     raise FileNotFoundError(f"No grad_laplace_eta_submeso_*.nc files found in {out_dir}")
 
-print(f"Found {len(file_list)} daily files to process.")
+# print(f"Found {len(file_list)} daily files to process.")
 
-# ==============================================================
-# Initialize output lists
-# ==============================================================
-times = []
-eta_submeso_grad2_mean_list = []
+# # ==============================================================
+# # Initialize output lists
+# # ==============================================================
+# times = []
+# eta_submeso_grad2_mean_list = []
 
-# ==============================================================
-# Main loop: read, mask boundaries, compute mean(|∇η′|²)
-# ==============================================================
-for f in tqdm(file_list, desc="Computing mean |∇η′|²"):
-    ds = xr.open_dataset(f)
-    time_val = ds.time.values[0] if "time" in ds else np.nan
+# # ==============================================================
+# # Main loop: read, mask boundaries, compute mean(|∇η′|²)
+# # ==============================================================
+# for f in tqdm(file_list, desc="Computing mean |∇η′|²"):
+#     ds = xr.open_dataset(f)
+#     time_val = ds.time.values[0] if "time" in ds else np.nan
 
-    # Read eta_submeso_grad_mag
-    grad_mag = ds["eta_submeso_grad_mag"]
+#     # Read eta_submeso_grad_mag
+#     grad_mag = ds["eta_submeso_grad_mag"]
 
-    # Exclude 2 grid points on each boundary (mask edges)
-    grad_mag_center = grad_mag.isel(i=slice(2, -2), j=slice(2, -2))
+#     # Exclude 2 grid points on each boundary (mask edges)
+#     grad_mag_center = grad_mag.isel(i=slice(2, -2), j=slice(2, -2))
 
-    # Compute domain-mean of |∇η′|²
-    grad2_mean = (grad_mag_center ** 2).mean(dim=["i", "j"])
-    eta_submeso_grad2_mean_list.append(grad2_mean)
-    times.append(time_val)
+#     # Compute domain-mean of |∇η′|²
+#     grad2_mean = (grad_mag_center ** 2).mean(dim=["i", "j"])
+#     eta_submeso_grad2_mean_list.append(grad2_mean)
+#     times.append(time_val)
 
-    ds.close()
+#     ds.close()
 
-# ==============================================================
-# Combine results into one dataset
-# ==============================================================
-ts_ds = xr.Dataset(
-    {"eta_submeso_grad2_mean": xr.concat(eta_submeso_grad2_mean_list, dim="time")},
-    coords={"time": ("time", times)},
-)
-out_ts_file = os.path.join(out_dir, "grad2_submeso_timeseries.nc")
-ts_ds.to_netcdf(out_ts_file)
-print(f"✅ Saved domain-mean |∇η′|² timeseries: {out_ts_file}")
+# # ==============================================================
+# # Combine results into one dataset
+# # ==============================================================
+# ts_ds = xr.Dataset(
+#     {"eta_submeso_grad2_mean": xr.concat(eta_submeso_grad2_mean_list, dim="time")},
+#     coords={"time": ("time", times)},
+# )
+# out_ts_file = os.path.join(out_dir, "grad2_submeso_timeseries.nc")
+# ts_ds.to_netcdf(out_ts_file)
+# print(f"✅ Saved domain-mean |∇η′|² timeseries: {out_ts_file}")
 
-# ==============================================================
-# Plot timeseries
-# ==============================================================
-plt.figure(figsize=(8, 4))
-ts_ds["eta_submeso_grad2_mean"].plot(label="⟨submesoscale |∇η′|²⟩", color="tab:orange")
+# # ==============================================================
+# # Plot timeseries
+# # ==============================================================
+# plt.figure(figsize=(8, 4))
+# ts_ds["eta_submeso_grad2_mean"].plot(label="⟨submesoscale |∇η′|²⟩", color="tab:orange")
 
-# 7-day rolling mean
-ts_ds["eta_submeso_grad2_mean"].rolling(time=7, center=True).mean().plot(
-    label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--"
-)
+# # 7-day rolling mean
+# ts_ds["eta_submeso_grad2_mean"].rolling(time=7, center=True).mean().plot(
+#     label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--"
+# )
 
-plt.title("Domain-mean submesoscale |∇η′|² Timeseries (Boundary-excluded)")
-plt.ylabel("Mean(submesoscale |∇η′|²) [m²/m²]")
-plt.xlabel("Time")
-plt.legend()
-plt.grid(True, linestyle="--", alpha=0.5)
-plt.tight_layout()
-fig_file = os.path.join(figdir, "grad2_submeso_timeseries.png")
-plt.savefig(fig_file, dpi=150)
-plt.close()
-print(f"✅ Saved figure: {fig_file}")
+# plt.title("Domain-mean submesoscale |∇η′|² Timeseries (Boundary-excluded)")
+# plt.ylabel("Mean(submesoscale |∇η′|²) [m²/m²]")
+# plt.xlabel("Time")
+# plt.legend()
+# plt.grid(True, linestyle="--", alpha=0.5)
+# plt.tight_layout()
+# fig_file = os.path.join(figdir, "grad2_submeso_timeseries.png")
+# plt.savefig(fig_file, dpi=150)
+# plt.close()
+# print(f"✅ Saved figure: {fig_file}")
