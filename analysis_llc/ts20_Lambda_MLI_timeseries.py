@@ -4,12 +4,12 @@ import numpy as np
 from glob import glob
 import matplotlib.pyplot as plt
 
-# from set_constant import domain_name, face, i, j
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
+from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 plt.rcParams.update({'font.size': 16})  # Global font size setting for figures
 
@@ -103,7 +103,7 @@ axs[0].set_title("Domain-Averaged MLI Diagnostics")
 
 axs[1].plot(ds.time, ds["M2_mean"], color='green')
 axs[1].plot(ds.time, ds["M2_mean_new"], color='red')
-axs[1].legend(["M2_mean", "M2_mean_new"])
+axs[1].legend(["sqrt of vertically averaged M^4", "vertically averaged M^2"])
 axs[1].set_ylabel("M² (s⁻²)")
 
 axs[2].plot(ds.time, ds["N2ml_mean"], color='purple')
