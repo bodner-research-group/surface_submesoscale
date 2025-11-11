@@ -38,8 +38,8 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path_gaussian = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_Gaussian_30kmCutoff.nc"
-out_nc_path_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_Gaussian_30kmCutoff_1_12deg.nc"
+out_nc_path_gaussian = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_submesoscale_Gaussian_30kmCutoff.nc"
+out_nc_path_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_submesoscale_Gaussian_30kmCutoff_1_12deg.nc"
 
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
@@ -85,7 +85,7 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
 
         # ---- Gaussian filter ----
         # Convert 30 km cutoff into Gaussian sigma (grid points)
-        # 1 sigma ~ 30 km / sqrt(8 ln 2) for Gaussian FWHM ~ 30 km
+        # 1 sigma ~ 30 km / sqrt(8 ln 2) for Gaussian FWHM (full width at half maximum) ~ 30 km
         sigma_km = 30.0 / np.sqrt(8 * np.log(2))
         sigma_pts = sigma_km / dx_km
         print(f"[{date_str}] Gaussian sigma = {sigma_pts:.2f} grid pts")
