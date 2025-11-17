@@ -126,7 +126,7 @@ CT_12h = gsw.conversions.CT_from_pt(SA_12h, tt_12h)              # Conservative 
 p_ref = 0                                            # Reference pressure 
 rho_12h = gsw.density.rho(SA_12h, CT_12h, p_ref)                 # Potential density, shape (k, j, i)
 
-rho0 = 1000
+rho0 = 1027.5
 gravity = 9.81
 buoy_12h = -gravity*(rho_12h-rho0)/rho0
 

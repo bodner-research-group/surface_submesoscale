@@ -39,7 +39,7 @@ input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 
 # ========== Define constants ==========
 g = 9.81
-rhoConst = 1029.
+rho0 = 1027.5
 p_atm = 101325./1e4   # atmospheric pressure at sea surface, in dbar
 
 # ========== Load SSH ==========
@@ -164,14 +164,14 @@ salt_mean = salt.mean(dim='k')
 SA_mean = gsw.SA_from_SP(salt_mean, pres_hydro, lon, lat)
 CT_temp = gsw.CT_from_pt(SA_mean, theta)
 rho_temp = gsw.rho(SA_mean, CT_temp, pres_hydro)
-specvol_anom_temp = (1 / rho_temp) - (1 / rhoConst)
+specvol_anom_temp = (1 / rho_temp) - (1 / rho0)
 thermosteric_height = (specvol_anom_temp * drF3d).sum(dim='k')
 
 # Halosteric: keep temperature constant at mean value
 theta_mean = theta.mean(dim='k')
 CT_salt = gsw.CT_from_pt(SA, theta_mean)
 rho_salt = gsw.rho(SA, CT_salt, pres_hydro)
-specvol_anom_salt = (1 / rho_salt) - (1 / rhoConst)
+specvol_anom_salt = (1 / rho_salt) - (1 / rho0)
 halosteric_height = (specvol_anom_salt * drF3d).sum(dim='k')
 
 # ========== Save output ==========
@@ -190,7 +190,7 @@ out_ds = xr.Dataset(
     },
     attrs={
         "description": "Steric height anomaly and thermosteric/halosteric contributions",
-        "rhoConst": rhoConst,
+        "rho0": rho0,
         "date": date_tag,
     }
 )

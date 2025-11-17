@@ -36,7 +36,7 @@ print("Dask dashboard:", client.dashboard_link)
 # Parameters and paths
 # ==============================================================
 g = 9.81
-rhoConst = 1029.0
+rho0 = 1027.5
 p_atm = 101325.0 / 1e4  # dbar
 
 base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
@@ -137,7 +137,7 @@ mask3d = (depth >= Hml_interp).broadcast_like(rho_prime)
 rho_prime_masked = rho_prime.where(mask3d)
 drF_masked = drF3d.where(mask3d)
 
-eta_prime = -(1 / rhoConst) * (rho_prime_masked * drF_masked).sum(dim="k")
+eta_prime = -(1 / rho0) * (rho_prime_masked * drF_masked).sum(dim="k")
 eta_prime = eta_prime - eta_prime.mean(dim=["i", "j"])
 
 eta_mean = Eta - Eta.mean(dim=["i", "j"])

@@ -30,7 +30,7 @@ print("Dask dashboard:", client.dashboard_link)
 
 # --- Physical constants ---
 g = 9.81        # gravity (m/s²)
-rho0 = 1025     # reference density (kg/m³)
+rho0 = 1027.5     # reference density (kg/m³)
 omega = 7.2921e-5  # Earth rotation rate
 
 # --- Paths ---

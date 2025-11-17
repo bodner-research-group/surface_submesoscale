@@ -20,7 +20,7 @@ j = slice(2960, 3441)  # icelandic_basin -- larger domain
 # Set parameters
 # ==============================================================
 g = 9.81
-rhoConst = 1029.0
+rho0 = 1027.5
 p_atm = 101325.0 / 1e4  # dbar
 
 # Paths

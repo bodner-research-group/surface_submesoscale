@@ -11,7 +11,7 @@ from set_constant import domain_name
 
 # ========== Constants ==========
 g = 9.81
-rho0 = 1025
+rho0 = 1027.5
 
 # ========== Setup Dask ==========
 cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="18GB")

@@ -69,7 +69,7 @@ tAlpha_ref = 2.0e-4
 sBeta_ref = 7.4e-4
 
 gravity = 9.81
-rho0 = 999.8
+rho0 = 1027.5
 T0_const = 20
 S0_const = 30
 
@@ -204,7 +204,7 @@ figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{do
 
 
 # gravity = 9.81
-# rho0 = 1000
+# rho0 = 1027.5
 # buoy_s_grad_mag_daily = -gravity*rho_s_grad_mag_daily/rho0
 # buoy_s_grad_mag_weekly = -gravity*rho_s_grad_mag_weekly/rho0
 

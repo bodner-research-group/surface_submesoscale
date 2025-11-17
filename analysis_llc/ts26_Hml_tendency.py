@@ -24,7 +24,7 @@ abs_f = np.abs(Coriolis.mean(dim=("i","j")).values) ### Absolute value of the co
 
 ##### Define constants 
 g = 9.81
-rho0 = 1025
+rho0 = 1027.5
 delta_rho = 0.03 ### The threshold for computing mixed-layer depth
 Ce = 0.06
 

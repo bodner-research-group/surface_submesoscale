@@ -14,7 +14,7 @@ gravity = 9.81       # m/s^2
 SA = 35.2            # Absolute Salinity [g/kg]
 CT = 6               # Conservative Temperature [°C]
 p = 0                # Sea pressure [dbar]
-rho0 = 999.8         # Reference density [kg/m^3]
+rho0 = 1027.5         # Reference density [kg/m^3]
 Cp = 3975            # Heat capacity [J/kg/K]
 
 # === Equation of state parameters ===

@@ -48,7 +48,7 @@ input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 
 # ========== Define constants ==========
 g = 9.81
-rhoConst = 1029.
+rho0 = 1027.5
 p_atm = 101325./1e4   # atmospheric pressure at sea surface, in dbar
 
 # ========== Load SSH ==========

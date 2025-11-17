@@ -40,7 +40,7 @@ beta_s_daily = ds.beta_s_daily
 
 # Compute required quantities
 gravity = 9.81
-rho0 = 999.8
+rho0 = 1027.5
 # buoy_s_grad_mag_daily = gravity*rho_s_grad_mag_daily/rho0
 
 tAlpha_ref = 2.0e-4

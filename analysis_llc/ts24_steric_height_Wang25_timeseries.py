@@ -20,7 +20,7 @@ from set_constant import domain_name, face, i, j
 # Set parameters
 # ==============================================================
 g = 9.81
-rhoConst = 1029.0
+rho0 = 1027.5
 p_atm = 101325.0 / 1e4  # dbar
 
 # Paths
@@ -137,7 +137,7 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     drF_masked = drF3d.where(mask3d)
 
     # Steric height anomaly
-    eta_prime = -(1 / rhoConst) * (rho_prime_masked * drF_masked).sum(dim="k")
+    eta_prime = -(1 / rho0) * (rho_prime_masked * drF_masked).sum(dim="k")
     eta_prime_minus_mean = eta_prime - eta_prime.mean(dim=["i", "j"])
 
     # Compute gradients and Laplacians

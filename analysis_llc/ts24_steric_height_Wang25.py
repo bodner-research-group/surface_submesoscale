@@ -48,7 +48,7 @@ input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/
 
 # ========== Define constants ==========
 g = 9.81
-rhoConst = 1029.
+rho0 = 1027.5
 p_atm = 101325./1e4   # atmospheric pressure at sea surface, in dbar
 
 # ========== Load SSH ==========
@@ -103,7 +103,7 @@ drF_masked = drF3d.where(mask3d)
 # integrate from Hml to surface
 # careful: depth increases downward, so we need to integrate "upward"
 # the integration variable should be positive distance (|dz|).
-eta_prime = - (1 / rhoConst) * (rho_prime_masked * drF_masked).sum(dim="k")
+eta_prime = - (1 / rho0) * (rho_prime_masked * drF_masked).sum(dim="k")
 
 
 # # --- result ---

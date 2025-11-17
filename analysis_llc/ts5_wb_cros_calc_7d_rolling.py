@@ -64,7 +64,7 @@ def compute_one_spec(tt, ss, ww):
     SA = gsw.SA_from_SP(ss, depth3d, lon_b, lat_b)
     CT = gsw.CT_from_pt(SA, tt)
     p_ref = 0
-    rho0 = 1000
+    rho0 = 1027.5
     gravity = 9.81
     rho = gsw.rho(SA, CT, p_ref)
     buoy = -gravity * (rho - rho0) / rho0
