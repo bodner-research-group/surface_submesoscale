@@ -8,7 +8,6 @@ from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 
 # from set_constant import domain_name, face, i, j
-
 # ========== Domain ==========
 domain_name = "icelandic_basin"
 face = 2
@@ -41,7 +40,7 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_20kmCutoff.nc"
+out_nc_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_RollingMean_submeso_20kmCutoff.nc"
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
 

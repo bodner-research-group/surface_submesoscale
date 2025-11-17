@@ -3,17 +3,16 @@ import os
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-from scipy.signal import detrend
 from scipy.ndimage import gaussian_filter
 from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 
-# from set_constant import domain_name, face, i, j
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
+from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)
+# j = slice(2960, 3441)
 
 # ========== Time settings ==========
 nday_avg = 364
@@ -38,8 +37,12 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path_gaussian = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_submesoscale_Gaussian_30kmCutoff.nc"
-out_nc_path_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_submesoscale_Gaussian_30kmCutoff_1_12deg.nc"
+base_out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale"
+os.makedirs(base_out_dir, exist_ok=True)
+
+out_nc_path_submeso = os.path.join(base_out_dir, "SSH_Gaussian_submeso_30kmCutoff.nc")
+out_nc_path_meso = os.path.join(base_out_dir, "SSH_Gaussian_meso_30kmCutoff.nc")
+out_nc_path_meso_coarse = os.path.join(base_out_dir, "SSH_Gaussian_meso_30kmCutoff_1_12deg.nc")
 
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
@@ -71,21 +74,19 @@ nyquist_wavelength = 2 * dx_km
 print(f"Grid spacing = {dx_km:.2f} km, Nyquist λ = {nyquist_wavelength:.2f} km")
 
 # =====================
-# Function: Gaussian filter + boxcar coarse-grain
+# Function: Gaussian filter + coarse-grain mesoscale field
 # =====================
 @delayed
 def process_one_timestep(t_index, date_str, eta_day, dx_km):
     """
-    Remove >30 km large-scale background using Gaussian filter,
-    then coarse-grain to 1/12° using boxcar (4x4 averaging).
+    Split SSH into submesoscale (<30 km) and mesoscale (>30 km) components
+    using Gaussian filtering, and coarse-grain the mesoscale field to 1/12°.
     """
     try:
         # Remove domain mean
         eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
 
         # ---- Gaussian filter ----
-        # Convert 30 km cutoff into Gaussian sigma (grid points)
-        # 1 sigma ~ 30 km / sqrt(8 ln 2) for Gaussian FWHM (full width at half maximum) ~ 30 km
         sigma_km = 30.0 / np.sqrt(8 * np.log(2))
         sigma_pts = sigma_km / dx_km
         print(f"[{date_str}] Gaussian sigma = {sigma_pts:.2f} grid pts")
@@ -97,26 +98,32 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
             output_dtypes=[eta_mean_removed.dtype],
         )
 
+        # ---- Submesoscale and mesoscale fields ----
         eta_submeso = eta_mean_removed - eta_large
         eta_submeso.name = "SSH_submesoscale"
         eta_submeso.attrs["description"] = "SSH with >30 km scales removed via Gaussian filter"
         eta_submeso.attrs["filter_cutoff_km"] = 30.0
 
-        # ---- Boxcar coarse-graining (4x4 average for 1/12°) ----
-        coarse_factor = 4  # 1/48° → 1/12°
-        eta_coarse = (
-            eta_submeso.coarsen(i=coarse_factor, j=coarse_factor, boundary="trim")
-            .mean()
-            .rename("SSH_submesoscale_coarse")
-        )
-        eta_coarse.attrs["description"] = "Gaussian-filtered SSH coarse-grained to 1/12°"
+        eta_meso = eta_large.rename("SSH_mesoscale")
+        eta_meso.attrs["description"] = "SSH with <30 km scales removed via Gaussian filter"
+        eta_meso.attrs["filter_cutoff_km"] = 30.0
 
-        return date_str, eta_submeso, eta_coarse
+        # ---- Coarse-grain mesoscale field only ----
+        coarse_factor = 4  # 1/48° → 1/12°
+        eta_meso_coarse = (
+            eta_meso.coarsen(i=coarse_factor, j=coarse_factor, boundary="trim")
+            .mean()
+            .rename("SSH_mesoscale_coarse")
+        )
+        eta_meso_coarse.attrs["description"] = "Gaussian-filtered mesoscale SSH coarse-grained to 1/12°"
+
+        return date_str, eta_submeso, eta_meso, eta_meso_coarse
+
     except Exception as e:
         print(f"⚠️ Error processing {date_str}: {e}")
-        nan_field = xr.full_like(eta_day, np.nan).rename("SSH_submesoscale")
-        nan_coarse = xr.full_like(eta_day.coarsen(i=4, j=4, boundary='trim').mean(), np.nan).rename("SSH_submesoscale_coarse")
-        return date_str, nan_field, nan_coarse
+        nan_field = xr.full_like(eta_day, np.nan)
+        nan_coarse = xr.full_like(eta_day.coarsen(i=4, j=4, boundary='trim').mean(), np.nan)
+        return date_str, nan_field, nan_field, nan_coarse
 
 
 # =====================
@@ -134,25 +141,28 @@ print(f"🧮 Scheduled {len(tasks)} Dask tasks...")
 # Compute in parallel
 # =====================
 results = compute(*tasks)
-dates, ssh_submeso_list, ssh_coarse_list = zip(*results)
+dates, ssh_submeso_list, ssh_meso_list, ssh_meso_coarse_list = zip(*results)
 
 # =====================
 # Combine results and save
 # =====================
-SSH_submesoscale = xr.concat(ssh_submeso_list, dim="time")
-SSH_submesoscale = SSH_submesoscale.assign_coords(time=("time", np.array(dates, dtype="datetime64[D]")))
+time_coords = np.array(dates, dtype="datetime64[D]")
 
-SSH_submesoscale_coarse = xr.concat(ssh_coarse_list, dim="time")
-SSH_submesoscale_coarse = SSH_submesoscale_coarse.assign_coords(time=("time", np.array(dates, dtype="datetime64[D]")))
+SSH_submesoscale = xr.concat(ssh_submeso_list, dim="time").assign_coords(time=("time", time_coords))
+SSH_mesoscale = xr.concat(ssh_meso_list, dim="time").assign_coords(time=("time", time_coords))
+SSH_mesoscale_coarse = xr.concat(ssh_meso_coarse_list, dim="time").assign_coords(time=("time", time_coords))
 
-ds_out_gaussian = xr.Dataset({"SSH_submesoscale": SSH_submesoscale})
-ds_out_gaussian.to_netcdf(out_nc_path_gaussian)
+ds_out_submeso = xr.Dataset({"SSH_submesoscale": SSH_submesoscale})
+ds_out_meso = xr.Dataset({"SSH_mesoscale": SSH_mesoscale})
+ds_out_meso_coarse = xr.Dataset({"SSH_mesoscale_coarse": SSH_mesoscale_coarse})
 
-ds_out_coarse = xr.Dataset({"SSH_submesoscale_coarse": SSH_submesoscale_coarse})
-ds_out_coarse.to_netcdf(out_nc_path_coarse)
+ds_out_submeso.to_netcdf(out_nc_path_submeso)
+ds_out_meso.to_netcdf(out_nc_path_meso)
+ds_out_meso_coarse.to_netcdf(out_nc_path_meso_coarse)
 
-print(f"\n✅ Saved Gaussian-filtered submesoscale SSH: {out_nc_path_gaussian}")
-print(f"✅ Saved coarse-grained (1/12°) SSH: {out_nc_path_coarse}")
+print(f"\n✅ Saved submesoscale SSH: {out_nc_path_submeso}")
+print(f"✅ Saved mesoscale SSH: {out_nc_path_meso}")
+print(f"✅ Saved mesoscale coarse-grained SSH: {out_nc_path_meso_coarse}")
 
 # =====================
 # Cleanup

@@ -67,7 +67,7 @@ Eta = Eta_daily
 eta = Eta.isel(time=170)
 eta.time.values
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_30kmCutoff.nc" 
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_submesoscale_30kmCutoff.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale.isel(time=170)
 eta_submeso.time.values
 
@@ -206,3 +206,162 @@ print("✅ Gradient magnitude and Laplacian maps saved.")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################################
+##############################################################################
+##############################################################################
+##############################################################################
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Compute and plot steric height anomaly, its gradient magnitude, and Laplacian
+for multiple SSH datasets following Eq.(1) of Jinbo Wang et al. (2025)
+"""
+
+# ===== Imports =====
+import os
+import numpy as np
+import xarray as xr
+import matplotlib.pyplot as plt
+from xgcm import Grid
+
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # Icelandic Basin domain
+j = slice(2960, 3441)
+
+# ========== Directories ==========
+ssh_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height"
+os.makedirs(figdir, exist_ok=True)
+
+# ========== Open grid information ==========
+print("🔹 Loading LLC4320 grid subset...")
+ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
+lon = ds1["XC"].isel(face=face, i=i, j=j)
+lat = ds1["YC"].isel(face=face, i=i, j=j)
+
+# Extract grid face info
+ds_grid_face = ds1.isel(face=face, i=i, j=j, i_g=i, j_g=j, k=0, k_p1=0, k_u=0)
+if "time" in ds_grid_face.dims:
+    ds_grid_face = ds_grid_face.isel(time=0, drop=True)
+
+coords = {"X": {"center": "i", "left": "i_g"}, "Y": {"center": "j", "left": "j_g"}}
+metrics = {("X",): ["dxC", "dxG"], ("Y",): ["dyC", "dyG"]}
+grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
+
+# ========== Helper functions ==========
+def compute_grad_laplace(var, grid):
+    """Compute gradient magnitude and Laplacian of a variable using xgcm."""
+    var_x = grid.derivative(var, axis="X")
+    var_y = grid.derivative(var, axis="Y")
+
+    var_x_c = grid.interp(var_x, axis="X", to="center")
+    var_y_c = grid.interp(var_y, axis="Y", to="center")
+    grad_mag = np.sqrt(var_x_c**2 + var_y_c**2)
+    grad_mag = grad_mag.assign_coords(time=var.time)
+
+    var_xx = grid.derivative(var_x_c, axis="X")
+    var_yy = grid.derivative(var_y_c, axis="Y")
+    var_xx_c = grid.interp(var_xx, axis="X", to="center")
+    var_yy_c = grid.interp(var_yy, axis="Y", to="center")
+    laplace = var_xx_c + var_yy_c
+    laplace = laplace.assign_coords(time=var.time)
+
+    return grad_mag, laplace
+
+
+def plot_map(var, lon, lat, title, cmap, vmin=None, vmax=None, filename="output.png"):
+    """Simple plotting function for maps."""
+    plt.figure(figsize=(8, 6))
+    plt.pcolormesh(lon, lat, var, cmap=cmap, shading="auto", vmin=vmin, vmax=vmax)
+    plt.colorbar(label=title)
+    plt.title(title)
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.grid(True, linestyle="--", alpha=0.4)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+    plt.close()
+    print(f"✅ Saved plot: {filename}")
+
+
+# ========== Files to process ==========
+ssh_files = [
+    # "SSH_Gaussian_meso_30kmCutoff_1_12deg.nc",
+    # "SSH_Gaussian_meso_30kmCutoff.nc",
+    # "SSH_Gaussian_submeso_30kmCutoff.nc",
+    # "SSH_GCMFilters_meso_30kmCutoff_1_12deg.nc",
+    # "SSH_GCMFilters_meso_30kmCutoff.nc",
+    # "SSH_GCMFilters_submeso_30kmCutoff.nc",
+    "SSH_RollingMean_submeso_10kmCutoff.nc",
+    "SSH_RollingMean_submeso_20kmCutoff.nc",
+    "SSH_RollingMean_submeso_30kmCutoff.nc",
+]
+
+# ========== Loop over each SSH file ==========
+for fname in ssh_files:
+    fpath = os.path.join(ssh_dir, fname)
+    print(f"\n🔹 Processing: {fname}")
+
+    # Load SSH dataset
+    ds = xr.open_dataset(fpath)
+    ssh_varname = [v for v in ds.data_vars][0]  # assume only one SSH variable
+    ssh = ds[ssh_varname].isel(time=170)  # same time index as example
+
+    # Remove domain mean
+    ssh_anom = ssh - ssh.mean(dim=["i", "j"])
+
+    # Compute gradient and Laplacian
+    grad_mag, laplace = compute_grad_laplace(ssh_anom, grid)
+
+    # Save plots
+    base = fname.replace(".nc", "")
+    plot_map(
+        var=ssh_anom,
+        lon=lon,
+        lat=lat,
+        title=f"{base} anomaly (m)",
+        cmap="coolwarm",
+        vmin=-0.2,
+        vmax=0.2,
+        filename=f"{figdir}/{base}_anom.png",
+    )
+
+    plot_map(
+        var=grad_mag,
+        lon=lon,
+        lat=lat,
+        title=f"|∇ {base}| (m/m)",
+        cmap="viridis",
+        vmin=0,
+        vmax=5e-6,
+        filename=f"{figdir}/{base}_gradmag.png",
+    )
+
+    plot_map(
+        var=laplace,
+        lon=lon,
+        lat=lat,
+        title=f"∇² {base} (1/m²)",
+        cmap="coolwarm",
+        vmin=-1e-9,
+        vmax=1e-9,
+        filename=f"{figdir}/{base}_laplace.png",
+    )
+
+print("\n✅ All steric height plots computed and saved.")

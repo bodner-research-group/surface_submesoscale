@@ -26,7 +26,7 @@ abs_f = np.abs(Coriolis.mean(dim=("i","j")).values) ### Absolute value of the co
 g = 9.81
 rho0 = 1025
 delta_rho = 0.03 ### The threshold for computing mixed-layer depth
-Ce = 0.08
+Ce = 0.06
 
 
 ##### 1. Compute the tendency of Hml from Hml timeseries
@@ -66,11 +66,15 @@ eta_prime_grad2_mean = xr.open_dataset(fname).eta_prime_grad2_mean.isel(time=sli
 
 hori_steric = -sigma_avg*Ce/abs_f* eta_prime_grad2_mean *g*rho0/delta_rho *86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_30kmCutOff_timeseries.nc"
 eta_submeso_grad2_mean = xr.open_dataset(fname).eta_submeso_grad2_mean.isel(time=slice(1, None)) 
 
 hori_submeso= -sigma_avg*Ce/abs_f* eta_submeso_grad2_mean *g*rho0/delta_rho*86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
+
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/grad_laplace_timeseries_meso_30kmCutoff_1_12deg/grad2_meso_30kmCutoff_1_12deg_timeseries.nc"
+SSH_meso_grad2_mean = xr.open_dataset(fname).SSH_meso_grad2_mean.isel(time=slice(1, None)) 
+hori_meso= -sigma_avg*Ce/abs_f* SSH_meso_grad2_mean *g*rho0/delta_rho*86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
 ##### 5. Apply a 7-day rolling mean
 
@@ -79,6 +83,7 @@ vert_rolling = vert.rolling(time=7, center=True).mean()
 hori_rolling = hori.rolling(time=7, center=True).mean()
 hori_steric_rolling = hori_steric.rolling(time=7, center=True).mean()
 hori_submeso_rolling = hori_submeso.rolling(time=7, center=True).mean()
+hori_meso_rolling = hori_meso.rolling(time=7, center=True).mean()
 
 diff_rolling = dHml_dt_rolling - vert_rolling
 
@@ -99,6 +104,7 @@ plt.plot(diff["time"], diff, linestyle='--',label=r"$dH_{ml}/dt$-vertical", colo
 plt.plot(hori["time"], hori, label=r"Hori. process (eddy-induced frontal slumping)", color='tab:orange')
 plt.plot(hori_steric["time"], hori_steric, label=r"Hori. (using steric |∇η′|)", color='yellow')
 plt.plot(hori_submeso["time"], hori_submeso, label=r"Hori. (using submeso |∇η′|)", color='red')
+plt.plot(hori_meso["time"], hori_meso, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
@@ -116,6 +122,7 @@ plt.plot(diff_rolling["time"], diff_rolling, linestyle='--',label=r"$dH_{ml}/dt$
 plt.plot(hori_rolling["time"], hori_rolling, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
 plt.plot(hori_steric_rolling["time"], hori_steric_rolling, label=r"Horizontal (using steric |∇η′|)", color='yellow')
 plt.plot(hori_submeso_rolling["time"], hori_submeso_rolling, label=r"Horizontal (using submeso |∇η′|)", color='red')
+plt.plot(hori_meso_rolling["time"], hori_meso_rolling, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
 plt.title("Mixed Layer Depth Tendency (7-day rolling mean)")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")

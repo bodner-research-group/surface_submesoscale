@@ -10,12 +10,12 @@ from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 import gcm_filters as gf   # the spatial filtering package
 
-# from set_constant import domain_name, face, i, j
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
+from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)
+# j = slice(2960, 3441)
 
 # ========== Time settings ==========
 nday_avg = 364
@@ -41,7 +41,7 @@ print("Dask dashboard:", client.dashboard_link)
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
 out_nc_path_meso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_30kmCutoff.nc"
-out_nc_path_submeso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_submesoscale_30kmCutoff.nc"
+out_nc_path_submeso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_submeso_30kmCutoff.nc"
 out_nc_path_meso_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_30kmCutoff_1_12deg.nc"
 
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
@@ -86,17 +86,10 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
         cutoff_km = 30.0
 
         # ---- Construct GCM Filter object ----
-        # According to docs, we must define grid spacings in meters.
-        dx_m = dx_km * 1000.0
-        dy_m = dx_km * 1000.0  # assuming roughly isotropic
-
-        # The smoothing length scale (in meters)
-        filter_scale_m = cutoff_km * 1000.0
-
         # Create filter instance:
         filter_obj = gf.Filter(
-            filter_scale=filter_scale_m,
-            dx_min=dx_m,
+            filter_scale=cutoff_km,  ### Same unit as dx_min
+            dx_min=dx_km,            ### Same unit as filter_scale
             filter_shape=gf.FilterShape.GAUSSIAN,   # Gaussian smoother
             grid_type=gf.GridType.REGULAR,          # regular lat/lon or cartesian grid
         )
