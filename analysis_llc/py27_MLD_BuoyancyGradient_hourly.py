@@ -1,3 +1,5 @@
+###### This takes too long to run -- 17 minutes for a 10x10 grid domain 
+
 import os
 import numpy as np
 import xarray as xr
