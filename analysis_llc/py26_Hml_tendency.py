@@ -44,7 +44,6 @@ Bflux_daily_avg= Bflux_daily_avg.assign_coords(time=dHml_dt.time.dt.floor("D"))
 # vert = -Bflux_daily_avg*rho0/g/delta_rho *86400 # unit: m/day
 vert = -Bflux_daily_avg*rho0/g/delta_rho*(Hml_mean-10)**2/(Hml_mean**2) *86400 # unit: m/day
 
-diff = dHml_dt - vert
 
 
 ##### 3. The change in Hml due to mixed-layer eddy-induced frontal slumping (horizontal process)
@@ -76,7 +75,56 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 SSH_meso_grad2_mean = xr.open_dataset(fname).SSH_meso_grad2_mean.isel(time=slice(1, None)) 
 hori_meso= -sigma_avg*Ce/abs_f* SSH_meso_grad2_mean *g*rho0/delta_rho*86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
-##### 5. Apply a 7-day rolling mean
+
+
+##### 5. Ekman buoyancy flux
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/B_Ek_timeseries.nc"
+B_Ek_mean = xr.open_dataset(fname).B_Ek_mean.isel(time=slice(1, None)) 
+B_Ek_mean= B_Ek_mean.assign_coords(time=B_Ek_mean.time.dt.floor("D"))
+
+tendency_ekman = -B_Ek_mean*rho0/g/delta_rho*(Hml_mean-10)**2/(Hml_mean**2) *86400 # unit: m/day
+
+diff = dHml_dt - vert - tendency_ekman
+
+
+
+
+# ==============================================================
+# 7. Compute cumulative integrated tendencies (units: m)
+# ==============================================================
+
+# Use 1-day timestep (your tendencies are already in m/day)
+dt = 1.0   # days
+
+def cumulative(ds):
+    """Return cumulative integral of a tendency time series."""
+    return (ds.isel(time=slice(1, None)) * dt).cumsum(dim="time")
+
+# ---- Cumulative integrals ----
+Hml_total_cum      = cumulative(dHml_dt)                  # total dH/dt
+vert_cum           = cumulative(vert)                     # vertical (surf buoy flux)
+hori_cum           = cumulative(hori)                     # horizontal slumping
+hori_steric_cum    = cumulative(hori_steric)
+hori_submeso_cum   = cumulative(hori_submeso)
+hori_meso_cum      = cumulative(hori_meso)
+tendency_ek_cum    = cumulative(tendency_ekman)
+diff_cum           = cumulative(diff)                     # total - vertical
+
+
+
+c_hori = diff_cum.min().values/hori_cum.min().values 
+c_steric = diff_cum.min().values/hori_steric_cum.min().values
+c_hori_submeso = diff_cum.min().values/hori_submeso_cum.min().values
+c_hori_meso = diff_cum.min().values/hori_meso_cum.min().values
+
+
+##### c_hori = 0.72
+##### c_steric = 0.94
+##### c_hori_submeso = 0.48
+##### c_hori_meso = 0.23
+
+
+##### 6. Apply a 7-day rolling mean
 
 dHml_dt_rolling = dHml_dt.rolling(time=7, center=True).mean()
 vert_rolling = vert.rolling(time=7, center=True).mean()
@@ -84,6 +132,7 @@ hori_rolling = hori.rolling(time=7, center=True).mean()
 hori_steric_rolling = hori_steric.rolling(time=7, center=True).mean()
 hori_submeso_rolling = hori_submeso.rolling(time=7, center=True).mean()
 hori_meso_rolling = hori_meso.rolling(time=7, center=True).mean()
+tendency_ekman_rolling = tendency_ekman.rolling(time=7, center=True).mean()
 
 diff_rolling = dHml_dt_rolling - vert_rolling
 
@@ -96,15 +145,16 @@ diff_rolling = dHml_dt_rolling - vert_rolling
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Hml_tendency/"
 os.makedirs(figdir, exist_ok=True)
 
-filename=f"{figdir}Hml_tendency_new.png"
+filename=f"{figdir}Adjusted_Hml_tendency_new.png"
 plt.figure(figsize=(15, 8))
 plt.plot(dHml_dt["time"], dHml_dt, label=r"$dH_{ml}/dt$ (total)", color='k')
 plt.plot(vert["time"], vert, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff["time"], diff, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
-plt.plot(hori["time"], hori, label=r"Hori. process (eddy-induced frontal slumping)", color='tab:orange')
-plt.plot(hori_steric["time"], hori_steric, label=r"Hori. (using steric |∇η′|)", color='yellow')
-plt.plot(hori_submeso["time"], hori_submeso, label=r"Hori. (using submeso |∇η′|)", color='red')
-plt.plot(hori_meso["time"], hori_meso, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+plt.plot(hori["time"], c_hori*hori, label=r"Hori. process (eddy-induced frontal slumping)", color='tab:orange')
+plt.plot(hori_steric["time"], c_steric*hori_steric, label=r"Hori. (using steric |∇η′|)", color='yellow')
+plt.plot(hori_submeso["time"], c_hori_submeso*hori_submeso, label=r"Hori. (using submeso |∇η′|)", color='red')
+plt.plot(hori_meso["time"], c_hori_meso*hori_meso, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+plt.plot(tendency_ekman["time"], tendency_ekman, label=r"Ekman buoyancy flux", color='cyan')
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
@@ -114,15 +164,16 @@ plt.tight_layout()
 plt.savefig(filename, dpi=200)
 
 
-filename=f"{figdir}Hml_tendency_new_rolling.png"
+filename=f"{figdir}Adjusted_Hml_tendency_new_rolling.png"
 plt.figure(figsize=(15, 8))
 plt.plot(dHml_dt_rolling["time"], dHml_dt_rolling, label=r"$dH_{ml}/dt$ (total)", color='k')
 plt.plot(vert_rolling["time"], vert_rolling, label=r"Vertical process (surface buoyancy flux)", color='tab:blue')
 plt.plot(diff_rolling["time"], diff_rolling, linestyle='--',label=r"$dH_{ml}/dt$-vertical", color='tab:green')
-plt.plot(hori_rolling["time"], hori_rolling, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
-plt.plot(hori_steric_rolling["time"], hori_steric_rolling, label=r"Horizontal (using steric |∇η′|)", color='yellow')
-plt.plot(hori_submeso_rolling["time"], hori_submeso_rolling, label=r"Horizontal (using submeso |∇η′|)", color='red')
-plt.plot(hori_meso_rolling["time"], hori_meso_rolling, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+plt.plot(hori_rolling["time"], c_hori*hori_rolling, label=r"Horizontal process (eddy-induced frontal slumping)", color='tab:orange')
+plt.plot(hori_steric_rolling["time"], c_steric*hori_steric_rolling, label=r"Horizontal (using steric |∇η′|)", color='yellow')
+plt.plot(hori_submeso_rolling["time"], c_hori_submeso*hori_submeso_rolling, label=r"Horizontal (using submeso |∇η′|)", color='red')
+plt.plot(hori_meso_rolling["time"], c_hori_meso*hori_meso_rolling, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+plt.plot(tendency_ekman_rolling["time"], tendency_ekman_rolling, label=r"Ekman buoyancy flux", color='cyan')
 plt.title("Mixed Layer Depth Tendency (7-day rolling mean)")
 plt.ylabel("Rate of change of MLD [m/day]")
 plt.xlabel("Time")
@@ -133,14 +184,100 @@ plt.savefig(filename, dpi=200)
 
 
 
-filename=f"{figdir}Hml_debug.png"
+# filename=f"{figdir}Hml_debug.png"
+# plt.figure(figsize=(15, 8))
+# plt.plot(eta_prime_grad2_mean["time"], eta_prime_grad2_mean, label=r"steric |∇η′|^2", color='yellow')
+# plt.plot(eta_submeso_grad2_mean["time"], eta_submeso_grad2_mean, label=r"submeso |∇η′|^2", color='red')
+# # plt.title("Mixed Layer Depth Tendency")
+# # plt.ylabel("Rate of change of MLD [m/day]")
+# plt.xlabel("Time")
+# plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
+# plt.grid(True, linestyle='--', alpha=0.5)
+# plt.tight_layout()
+# plt.savefig(filename, dpi=200)
+
+
+
+
+
+
+
+# ==============================================================
+# 8. Plot cumulative integrals (absolute, in meters)
+# ==============================================================
+
+filename = f"{figdir}Adjusted_Hml_cumulative_tendency.png"
 plt.figure(figsize=(15, 8))
-plt.plot(eta_prime_grad2_mean["time"], eta_prime_grad2_mean, label=r"steric |∇η′|^2", color='yellow')
-plt.plot(eta_submeso_grad2_mean["time"], eta_submeso_grad2_mean, label=r"submeso |∇η′|^2", color='red')
-# plt.title("Mixed Layer Depth Tendency")
-# plt.ylabel("Rate of change of MLD [m/day]")
+
+plt.plot(Hml_total_cum.time, Hml_total_cum, label=r"Cumulative $H_{ml}$ change (total)", color='k')
+plt.plot(vert_cum.time, vert_cum, label=r"Vertical process", color='tab:blue')
+plt.plot(diff_cum.time, diff_cum, linestyle='--', label=r"Cumulative (total - vertical)", color='tab:green')
+plt.plot(hori_cum.time, c_hori*hori_cum, label=r"Horizontal slumping", color='tab:orange')
+plt.plot(hori_steric_cum.time, c_steric*hori_steric_cum, label=r"Hori. (steric |∇η′|)", color='yellow')
+plt.plot(hori_submeso_cum.time, c_hori_submeso*hori_submeso_cum, label=r"Hori. (submeso |∇η′|)", color='red')
+plt.plot(hori_meso_cum.time, c_hori_meso*hori_meso_cum, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+plt.plot(tendency_ek_cum.time, tendency_ek_cum, label=r"Ekman buoyancy flux", color='cyan')
+
+plt.title("Cumulative Integrated MLD Tendency (m)")
+plt.ylabel("Cumulative ΔHml [m]")
 plt.xlabel("Time")
-plt.legend(loc='lower right',bbox_to_anchor=(1.1, 0.02),borderaxespad=0)
+plt.legend(loc='lower right', bbox_to_anchor=(1.1, 0.02))
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.savefig(filename, dpi=200)
+
+
+
+filename = f"{figdir}Adjusted_Hml_reconstructed_steric.png"
+plt.figure(figsize=(15, 8))
+
+Hml_reconstructed = vert_cum+c_steric*hori_steric_cum+tendency_ek_cum
+
+plt.plot(Hml_total_cum.time, Hml_total_cum, label=r"Cumulative $H_{ml}$ change (total)", color='k')
+plt.plot(Hml_reconstructed.time, Hml_reconstructed, label=r"Reconstructed $H_{ml}$ ", color='tab:blue')
+
+plt.title("Cumulative Integrated MLD Tendency (m)")
+plt.ylabel("Cumulative ΔHml [m]")
+plt.xlabel("Time")
+plt.legend(loc='lower right', bbox_to_anchor=(1.1, 0.02))
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.savefig(filename, dpi=200)
+
+
+
+
+# # Rolling versions
+# Hml_total_cum_roll      = cumulative(dHml_dt_rolling)
+# vert_cum_roll           = cumulative(vert_rolling)
+# hori_cum_roll           = cumulative(hori_rolling)
+# hori_steric_cum_roll    = cumulative(hori_steric_rolling)
+# hori_submeso_cum_roll   = cumulative(hori_submeso_rolling)
+# hori_meso_cum_roll   = cumulative(hori_meso_rolling)
+# tendency_ek_cum_roll    = cumulative(tendency_ekman_rolling)
+# diff_cum_roll           = cumulative(diff_rolling)
+
+# # ==============================================================
+# # 9. Plot cumulative integrals (rolling mean)
+# # ==============================================================
+
+# filename = f"{figdir}Hml_cumulative_tendency_rolling.png"
+# plt.figure(figsize=(15, 8))
+
+# plt.plot(Hml_total_cum_roll.time, Hml_total_cum_roll, label=r"Cumulative $H_{ml}$ change (total)", color='k')
+# plt.plot(vert_cum_roll.time, vert_cum_roll, label=r"Vertical process", color='tab:blue')
+# plt.plot(diff_cum_roll.time, diff_cum_roll, linestyle='--', label=r"Cumulative (total - vertical)", color='tab:green')
+# plt.plot(hori_cum_roll.time, hori_cum_roll, label=r"Horizontal slumping", color='tab:orange')
+# plt.plot(hori_steric_cum_roll.time, hori_steric_cum_roll, label=r"Hori. (steric |∇η′|)", color='yellow')
+# plt.plot(hori_submeso_cum_roll.time, hori_submeso_cum_roll, label=r"Hori. (submeso |∇η′|)", color='red')
+# plt.plot(hori_meso_cum_roll.time, hori_meso_cum_roll, label=r"Hori. (using mesoscale |∇η_m|)", color='purple')
+# plt.plot(tendency_ek_cum_roll.time, tendency_ek_cum_roll, label=r"Ekman buoyancy flux", color='cyan')
+
+# plt.title("Cumulative Integrated MLD Tendency (7-day rolling)")
+# plt.ylabel("Cumulative ΔHml [m]")
+# plt.xlabel("Time")
+# plt.legend(loc='lower right', bbox_to_anchor=(1.1, 0.02))
+# plt.grid(True, linestyle='--', alpha=0.5)
+# plt.tight_layout()
+# plt.savefig(filename, dpi=200)
+

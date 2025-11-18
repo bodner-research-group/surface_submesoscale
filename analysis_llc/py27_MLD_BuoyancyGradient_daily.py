@@ -126,7 +126,7 @@ dbdx, dbdy = grad_center(B_ml)
 # ============================================================
 # Save output to a single file
 # ============================================================
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/ml_buoyancy_gradients"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
 os.makedirs(out_dir, exist_ok=True)
 
 ds_out = xr.Dataset(

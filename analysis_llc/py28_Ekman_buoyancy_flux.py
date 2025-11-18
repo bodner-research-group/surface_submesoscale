@@ -11,6 +11,11 @@ import xarray as xr
 from glob import glob
 from xgcm import Grid
 
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import cartopy.crs as ccrs
+from tqdm.auto import tqdm
+
 # ========== Domain ==========
 # from set_constant import domain_name, face, i, j
 domain_name = "icelandic_basin"
@@ -27,11 +32,17 @@ rho0 = 1027.5
 # ==============================================================
 # Paths
 # ==============================================================
-base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
-rho_dir  = os.path.join(base_dir, "rho_insitu_hydrostatic_pressure_daily")
-hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
-out_dir  = os.path.join(base_dir, "ekman_buoyancy_flux_daily")
-os.makedirs(out_dir, exist_ok=True)
+base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
+b_gradient_file  = os.path.join(base_dir, "ML_buoyancy_gradients_daily.nc")
+wind_stress_file = os.path.join(base_dir, "windstress_center_daily_avg.nc")
+out_dir  = base_dir
+
+taux = xr.open_dataset(wind_stress_file).taux_center
+tauy = xr.open_dataset(wind_stress_file).tauy_center
+dbdx = xr.open_dataset(b_gradient_file).dbdx
+dbdy = xr.open_dataset(b_gradient_file).dbdy
+Hml = xr.open_dataset(b_gradient_file).Hml
+
 
 # ==============================================================
 # Load grid + wind stress (Dask lazy)
@@ -47,101 +58,165 @@ drF3d, _, _ = xr.broadcast(drF, lon, lat)
 Coriolis = 4*np.pi/86164*np.sin(lat*np.pi/180)
 f0 = Coriolis.mean(dim=("i","j")).values     ### Coriolis parameter averaged over this domain
 
-# Wind (chunk over time)
-taux = ds1.oceTAUX.isel(face=face, j=j, i_g=i).chunk({"time": 24})
-tauy = ds1.oceTAUY.isel(face=face, j_g=j, i=i).chunk({"time": 24})
+# Ekman buoyancy flux 
+B_Ek = (taux * dbdy - tauy * dbdx) / (rho0 * Coriolis)   # (time,i,j) at center grid
 
-# xgcm grid
-ds_grid = ds1.isel(face=face, i=i, j=j, i_g=i, j_g=j, k=0, k_u=0, k_p1=0)
-if "time" in ds_grid.dims:
-    ds_grid = ds_grid.isel(time=0, drop=True)
+B_Ek_d_Hml2 = B_Ek/(Hml**2)
 
-coords = {"X": {"center": "i", "left": "i_g"},
-          "Y": {"center": "j", "left": "j_g"}}
-metrics = {("X",): ["dxC", "dxG"], ("Y",): ["dyC", "dyG"]}
-grid = Grid(ds_grid, coords=coords, metrics=metrics, periodic=False)
 
-# ==============================================================
-# Helpers
-# ==============================================================
 
-def grad_center(var):
-    dx = grid.derivative(var, axis="X")
-    dy = grid.derivative(var, axis="Y")
-    dx = grid.interp(dx, axis="X", to="center")
-    dy = grid.interp(dy, axis="Y", to="center")
-    return dx, dy
 
-def rho_file(date):
-    tag = np.datetime_as_string(date, unit="D").replace("-", "")
-    f = glob(os.path.join(rho_dir, f"rho_insitu_pres_hydro_{tag}.nc"))
-    return f[0] if f else None
+# ============================
+# Paths
+# ============================
+# base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
+# B_Ek_file = os.path.join(base_dir, "B_Ek.nc")       # <-- you create this earlier
+out_ts = os.path.join(base_dir, "B_Ek_timeseries.nc")
 
-# Mixed layer depth daily
-Hml_daily = xr.open_dataset(hml_file).Hml_mean
-Hml_daily = Hml_daily.assign_coords(time=Hml_daily.time.dt.floor("D"))
+fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+os.makedirs(fig_dir, exist_ok=True)
+out_mp4 = os.path.join(fig_dir, "B_Ek_animation.mp4")
 
-# ==============================================================
-# DAILY PROCESSING LOOP (low overhead, Dask does real work)
-# ==============================================================
+# ============================
+# Load data
+# ============================
+# B_Ek = xr.open_dataset(B_Ek_file).B_Ek    # shape (time,j,i)
+# lon = B_Ek.lon
+# lat = B_Ek.lat
+time = B_Ek.time
 
-days = np.unique(taux.time.dt.floor("D").values)
+# # ============================
+# # 1. Plot daily maps → frames
+# # ============================
 
-for day in days:
-    date = np.datetime_as_string(day, unit="D").replace("-", "")
-    outfile = os.path.join(out_dir, f"B_Ekman_{date}.nc")
-    if os.path.exists(outfile):
-        continue
+# print("\nCreating daily maps...")
 
-    # Select wind stress for that day (may be 24 hr or more)
-    mask = taux.time.dt.floor("D") == day
-    taux_d = taux.sel(time=mask)
-    tauy_d = tauy.sel(time=mask)
+# for n in tqdm(range(B_Ek.time.size)):
+#     day = B_Ek.isel(time=n)
+#     date_str = np.datetime_as_string(day.time.values, unit='D')
 
-    # Find density file
-    rf = rho_file(day)
-    if rf is None:
-        print(f"⚠ No density file found for {date}")
-        continue
+#     fig = plt.figure(figsize=(10, 7))
+#     ax = plt.axes(projection=ccrs.PlateCarree())
 
-    # Load daily density
-    ds_rho = xr.open_dataset(rf).chunk({"k": -1, "j": 50, "i": 50})
-    rho = ds_rho.rho_insitu.isel(i=i, j=j)
+#     pcm = ax.pcolormesh(
+#         lon, lat, day,
+#         cmap="RdBu_r",
+#         vmin=-5e-8, vmax=5e-8,   # adjust ranges
+#         shading='auto',
+#         transform=ccrs.PlateCarree(),
+#     )
 
-    # Density anomaly
-    rho_prime = rho - rho.mean(("i", "j"))
+#     ax.coastlines(color='k', linewidth=0.8)
+#     ax.set_title(f"Ekman Buoyancy Flux B_Ek — {date_str}", fontsize=14)
+#     cbar = plt.colorbar(pcm, ax=ax, label="m²/s³")
 
-    # Mixed layer depth
-    Hml = float(Hml_daily.sel(time=day, method="nearest").values)
+#     frame_file = os.path.join(fig_dir, f"B_Ek_{date_str}.png")
+#     plt.savefig(frame_file, dpi=150)
+#     plt.close()
 
-    # ML mask
-    ML = depth >= Hml
-    ML3 = ML.broadcast_like(rho_prime)
-    drF_ML = drF3d.where(ML3)
+# print("Frames saved.")
 
-    # ML-averaged buoyancy anomaly
-    rho_ML = (rho_prime.where(ML3) * drF_ML).sum("k") / drF_ML.sum("k")
-    b = -g * rho_ML / rho0   # (i,j)
+# # ============================
+# # Create MP4 animation
+# # ============================
 
-    # Gradients (lazy)
-    bx, by = grad_center(b)
+# print("\nCreating MP4 animation...")
 
-    # Wind stress -> center
-    taux_c = grid.interp(taux_d, axis="X", to="center")
-    tauy_c = grid.interp(tauy_d, axis="Y", to="center")
+# frame_list = sorted([os.path.join(fig_dir, f) for f in os.listdir(fig_dir) if f.endswith(".png")])
 
-    # Ekman buoyancy flux (lazy Dask)
-    B = (taux_c * by - tauy_c * bx) / (rho0 * Coriolis)   # (time,i,j)
+# fig = plt.figure(figsize=(10, 7))
+# ax = plt.axes(projection=ccrs.PlateCarree())
 
-    # Daily mean (lazy)
-    B_daily = B.mean("time").compute()  # compute only final product
+# def animate(k):
+#     img = plt.imread(frame_list[k])
+#     ax.clear()
+#     ax.imshow(img, extent=[-10,10,-10,10])  # dummy extent, replaced by full frame
+#     return []
 
-    # Save
-    ds_out = xr.Dataset(
-        {"B_Ek": B_daily},
-        coords={"lon": lon, "lat": lat, "time": [day]},
-    )
-    ds_out.to_netcdf(outfile)
-    print(f"✔ Saved {outfile}")
+# ani = animation.FuncAnimation(fig, animate, frames=len(frame_list), interval=120)
+# ani.save(out_mp4, writer='ffmpeg', dpi=150)
 
-print("✓ All daily Ekman buoyancy flux files computed.")
+# plt.close()
+# print(f"MP4 saved to: {out_mp4}")
+
+# ============================
+# 2. Domain-averaged timeseries
+# ============================
+print("\nComputing domain averaged B_Ek...")
+
+# # simple spatial mean
+# B_Ek_mean = B_Ek.mean(dim=("j", "i"))
+
+# ============================
+# 1. Remove boundary points
+# ============================
+B_inner  = B_Ek.isel(j=slice(2, -2), i=slice(2, -2))
+Hml_inner = Hml.isel(j=slice(2, -2), i=slice(2, -2))
+
+# ============================
+# 2. Mask NaNs & zero values
+# ============================
+B_masked = B_inner.where(~np.isnan(B_inner))
+B_masked = B_masked.where(B_masked != 0)
+
+Hml_masked = Hml_inner.where(~np.isnan(Hml_inner))
+Hml_masked = Hml_masked.where(Hml_masked != 0)
+
+# ============================
+# 3. Domain-mean B_Ek
+# ============================
+B_Ek_mean = B_masked.mean(dim=("j", "i"), skipna=True)
+
+# ============================
+# 4. Compute B_Ek_d_Hml2
+# ============================
+B_Ek_d_Hml2 = B_masked / (Hml_masked ** 2)
+
+# Mask infinities just in case
+B_Ek_d_Hml2 = B_Ek_d_Hml2.where(np.isfinite(B_Ek_d_Hml2))
+
+# Domain mean
+B_Ek_d_Hml2_mean = B_Ek_d_Hml2.mean(dim=("j", "i"), skipna=True)
+
+
+ds_ts = xr.Dataset({
+    "B_Ek_mean": B_Ek_mean,
+    "B_Ek_d_Hml2_mean": B_Ek_d_Hml2_mean,
+})
+ds_ts.to_netcdf(out_ts)
+print(f"Saved timeseries to: {out_ts}")
+
+# ============================
+# 3. Plot timeseries
+# ============================
+
+print("\nPlotting timeseries...")
+out_fig = os.path.join(fig_dir, "B_Ek_timeseries.png")
+plt.figure(figsize=(12,5))
+plt.plot(B_Ek_mean.time, B_Ek_mean, '-k', lw=1.2)
+plt.axhline(0, color='gray', ls='--')
+plt.ylabel("B_Ek (m²/s³)")
+plt.xlabel("Time")
+plt.title("Domain-averaged Ekman Buoyancy Flux")
+
+plt.tight_layout()
+plt.savefig(out_fig, dpi=150)
+plt.close()
+
+print(f"Timeseries figure saved to: {out_fig}")
+print("\nDONE.")
+
+out_fig = os.path.join(fig_dir, "B_Ek_d_Hml2_mean_timeseries.png")
+plt.figure(figsize=(12,5))
+plt.plot(B_Ek_d_Hml2_mean.time, B_Ek_d_Hml2_mean, '-k', lw=1.2)
+plt.axhline(0, color='gray', ls='--')
+plt.ylabel("B_Ek (m²/s³)")
+plt.xlabel("Time")
+plt.title("Ekman Buoyancy Flux/Hml^2")
+
+plt.tight_layout()
+plt.savefig(out_fig, dpi=150)
+plt.close()
+
+print(f"Timeseries figure saved to: {out_fig}")
+print("\nDONE.")

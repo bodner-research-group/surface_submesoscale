@@ -8,6 +8,10 @@ import time
 from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Paths ==========
 output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
@@ -64,9 +68,11 @@ if __name__ == "__main__":
 
     # List of variables to process: (variable_name, label, i_dim, j_dim)
     variable_map = [
-        ("U", "uu_s", "i_g", "j"),
-        ("V", "vv_s", "i", "j_g"),
-        ("Eta", "eta", "i", "j"),
+        ("oceTAUX", "taux", "i_g", "j"),
+        ("oceTAUY", "tauy", "i", "j_g"),
+        # ("U", "uu_s", "i_g", "j"),
+        # ("V", "vv_s", "i", "j_g"),
+        # ("Eta", "eta", "i", "j"),
     ]
 
     for var_name, label, i_name, j_name in variable_map:

@@ -1,74 +1,167 @@
-##### Compute daily averaged surface wind stress into ONE NetCDF file
-
 import xarray as xr
 import numpy as np
 import os
 import time
 from dask.distributed import Client, LocalCluster
+from xgcm import Grid
+from tqdm.auto import tqdm
 
+# =============================================================
+# Constants / Domain
+# =============================================================
 from set_constant import start_hours, end_hours
-
-# ========== Domain settings ==========
-# from set_constant import domain_name, face, i, j
 domain_name = "icelandic_basin"
 face = 2
-i = slice(527, 1007)
-j = slice(2960, 3441)
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
+# =============================================================
+# Paths
+# =============================================================
+# directories where the 24-hour avg files already exist
+daily_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
 
-# ========== Paths ==========
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
+# output directory
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
 os.makedirs(output_dir, exist_ok=True)
-outfile = os.path.join(output_dir, "surface_windstress_24h.nc")
+outfile = os.path.join(output_dir, "windstress_center_daily_avg.nc")
 
-# ========== Open dataset ==========
-ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
-
-# ========== Dask cluster ==========
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+# =============================================================
+# Dask cluster
+# =============================================================
+cluster = LocalCluster(
+    n_workers=64,
+    threads_per_worker=1,
+    memory_limit="5.5GB"
+)
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
-# ========== Helper: extract a single variable ==========
-def extract_and_average(varname, i_name, j_name):
-    print(f"\n Selecting and averaging {varname}")
 
-    da = ds1[varname].isel(face=face, **{i_name: i, j_name: j})
-
-    if 'k' in da.dims:      # only for oceTAUX/TAUY (surface)
-        da = da.isel(k=0)
-
-    # full time window
-    da = da.isel(time=slice(start_hours, end_hours))
-
-    # coarsen to daily (24h) average
-    da_24h = da.coarsen(time=24, boundary='trim').mean()
-
-    return da_24h
-
-# ========== Main ==========
-if __name__ == "__main__":
-
-    # Extract 24h averaged taux and tauy
-    taux_24h = extract_and_average("oceTAUX", "i_g", "j")
-    tauy_24h = extract_and_average("oceTAUY", "i", "j_g")
-
-    # Combine into dataset
-    ds_out = xr.Dataset(
-        {
-            "taux": taux_24h,
-            "tauy": tauy_24h,
-        }
+# =============================================================
+# Helper: Load 24h averaged taux/tauy files
+# =============================================================
+def load_daily_series(label,variable):
+    """Loads all daily files for taux or tauy and concatenates along time."""
+    flist = sorted(
+        [os.path.join(daily_dir, f) for f in os.listdir(daily_dir)
+         if f.startswith(f"{label}_24h_") and f.endswith(".nc")]
     )
+    if len(flist) == 0:
+        raise FileNotFoundError(f"No daily files found for {label} in {daily_dir}")
 
-    print("\n Computing and writing output NetCDF...")
-    t0 = time.time()
+    print(f"Loading {len(flist)} daily files for {label}...")
 
-    # Write a SINGLE file
-    ds_out.compute().to_netcdf(outfile)
+    ds = xr.open_mfdataset(flist, combine="by_coords", parallel=True)
+    return ds[variable]
 
-    print(f"\n DONE. File saved:\n   {outfile}")
-    print(f"Total time: {(time.time() - t0)/60:.2f} minutes")
+# =============================================================
+# Load daily averages
+# =============================================================
+taux_daily = load_daily_series("taux","oceTAUX")
+tauy_daily = load_daily_series("tauy","oceTAUY")
 
-    client.close()
-    cluster.close()
+
+# =============================================================
+# Open a small slice of the original LLC4320 dataset for grid metrics
+# =============================================================
+print("Loading LLC4320 grid metrics for interpolation...")
+ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
+
+# use ds1 for coordinates
+ds_grid = ds1.isel(
+    face=face,
+    i=i, j=j,
+    i_g=i, j_g=j,
+    k=0, k_u=0, k_p1=0
+)
+
+if "time" in ds_grid.dims:
+    ds_grid = ds_grid.isel(time=0, drop=True)
+
+coords = {
+    "X": {"center": "i", "left": "i_g"},
+    "Y": {"center": "j", "left": "j_g"},
+}
+
+metrics = {
+    ("X",): ["dxC", "dxG"],
+    ("Y",): ["dyC", "dyG"]
+}
+
+grid = Grid(ds_grid, coords=coords, metrics=metrics, periodic=False)
+
+# =============================================================
+# Interpolation to center grid
+# =============================================================
+print("\nInterpolating wind stress to the C-grid center...")
+
+tstart = time.time()
+
+taux_center = grid.interp(taux_daily, axis="X", to="center")
+tauy_center = grid.interp(tauy_daily, axis="Y", to="center")
+
+# Compute results
+taux_center = taux_center.compute()
+tauy_center = tauy_center.compute()
+
+taux_center = taux_center.assign_coords(time=taux_daily.time)
+tauy_center = tauy_center.assign_coords(time=tauy_daily.time)
+
+print(f"Interpolation finished in {(time.time() - tstart)/60:.2f} min")
+
+# =============================================================
+# Save output
+# =============================================================
+print("\nSaving to NetCDF:", outfile)
+ds_out = xr.Dataset({
+    "taux_center": taux_center,
+    "tauy_center": tauy_center
+})
+
+t0 = time.time()
+ds_out.to_netcdf(outfile)
+print(f"Saved in {(time.time() - t0)/60:.2f} min")
+
+# Cleanup
+client.close()
+cluster.close()
+print("\nDONE.")
+
+
+
+
+
+
+
+
+
+# # =============================================================
+# # Select surface wind stress (full hourly time window)
+# # =============================================================
+# taux_hr = ds1["oceTAUX"].isel(face=face, i_g=i, j=j).isel(time=slice(start_hours, end_hours)).chunk({"time": 24, "i_g": 20, "j": 20})
+# tauy_hr = ds1["oceTAUY"].isel(face=face, i=i, j_g=j).isel(time=slice(start_hours, end_hours)).chunk({"time": 24, "i": 20, "j_g": 20})
+
+# # =============================================================
+# # DAILY AVERAGING FIRST
+# # =============================================================
+# nt = taux_hr.sizes["time"]
+# n_days = nt // 24
+
+# print(f"\nComputing {n_days} daily averages first...")
+
+# taux_daily_list = []
+# tauy_daily_list = []
+
+# for d in tqdm(range(n_days)):
+#     t0, t1 = d * 24, (d + 1) * 24
+#     taux_daily_list.append(taux_hr.isel(time=slice(t0, t1)).mean("time").compute())
+#     tauy_daily_list.append(tauy_hr.isel(time=slice(t0, t1)).mean("time").compute())
+
+# # Combine into daily fields
+# taux_daily = xr.concat(taux_daily_list, dim="time")
+# tauy_daily = xr.concat(tauy_daily_list, dim="time")
+
+
+# # taux_daily = taux_hr.coarsen(time=24, boundary='trim').mean().compute()
+# # tauy_daily = tauy_hr.coarsen(time=24, boundary='trim').mean().compute()
