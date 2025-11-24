@@ -68,8 +68,9 @@ if __name__ == "__main__":
 
     # List of variables to process: (variable_name, label, i_dim, j_dim)
     variable_map = [
-        ("oceTAUX", "taux", "i_g", "j"),
-        ("oceTAUY", "tauy", "i", "j_g"),
+        ("KPPhbl", "KPPhbl", "i", "j"),
+        # ("oceTAUX", "taux", "i_g", "j"),
+        # ("oceTAUY", "tauy", "i", "j_g"),
         # ("U", "uu_s", "i_g", "j"),
         # ("V", "vv_s", "i", "j_g"),
         # ("Eta", "eta", "i", "j"),
