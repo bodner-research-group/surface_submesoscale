@@ -132,6 +132,56 @@ print("\nDONE.")
 
 
 
+# =============================================================
+# Compute wind-stress magnitude and plot time series
+# =============================================================
+
+import xarray as xr
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
+
+outfile = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/windstress_center_daily_avg.nc"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wind_stress"
+os.makedirs(figdir, exist_ok=True)
+
+print("\nLoading saved center-interpolated wind stress...")
+ds = xr.open_dataset(outfile)
+
+taux = ds["taux_center"]
+tauy = ds["tauy_center"]
+
+# Wind-stress magnitude
+print("Computing wind-stress magnitude...")
+tau_mag = np.sqrt(taux**2 + tauy**2)
+
+# Spatial average (if desired)
+tau_mag_mean = tau_mag.mean(dim=("i", "j"))
+
+# =============================================================
+# Plot time series
+# =============================================================
+plt.figure(figsize=(12, 5))
+tau_mag_mean.plot(color='k', linewidth=1.5)
+
+plt.title("Daily Mean Wind-Stress Magnitude")
+plt.xlabel("Time")
+plt.ylabel("Wind Stress Magnitude [N/m²]")
+plt.grid(True)
+
+plot_file = os.path.join(figdir, "windstress_magnitude_timeseries.png")
+plt.savefig(plot_file, dpi=150, bbox_inches='tight')
+plt.show()
+
+print(f"Time series plot saved to: {plot_file}")
+print("DONE plotting.")
+
 
 
 

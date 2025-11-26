@@ -38,9 +38,9 @@ j = slice(2960, 3441)
 # ============================================================
 # 2. Load grid (chunked)
 # ============================================================
-ds_grid = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320",consolidated=False)
-lon = ds_grid.XC.isel(face=face, i=i, j=j)
-lat = ds_grid.YC.isel(face=face, i=i, j=j)
+ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320",consolidated=False)
+lon = ds1.XC.isel(face=face, i=i, j=j)
+lat = ds1.YC.isel(face=face, i=i, j=j)
 
 # ============================================================
 # 3. Paths

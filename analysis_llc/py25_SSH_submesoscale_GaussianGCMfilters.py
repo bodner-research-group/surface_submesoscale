@@ -10,12 +10,12 @@ from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 import gcm_filters as gf   # the spatial filtering package
 
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)
-# j = slice(2960, 3441)
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)
+j = slice(2960, 3441)
 
 # ========== Time settings ==========
 nday_avg = 364
@@ -40,9 +40,9 @@ print("Dask dashboard:", client.dashboard_link)
 # Paths
 # =====================
 eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/surface_24h_avg"
-out_nc_path_meso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_30kmCutoff.nc"
-out_nc_path_submeso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_submeso_30kmCutoff.nc"
-out_nc_path_meso_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_30kmCutoff_1_12deg.nc"
+out_nc_path_meso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_10kmCutoff.nc"
+out_nc_path_submeso = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_submeso_10kmCutoff.nc"
+out_nc_path_meso_coarse = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_GCMFilters_meso_10kmCutoff_1_12deg.nc"
 
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
@@ -74,7 +74,7 @@ print("Data loaded.")
 def process_one_timestep(t_index, date_str, eta_day, dx_km):
     """
     Use gcm-filters to compute ‘mesoscale’ field (eta_meso) and derive submesoscale:
-    eta_meso = large‐scale via filter (cutoff ~ 30 km)
+    eta_meso = large‐scale via filter (cutoff ~ 10 km)
     eta_submeso = eta_day minus eta_meso
     Then coarse‐grain eta_meso (4×4 → 1/12°) and return all three.
     """
@@ -83,7 +83,7 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
         eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
 
         # Define cutoff scale
-        cutoff_km = 30.0
+        cutoff_km = 10.0
 
         # ---- Construct GCM Filter object ----
         # Create filter instance:

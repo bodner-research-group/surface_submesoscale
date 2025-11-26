@@ -1,4 +1,3 @@
-#### Compute and save the steric height anomaly following Wang et al. 2025.
 
 import os
 import numpy as np
@@ -26,13 +25,13 @@ p_atm = 101325.0 / 1e4  # dbar
 # Paths
 base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
 eta_dir = os.path.join(base_dir, "surface_24h_avg")
-rho_dir = os.path.join(base_dir, "rho_insitu_hydrostatic_pressure_daily")
-Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
+# rho_dir = os.path.join(base_dir, "rho_insitu_hydrostatic_pressure_daily")
+# Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
 
-out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+out_dir = os.path.join(base_dir, "SSH_submesoscale")
 os.makedirs(out_dir, exist_ok=True)
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale/"
 os.makedirs(figdir, exist_ok=True)
 
 # ==============================================================
@@ -63,8 +62,12 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale_20kmCutoff.nc" 
-eta_submeso = xr.open_dataset(fname).SSH_submesoscale
+shortname = "SSH_Gaussian_meso_30kmCutoff"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
+# eta_submeso = xr.open_dataset(fname).SSH_submesoscale
+# eta_submeso = xr.open_dataset(fname).eta_submeso ### Only for GCMFilters
+eta_submeso = xr.open_dataset(fname).SSH_mesoscale
+# eta_submeso = xr.open_dataset(fname).eta_meso ### Only for GCMFilters
 eta_submeso= eta_submeso.assign_coords(time=eta_submeso.time.dt.floor("D"))
 
 # ==============================================================
@@ -103,8 +106,8 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     #     print(f"Already processed: {day_file}")
     #     continue
 
-    eta = Eta.isel(time=t)
-    eta_minus_mean = eta - eta.mean(dim=["i", "j"])
+    # eta = Eta.isel(time=t)
+    # eta_minus_mean = eta - eta.mean(dim=["i", "j"])
 
     eta_submeso_t = eta_submeso.isel(time=t)
 
@@ -145,8 +148,8 @@ ts_ds = xr.Dataset(
     },
     coords={"time": ("time", times)},
 )
-ts_ds.to_netcdf(os.path.join(out_dir, "grad2_submeso_20kmCutOff_timeseries.nc"))
-print("✅ Saved domain-mean |∇η_submeso|² timeseries: grad2_submeso_20kmCutOff_timeseries.nc")
+ts_ds.to_netcdf(os.path.join(out_dir, f"{shortname}_timeseries.nc"))
+print(f"✅ Saved domain-mean |∇η_submeso|² timeseries: {shortname}_timeseries.nc")
 
 # ==============================================================
 # Plot timeseries
@@ -166,9 +169,9 @@ plt.xlabel("Time")
 plt.legend()
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.tight_layout()
-plt.savefig(f"{figdir}grad2_submeso_20kmCutOff_timeseries.png", dpi=150)
+plt.savefig(f"{figdir}{shortname}_timeseries.png", dpi=150)
 plt.close()
-print(f"✅ Saved figure: {figdir}grad2_submeso_20kmCutOff_timeseries.png")
+print(f"✅ Saved figure: {figdir}{shortname}_timeseries.png")
 
 
 

@@ -1,4 +1,3 @@
-#### Compute the steric height anomaly, following Eq.(1) of Jinbo Wang et al. (2025)
 
 
 # ===== Imports =====

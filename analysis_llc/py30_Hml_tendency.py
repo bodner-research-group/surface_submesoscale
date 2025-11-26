@@ -65,7 +65,7 @@ eta_prime_grad2_mean = xr.open_dataset(fname).eta_prime_grad2_mean.isel(time=sli
 
 hori_steric = -sigma_avg*Ce/abs_f* eta_prime_grad2_mean *g*rho0/delta_rho *86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_30kmCutOff_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries/grad2_submeso_20kmCutOff_timeseries.nc"
 eta_submeso_grad2_mean = xr.open_dataset(fname).eta_submeso_grad2_mean.isel(time=slice(1, None)) 
 
 hori_submeso= -sigma_avg*Ce/abs_f* eta_submeso_grad2_mean *g*rho0/delta_rho*86400 * (Hml_mean-10)**2/(Hml_mean**2)  # unit: m/day
@@ -111,18 +111,15 @@ tendency_ek_cum    = cumulative(tendency_ekman)
 diff_cum           = cumulative(diff)                     # total - vertical
 
 
-c_hori = diff_cum.min().values/hori_cum.min().values 
-c_steric = diff_cum.min().values/hori_steric_cum.min().values
-c_hori_submeso = diff_cum.min().values/hori_submeso_cum.min().values
-c_hori_meso = diff_cum.min().values/hori_meso_cum.min().values
+# c_hori = diff_cum.min().values/hori_cum.min().values 
+# c_steric = diff_cum.min().values/hori_steric_cum.min().values
+# c_hori_submeso = diff_cum.min().values/hori_submeso_cum.min().values
+# c_hori_meso = diff_cum.min().values/hori_meso_cum.min().values
 
-
-##### c_hori = 0.72
-##### c_steric = 0.94
-##### c_hori_submeso = 0.48
-##### c_hori_meso = 0.23
-
-
+c_hori = 1
+c_steric = 1
+c_hori_submeso = 1
+c_hori_meso = 1
 
 # ==============================================================
 # 6. Plot comparison
