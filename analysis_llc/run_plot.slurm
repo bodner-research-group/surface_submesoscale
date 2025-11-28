@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Kerguelen_Plateau
-#SBATCH --output=Kerguelen_Plateau.out
-#SBATCH --error=Kerguelen_Plateau.err
+#SBATCH --job-name=SO_gou
+#SBATCH --output=SO_gou.out
+#SBATCH --error=SO_gou.err
 #SBATCH --partition=mit_normal
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                # IMPORTANT: use 1 task (you use 64 threads inside Dask)
@@ -11,14 +11,14 @@
 
 source ~/.bashrc-conda
 
-python3 ts1_24h_avg_TSW.py
-echo "Complete: ts1_24h_avg_TSW"
+# python3 ts1_24h_avg_TSW.py
+# echo "Complete: ts1_24h_avg_TSW"
 
 # python3 ts2_24h_avg_surface.py
 # echo "Complete: ts2_24h_avg_surface"
 
-python3 ts3_7day_rolling_mean.py 
-echo "Complete: ts3_7day_rolling_mean"
+# python3 ts3_7day_rolling_mean.py 
+# echo "Complete: ts3_7day_rolling_mean"
 
 # python3 ts7_Qnet_mean.py
 # echo "Complete: ts7_Qnet_mean"

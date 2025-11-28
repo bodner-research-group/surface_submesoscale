@@ -100,6 +100,60 @@ def extract_and_monthly(ds, varname, face, i_slice, j_slice, time_slice):
 
     return ds_out
 
+# # ==================== Staggered coordinates =========
+# coord_map = {
+#     "Eta": ("i", "j", "XC", "YC"),
+#     "U":   ("i_g", "j", "XG", "YC"),
+#     "V":   ("i", "j_g", "XC", "YG"),
+# }
+
+# def extract_and_monthly(ds, varname, face, i_slice, j_slice):
+#     """Extract surface field for a face and compute monthly mean."""
+#     i_dim, j_dim, lon_name, lat_name = coord_map[varname]
+
+#     da = ds[varname].isel(time=time_slice, face=face)
+#     da = da.isel(**{i_dim: i_slice, j_dim: j_slice})
+#     if "k" in da.dims:
+#         da = da.isel(k=0)
+
+#     # --- assign time coords ---
+#     da = da.assign_coords(time=ds["time"].isel(time=time_slice).values)
+
+#     # --- compute monthly mean ---
+#     ym = xr.DataArray(da.time.dt.strftime("%Y-%m"), dims="time", name="month_str")
+#     da_monthly = da.groupby(ym).mean()
+#     new_time = np.array([np.datetime64(m + "-01") for m in da_monthly["month_str"].values])
+#     da_monthly = da_monthly.rename({"month_str": "time"}).assign_coords(time=("time", new_time))
+
+#     # --- lat/lon ---
+#     lat = ds[lat_name].isel(face=face, **{i_dim: i_slice, j_dim: j_slice})
+#     lon = ds[lon_name].isel(face=face, **{i_dim: i_slice, j_dim: j_slice})
+
+#     # stack points
+#     da_monthly = da_monthly.stack(points=(j_dim, i_dim))
+#     lat = lat.stack(points=(j_dim, i_dim))
+#     lon = lon.stack(points=(j_dim, i_dim))
+
+#     # remove MultiIndex
+#     da_monthly = da_monthly.reset_index("points")
+#     lat = lat.reset_index("points")
+#     lon = lon.reset_index("points")
+
+#     # attach coords
+#     ds_out = da_monthly.to_dataset(name=varname)
+#     ds_out["lat"] = lat
+#     ds_out["lon"] = lon
+
+#     return ds_out
+
+
+# def flatten_points(ds):
+#     # stack i/j into points
+#     i_dim, j_dim = [d for d in ds[varname].dims if d in ["i","i_g"]][0], [d for d in ds[varname].dims if d in ["j","j_g"]][0]
+#     ds_flat = ds.stack(points=(j_dim, i_dim)).reset_index("points")
+#     return ds_flat
+
+
 # ==================== Main ======================
 if __name__ == "__main__":
     cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
@@ -114,8 +168,16 @@ if __name__ == "__main__":
 
     for varname, outfile in varlist:
         # compute monthly mean per face
+        # ds_f1 = extract_and_monthly(ds, varname, face1, i1, j1)
+        # ds_f4 = extract_and_monthly(ds, varname, face4, i4, j4)
         ds_f1 = extract_and_monthly(ds, varname, face1, i1, j1, time_slice)
         ds_f4 = extract_and_monthly(ds, varname, face4, i4, j4, time_slice)
+
+        # concatenate along points
+        # ds_f1_flat = flatten_points(ds_f1)
+        # ds_f4_flat = flatten_points(ds_f4)
+        # ds_month = xr.concat([ds_f1_flat, ds_f4_flat], dim="points").sortby("lon")
+        # ds_month = xr.concat([ds_f1, ds_f4], dim="points").sortby("lon")
 
         # Concatenate along the i-axis (longitude direction)
         da_month = xr.concat([ds_f1[varname], ds_f4[varname]], dim="i")
@@ -130,6 +192,10 @@ if __name__ == "__main__":
                 "lon": lon_combined
             }
         )
+
+        # Optional: sort along longitude
+        # ds_month = ds_month.sortby("lon")
+
 
         # save
         print(f"Saving: {outfile}")
