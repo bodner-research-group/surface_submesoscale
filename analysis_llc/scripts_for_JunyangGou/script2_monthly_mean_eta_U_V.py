@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Compute monthly averages of LLC4320 surface 
-- Eta (surface height anomaly), 
-- U (surface zonal velocity), 
-- V (surface meridional velocity)
-for a Southern Ocean region spanning two faces.
-Optimized: compute monthly mean per face first, then concatenate.
+Compute monthly means of LLC4320 surface fields:
+- Eta (surface height anomaly)
+- U   (surface zonal velocity, i_g, j)
+- V   (surface meridional velocity, i, j_g)
+
+For a Southern Ocean region across two LLC faces.
+
+- Correct staggered grid coordinates
 """
 
 # ================= Imports =======================
@@ -15,127 +17,150 @@ import os
 from dask.distributed import Client, LocalCluster
 
 # ================= Paths =========================
-output_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/Southern_Ocean_JunyangGou/"
+output_dir = (
+    "/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/"
+    "Southern_Ocean_JunyangGou/"
+)
 os.makedirs(output_dir, exist_ok=True)
 
 # ================= Open Dataset ===================
 ds = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
 
 # ==================== Region ======================
+# Face 1
 face1 = 1
-i1 = slice(1824, 4320)
-j1 = slice(179, 1652)
+i1 = slice(1824, 4320 ,1)
+j1 = slice(179, 1652, 1)
 
+# Face 4
 face4 = 4
-i4 = slice(0, 384)
-j4 = slice(179, 1652)
+i4 = slice(0, 384, 1)
+j4 = slice(179, 1652 ,1)
 
 # ==================== Time ========================
 start_hours = 49 * 24
-end_hours = start_hours + 365*12
+end_hours = start_hours + 365 * 24
 time_slice = slice(start_hours, end_hours)
 
+# ===========================================================
+# ETA extraction
+# ===========================================================
+def extract_eta(ds, face, i_slice, j_slice, time_slice):
 
-# ==================== Helper: extract & monthly mean per face ==========
-def extract_and_monthly(ds, varname, face, i_slice, j_slice, time_slice):
-    """
-    Extract surface field for a single face and compute monthly means.
+    da = ds["Eta"].isel(face=face, time=time_slice, i=i_slice, j=j_slice)
 
-    Optimized for very large datasets (PB-scale):
-    - Uses Dask chunking
-    - Uses resample for monthly averaging
-    - Avoids expensive string operations and unnecessary stacking
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        The full LLC4320 dataset
-    varname : str
-        Variable name: "Eta", "U", or "V"
-    face : int
-        LLC face index
-    i_slice, j_slice : slice
-        Spatial slices for the face
-    time_slice : slice
-        Time slice to select
-
-    Returns
-    -------
-    xarray.Dataset
-        Dataset with monthly means for the face, with lat/lon coordinates
-    """
-
-    # Map variable to its staggered coords
-    coord_map = {
-        "Eta": ("i", "j", "XC", "YC"),
-        "U":   ("i_g", "j", "XG", "YC"),
-        "V":   ("i", "j_g", "XC", "YG"),
-    }
-    i_dim, j_dim, lon_name, lat_name = coord_map[varname]
-
-    # Extract variable for the given face and slice
-    da = ds[varname].isel(time=time_slice, face=face)
-    da = da.isel(**{i_dim: i_slice, j_dim: j_slice})
-
-    # If 3D, take surface level
     if "k" in da.dims:
         da = da.isel(k=0)
 
-    # Chunk the DataArray for Dask; time chunk = 1 month (~720 hours)
-    # Adjust spatial chunks to balance memory usage
-    da = da.chunk({i_dim: 512, j_dim: 512, "time": 720})
+    da = da.chunk({"time": 720, "i": 512, "j": 512})
+    da_m = da.resample(time="MS").mean()
 
-    # --- Monthly mean using resample (fast, Dask-friendly) ---
-    da_monthly = da.resample(time="MS").mean()
+    lon = ds["XC"].isel(face=face, i=i_slice, j=j_slice)
+    lat = ds["YC"].isel(face=face, i=i_slice, j=j_slice)
 
-    # Extract lat/lon for the same face and slice
-    lat = ds[lat_name].isel(face=face, **{i_dim: i_slice, j_dim: j_slice})
-    lon = ds[lon_name].isel(face=face, **{i_dim: i_slice, j_dim: j_slice})
+    return xr.Dataset({"Eta": da_m, "lon": lon, "lat": lat})
 
-    # Assign lat/lon as coordinates (keeps original dims)
-    da_monthly = da_monthly.assign_coords(lat=lat, lon=lon)
 
-    # Convert to dataset
-    ds_out = da_monthly.to_dataset(name=varname)
+# ===========================================================
+# U extraction  (i_g, j)
+# ===========================================================
+def extract_u(ds, face, i_slice, j_slice, time_slice):
 
-    return ds_out
+    da = ds["U"].isel(face=face, time=time_slice, i_g=i_slice, j=j_slice)
+    if "k" in da.dims:
+        da = da.isel(k=0)
 
-# ==================== Main ======================
-if __name__ == "__main__":
-    cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
-    client = Client(cluster)
-    print("Dask dashboard:", client.dashboard_link)
+    da = da.chunk({"time": 720, "i_g": 512, "j": 512})
+    da_m = da.resample(time="MS").mean()
 
-    varlist = [
-        ("Eta", "eta_monthly.nc"),
-        ("U", "u_monthly.nc"),
-        ("V", "v_monthly.nc"),
-    ]
+    lon = ds["XG"].isel(face=face, i_g=i_slice, j_g=j_slice)
+    lat = ds["YC"].isel(face=face, i=i_slice, j=j_slice)
 
-    for varname, outfile in varlist:
-        # compute monthly mean per face
-        ds_f1 = extract_and_monthly(ds, varname, face1, i1, j1, time_slice)
-        ds_f4 = extract_and_monthly(ds, varname, face4, i4, j4, time_slice)
+    return xr.Dataset({"U": da_m, "lon": lon, "lat": lat})
 
-        # Concatenate along the i-axis (longitude direction)
-        da_month = xr.concat([ds_f1[varname], ds_f4[varname]], dim="i")
-        lat_combined = xr.concat([ds_f1["lat"], ds_f4["lat"]], dim="i")
-        lon_combined = xr.concat([ds_f1["lon"], ds_f4["lon"]], dim="i")
 
-        # Create dataset
-        ds_month = xr.Dataset(
-            {
-                varname: da_month,
-                "lat": lat_combined,
-                "lon": lon_combined
-            }
-        )
+# ===========================================================
+# V extraction  (i, j_g)
+# ===========================================================
+def extract_v(ds, face, i_slice, j_slice, time_slice):
 
-        # save
-        print(f"Saving: {outfile}")
-        ds_month.to_netcdf(os.path.join(output_dir, outfile))
-        print("Saved.")
+    da = ds["V"].isel(face=face, time=time_slice, i=i_slice, j_g=j_slice)
+    if "k" in da.dims:
+        da = da.isel(k=0)
 
-    print("All variables processed.")
-    client.close()
-    cluster.close()
+    da = da.chunk({"time": 720, "i": 512, "j_g": 512})
+    da_m = da.resample(time="MS").mean()
+
+    lon = ds["XC"].isel(face=face, i=i_slice, j=j_slice)
+    lat = ds["YG"].isel(face=face, i_g=i_slice, j_g=j_slice)
+
+    return xr.Dataset({"V": da_m, "lon": lon, "lat": lat})
+
+
+# ===========================================================
+# Main execution
+# ===========================================================
+# if __name__ == "__main__":
+
+cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
+client = Client(cluster)
+print("\nDask dashboard:", client.dashboard_link)
+
+# ------------------------------------
+# ETA
+# ------------------------------------
+print("\n=== Processing ETA ===")
+f1 = extract_eta(ds, face1, i1, j1, time_slice)
+f4 = extract_eta(ds, face4, i4, j4, time_slice)
+
+eta = xr.concat([f1["Eta"], f4["Eta"]], dim="i")
+lat = xr.concat([f1["lat"], f4["lat"]], dim="i")
+lon = xr.concat([f1["lon"], f4["lon"]], dim="i")
+
+ds_eta = xr.Dataset({"Eta": eta, "lat": lat, "lon": lon})
+ds_eta.to_netcdf(os.path.join(output_dir, "eta_monthly.nc"))
+print("Saved eta_monthly.nc")
+
+# ------------------------------------
+# U
+# ------------------------------------
+print("\n=== Processing U ===")
+f1 = extract_u(ds, face1, i1, j1, time_slice)
+f4 = extract_u(ds, face4, i4, j4, time_slice)
+
+u = xr.concat([f1["U"], f4["U"]], dim="i_g")
+lat = xr.concat([f1["lat"], f4["lat"]], dim="i")
+lon = xr.concat([f1["lon"], f4["lon"]], dim="i_g")
+
+u  = u.drop_vars("face")
+lat = lat.drop_vars("face")
+lon = lon.drop_vars("face")
+
+ds_u = xr.Dataset({"U": u, "lat": lat, "lon": lon})
+ds_u.to_netcdf(os.path.join(output_dir, "u_monthly.nc"))
+print("Saved u_monthly.nc")
+
+# ------------------------------------
+# V
+# ------------------------------------
+print("\n=== Processing V ===")
+f1 = extract_v(ds, face1, i1, j1, time_slice)
+f4 = extract_v(ds, face4, i4, j4, time_slice)
+
+v = xr.concat([f1["V"], f4["V"]], dim="i")
+lat = xr.concat([f1["lat"], f4["lat"]], dim="i_g")
+lon = xr.concat([f1["lon"], f4["lon"]], dim="i")
+
+v  = v.drop_vars("face")
+lat = lat.drop_vars("face")
+lon = lon.drop_vars("face")
+
+ds_v = xr.Dataset({"V": v, "lat": lat, "lon": lon})
+ds_v.to_netcdf(os.path.join(output_dir, "v_monthly.nc"))
+print("Saved v_monthly.nc")
+
+# ------------------------------------
+print("\nAll variables processed.\n")
+
+client.close()
+cluster.close()

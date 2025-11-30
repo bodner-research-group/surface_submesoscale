@@ -36,19 +36,19 @@ time = ds_eta.time.values
 
 # ===================== PLOTTING HELPERS ==================
 def make_map(ax):
-    """Add coastlines, gridlines, etc."""
-    ax.coastlines(resolution="110m", linewidth=0.6)
-    ax.add_feature(cfeature.LAND, facecolor="lightgray")
+    # """Add coastlines, gridlines, etc."""
+    # ax.coastlines(resolution="110m", linewidth=0.6)
+    # ax.add_feature(cfeature.LAND, facecolor="lightgray")
     gl = ax.gridlines(draw_labels=True, linewidth=0.3, color='gray', alpha=0.5)
     gl.right_labels = False
     gl.top_labels = False
 
 def plot_field(ax, lon, lat, field, title, cmap, vmin=None, vmax=None):
     """Scatter plot of the monthly field."""
-    sc = ax.scatter(lon, lat, c=field, s=3, cmap=cmap,
-                    transform=ccrs.PlateCarree(),
-                    vmin=vmin, vmax=vmax)
-    ax.set_title(title, fontsize=12)
+    sc = ax.pcolormesh(lon, lat, field, cmap=cmap, vmin=vmin, vmax=vmax,
+                   transform=ccrs.PlateCarree(), shading="auto")
+
+    ax.set_title(title, fontsize=14)
     return sc
 
 # ================== COLOR LIMITS (edit if needed) ===================
@@ -73,30 +73,31 @@ for n, t in enumerate(time):
     lat = ds_eta["lat"].values
 
     # ---------- FIGURE ----------
-    fig = plt.figure(figsize=(14, 10))
+    fig = plt.figure(figsize=(12, 13))
 
-    proj = ccrs.SouthPolarStereo()
+    proj = ccrs.SouthPolarStereo(central_longitude=30)
 
     # Eta
     ax1 = fig.add_subplot(3, 1, 1, projection=proj)
     make_map(ax1)
     sc1 = plot_field(ax1, lon, lat, eta, "Eta (m)", cmap="coolwarm",
                      vmin=eta_clim[0], vmax=eta_clim[1])
-    cb1 = plt.colorbar(sc1, ax=ax1, orientation="horizontal", pad=0.05)
+    cb1 = plt.colorbar(sc1, ax=ax1, orientation="vertical", pad=0.04, shrink=0.6, fraction=0.05)
 
     # U
     ax2 = fig.add_subplot(3, 1, 2, projection=proj)
     make_map(ax2)
     sc2 = plot_field(ax2, lon, lat, U, "Surface U (m/s)", cmap="RdBu_r",
                      vmin=u_clim[0], vmax=u_clim[1])
-    cb2 = plt.colorbar(sc2, ax=ax2, orientation="horizontal", pad=0.05)
+    cb2 = plt.colorbar(sc2, ax=ax2, orientation="vertical", pad=0.04, shrink=0.6, fraction=0.05)
+
 
     # V
     ax3 = fig.add_subplot(3, 1, 3, projection=proj)
     make_map(ax3)
     sc3 = plot_field(ax3, lon, lat, V, "Surface V (m/s)", cmap="RdBu_r",
                      vmin=v_clim[0], vmax=v_clim[1])
-    cb3 = plt.colorbar(sc3, ax=ax3, orientation="horizontal", pad=0.05)
+    cb3 = plt.colorbar(sc3, ax=ax3, orientation="vertical", pad=0.04, shrink=0.6, fraction=0.05)
 
     fig.suptitle(f"Monthly Surface Fields – {YYYY_MM}", fontsize=16)
 
