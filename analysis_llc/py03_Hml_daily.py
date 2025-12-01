@@ -45,7 +45,7 @@ def main():
     # ---------- Loop through files ----------
     for file in rho_files:
 
-        date_tag = os.path.basename(file)[19:27]  # extract YYYYMMDD
+        date_tag = os.path.basename(file)[17:25]  # extract YYYYMMDD
         out_path = os.path.join(output_dir, f"Hml_daily_{date_tag}.nc")
 
         if os.path.exists(out_path):
