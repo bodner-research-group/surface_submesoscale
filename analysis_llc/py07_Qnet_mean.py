@@ -31,8 +31,8 @@ def main():
         plt.rcParams.update({'font.size': 16})
 
         # ========== Coordinates for center location (optional) ==========
-        lat = ds1.YC.isel(face=face, i=1, j=j)
-        lon = ds1.XC.isel(face=face, i=i, j=1)
+        lat = ds1.YC.isel(face=face, i=i, j=j)
+        lon = ds1.XC.isel(face=face, i=i, j=j)
         lat_c = float(lat.mean().values)
         lon_c = float(lon.mean().values)
 

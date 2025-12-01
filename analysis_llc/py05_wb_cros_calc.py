@@ -23,14 +23,13 @@ ww_files = sorted(glob(os.path.join(input_dir, "ww_24h_*.nc")))
 
 # ========== Load static coordinates once ==========
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
-lat = ds1.YC.isel(face=face, i=1, j=j)
-lon = ds1.XC.isel(face=face, i=i, j=1)
+lat = ds1.YC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
+lon = ds1.XC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
 depth = ds1.Z
 depth_kp1 = ds1.Zp1
 
 # Broadcast to 3D
-lon_b, lat_b = xr.broadcast(lon, lat)
-depth3d, _, _ = xr.broadcast(depth, lon_b, lat_b)
+depth3d, _, _ = xr.broadcast(depth, lon, lat)
 
 # Horizontal grid spacing
 dx = ds1.dxF.isel(face=face, i=i, j=j).mean().values
@@ -53,7 +52,7 @@ def compute_one_spec(tt, ss, ww):
     """
 
     # compute buoyancy
-    SA = gsw.SA_from_SP(ss, depth3d, lon_b, lat_b)
+    SA = gsw.SA_from_SP(ss, depth3d, lon, lat)
     CT = gsw.CT_from_pt(SA, tt)
     p_ref = 0
     rho0 = 1027.5

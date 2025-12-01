@@ -35,11 +35,10 @@ os.makedirs(out_dir, exist_ok=True)
 print("Loading grid with chunks...")
 ds_grid = xr.open_zarr(zarr_path, consolidated=False, chunks={"face": 1, "i": 100, "j": 100})
 depth = ds_grid.Z
-lat = ds_grid.YC.isel(face=face, i=1, j=j)
-lon = ds_grid.XC.isel(face=face, i=i, j=1)
+lat = ds_grid.YC.isel(face=face, i=i, j=j)
+lon = ds_grid.XC.isel(face=face, i=i, j=j)
 dxF = ds_grid.dxF.isel(face=face, i=i, j=j)  # Zonal grid spacing
 dyF = ds_grid.dyF.isel(face=face, i=i, j=j)  # Meridional grid spacing
-lon2d, lat2d = xr.broadcast(lon, lat)
 
 # ------------------------------------------
 # Define delayed function to compute horizontal gradients in tiles
@@ -265,8 +264,8 @@ for rho_file in rho_files:
             "Tu_diff": (["j", "i"], Tu_diff.data),
             "alpha_surf": (["j", "i"], alpha_surf.data),
             "beta_surf": (["j", "i"], beta_surf.data),
-            "lon2d": (["i", "j"], lon2d.data),
-            "lat2d": (["i", "j"], lat2d.data),
+            "lon": (["i", "j"], lon.data),
+            "lat": (["i", "j"], lat.data),
             "pdf_values_v": (["x_grid"], pdf_v),
             "pdf_values_h": (["x_grid"], pdf_h),
             "deta_cross": (["j", "i"], deta_cross.data),

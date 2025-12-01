@@ -18,7 +18,7 @@ def compute_Hml(rho_profile, depth_profile, threshold=0.03):
 
     if not np.any(mask):
         return 0.0
-
+    
     return float(depth_profile[mask].max())
 
 
@@ -35,10 +35,9 @@ def main():
         return
 
     # ---------- Load depth from first file ----------
-    # All files contain identical depth values in coordinate "k"
-    sample = xr.open_dataset(rho_files[0])
-    depth = sample["rho_daily"].coords["k"].values  # shape (k,)
-    sample.close()
+    # ========== Open LLC4320 Dataset ==========
+    ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
+    depth = ds1.Z
 
     print(f"Loaded depth with {len(depth)} vertical levels")
 

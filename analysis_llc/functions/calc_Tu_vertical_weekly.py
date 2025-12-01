@@ -20,8 +20,8 @@ os.makedirs(out_dir, exist_ok=True)
 print("Loading grid...")
 ds_grid = xr.open_zarr(zarr_path, consolidated=False)
 depth = ds_grid.Z
-lat = ds_grid.YC.isel(face=face, i=1, j=j)
-lon = ds_grid.XC.isel(face=face, i=i, j=1)
+lat = ds_grid.YC.isel(face=face, i=i, j=j)
+lon = ds_grid.XC.isel(face=face, i=i, j=j)
 
 # ========== Loop over weekly files ==========
 rho_files = sorted(glob(os.path.join(rho_input_dir, "rho_Hml_TS_7d_*.nc")))
@@ -102,14 +102,14 @@ for rho_file in rho_files:
     pdf_values = kde(x_grid)
 
     # ========== Save ==========
-    lon_vals = lon.values
-    lat_vals = lat.values
-    lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')
+    # lon_vals = lon.values
+    # lat_vals = lat.values
+    # lon2d, lat2d = np.meshgrid(lon_vals, lat_vals, indexing='xy')
 
     ds_out = xr.Dataset({
         "TuV_deg": (["lat", "lon"], TuV_deg),
-        "lon2d": (["lat", "lon"], lon2d),
-        "lat2d": (["lat", "lon"], lat2d),
+        "lon": (["lat", "lon"], lon),
+        "lat": (["lat", "lon"], lat),
         "pdf_values": (["x_grid"], pdf_values),
         "x_grid": (["x_grid"], x_grid),
     })

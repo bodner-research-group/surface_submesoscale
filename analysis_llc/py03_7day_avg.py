@@ -33,15 +33,12 @@ def main():
     # ========== Open LLC4320 Dataset ==========
     ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
 
-    lat = ds1.YC.isel(face=face, i=1, j=j)
-    lon = ds1.XC.isel(face=face, i=i, j=1)
-    lon = lon.chunk({'i': -1}) # Re-chunk to include all data points
-    lat = lat.chunk({'j': -1}) # Re-chunk to include all data points
+    lat = ds1.YC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
+    lon = ds1.XC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
     depth = ds1.Z
 
     # ========== Broadcast lon, lat, depth ==========
-    lon_b, lat_b = xr.broadcast(lon, lat)
-    depth3d, _, _ = xr.broadcast(np.abs(depth), lon_b, lat_b)
+    depth3d, _, _ = xr.broadcast(np.abs(depth), lon, lat)
 
     # ========== Main loop ==========
     tt_files = sorted(glob(os.path.join(input_dir, "tt_24h_*.nc")))
