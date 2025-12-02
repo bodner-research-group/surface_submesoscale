@@ -101,7 +101,7 @@ def main():
         CT = 6
         p = 0
         rho0 = 1027.5  # kg/m^3
-        Cp = 3975     # J/kg/K
+        Cp = 3994     # J/kg/K
 
         beta = gsw.beta(SA, CT, p)
         alpha = gsw.alpha(SA, CT, p)

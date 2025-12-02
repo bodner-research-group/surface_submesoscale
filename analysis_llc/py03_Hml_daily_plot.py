@@ -10,7 +10,7 @@ from glob import glob
 # --- User options ---
 from set_constant import domain_name, face, i, j
 data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
-fig_dir  = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Hml_daily"
+fig_dir  = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Hml_daily_surface_reference"
 
 os.makedirs(fig_dir, exist_ok=True)
 
@@ -39,7 +39,7 @@ def main():
     lon = ds1.XC.isel(face=face, i=i, j=j)
 
     # Find all Hml files
-    hml_files = sorted(glob(os.path.join(data_dir, "Hml_daily_*.nc")))
+    hml_files = sorted(glob(os.path.join(data_dir, "Hml_daily_surface_reference_*.nc")))
     if len(hml_files) == 0:
         print("❌ No Hml files found.")
         return
@@ -48,7 +48,8 @@ def main():
 
     for file in hml_files:
         # Get date tag
-        date_tag = os.path.basename(file)[10:18]  # "Hml_daily_YYYYMMDD.nc"
+        # date_tag = os.path.basename(file)[10:18]  # "Hml_daily_YYYYMMDD.nc"
+        date_tag = os.path.basename(file).split("_")[-1].replace(".nc", "")
 
         print(f"📅 Plotting {date_tag}")
 

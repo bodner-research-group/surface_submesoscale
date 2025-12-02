@@ -5,6 +5,12 @@ from glob import glob
 import gc
 
 from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "Kerguelen_Plateau"  
+# face = 4
+# i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
+# j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
+
 
 # ---------- HML computation function ----------
 def compute_Hml(rho_profile, depth_profile, threshold=0.03):
@@ -44,8 +50,9 @@ def main():
     # ---------- Loop through files ----------
     for file in rho_files:
 
-        date_tag = os.path.basename(file)[17:25]  # extract YYYYMMDD
-        out_path = os.path.join(output_dir, f"Hml_daily_{date_tag}.nc")
+        # date_tag = os.path.basename(file)[17:25]  # extract YYYYMMDD
+        date_tag = os.path.basename(file).split("_")[-1].replace(".nc", "")
+        out_path = os.path.join(output_dir, f"Hml_daily_surface_reference_{date_tag}.nc")
 
         if os.path.exists(out_path):
             print(f"⏭️  Skipping {date_tag}, output already exists.")

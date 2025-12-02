@@ -27,7 +27,7 @@ def plot_three_panel(Hml_left, Hml_right, lat, lon, date_tag, save_path):
         lon, lat, -Hml_left,
         cmap="gist_ncar", shading="auto", vmin=0, vmax=850
     )
-    axs[0].set_title(f"Δρ=0.03 relative to 10 m\n{date_tag}")
+    axs[0].set_title(f"Δρ=0.03 relative to surface 0.5m")
     axs[0].set_xlabel("Longitude")
     axs[0].set_ylabel("Latitude")
     plt.colorbar(im1, ax=axs[0])
@@ -39,7 +39,7 @@ def plot_three_panel(Hml_left, Hml_right, lat, lon, date_tag, save_path):
         lon, lat, -Hml_right,
         cmap="gist_ncar", shading="auto", vmin=0, vmax=850
     )
-    axs[1].set_title("Δρ=0.03 relative to surface")
+    axs[1].set_title("Δρ=0.03 relative to 10m")
     axs[1].set_xlabel("Longitude")
     axs[1].set_ylabel("Latitude")
     plt.colorbar(im2, ax=axs[1])
@@ -53,7 +53,7 @@ def plot_three_panel(Hml_left, Hml_right, lat, lon, date_tag, save_path):
         lon, lat, diff,
         cmap="RdBu", shading="auto", vmin=-60, vmax=60
     )
-    axs[2].set_title("Difference (10 m − surface)")
+    axs[2].set_title("Difference (surface − 10m)")
     axs[2].set_xlabel("Longitude")
     axs[2].set_ylabel("Latitude")
     plt.colorbar(im3, ax=axs[2], label="Difference (m)")
@@ -76,7 +76,7 @@ def main():
     lon = ds1.XC.isel(face=face, i=i, j=j)
 
     # File lists
-    new_Hml_files = sorted(glob(os.path.join(data_dir, "Hml_daily_*.nc")))
+    new_Hml_files = sorted(glob(os.path.join(data_dir, "Hml_daily_surface_reference_*.nc")))
     raw_Hml_files = sorted(glob(os.path.join(data_dir, "rho_Hml_TS_daily_*.nc")))
 
     print(f"Found {len(new_Hml_files)} processed Hml files")

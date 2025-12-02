@@ -12,12 +12,12 @@ from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
 
 from set_constant import domain_name, face, i, j
-
 # # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# domain_name = "Kerguelen_Plateau"  
+# face = 4
+# i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
+# j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
+
 
 from dask.distributed import Client, LocalCluster
 
@@ -40,9 +40,10 @@ grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 # output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
 # hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
 hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_daily"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily"
-hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_daily_*.nc")))
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_daily_surface_reference"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily_surface_reference"
+# hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_daily_*.nc")))
+hml_files = sorted(glob(os.path.join(hml_dir, "Hml_daily_surface_reference_*.nc")))
 
 os.makedirs(figdir, exist_ok=True)
 os.makedirs(output_dir, exist_ok=True)
@@ -124,7 +125,6 @@ for fpath in hml_files:
     print(f"Processing {os.path.basename(fpath)}")
     ds = xr.open_dataset(fpath)
     date_tag = os.path.basename(fpath).split("_")[-1].replace(".nc", "")
-
     out_nc = os.path.join(output_dir, f"Lambda_MLI_{date_tag}.nc")
     
     if os.path.exists(out_nc):
@@ -134,7 +134,10 @@ for fpath in hml_files:
     # Hml = ds["Hml_7d"].load()
     # rho = ds["rho_7d"].load()  # (k, j, i)
     Hml = ds["Hml_daily"].load()
-    rho = ds["rho_daily"].load()  # (k, j, i)
+
+    raw_file = f"{hml_dir}/rho_Hml_TS_daily_{date_tag}.nc"
+    ds_rho = xr.open_dataset(raw_file)
+    rho = ds_rho["rho_daily"].load()  # (k, j, i)
 
 
     # Depth broadcast

@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 
 plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 
-
 # ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   
-j = slice(2960, 3441)  
+from set_constant import domain_name, face, i, j
 
 ##### Load LLC dataset
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
