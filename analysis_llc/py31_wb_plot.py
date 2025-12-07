@@ -74,9 +74,9 @@ def make_daily_plot(nc_path):
     date_tag = os.path.basename(nc_path).split("_")[-1].replace(".nc", "")
     save_path = os.path.join(figdir, f"wb_mld_daily_{date_tag}.png")
 
-    # if os.path.exists(save_path):
-    #     print(f"Skipping existing: {save_path}")
-    #     return save_path
+    if os.path.exists(save_path):
+        print(f"Skipping existing: {save_path}")
+        return save_path
 
     ds = xr.open_dataset(nc_path)
     wb_avg  = ds["wb_avg"]
@@ -136,20 +136,31 @@ print("All daily plots complete.")
 # ============================================================
 print("Creating animation...")
 
-fig = plt.figure(figsize=(12, 7))
-img = plt.imshow(np.zeros((10, 10, 3)), animated=True)
-plt.axis("off")
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily"
+# high-resolution
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/movie-wb_mld_daily.mp4"
+os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_mld_daily_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 
-def update(frame):
-    fname = png_files[frame]
-    img.set_array(plt.imread(fname))
-    plt.title(os.path.basename(fname).replace(".png", ""), fontsize=14)
-    return [img]
 
-ani = animation.FuncAnimation(fig, update, frames=len(png_files), interval=250)
 
-mp4_path = os.path.join(figdir, "wb_mld_daily_animation.mp4")
-ani.save(mp4_path, writer="ffmpeg", dpi=150)
-plt.close()
+# sample = plt.imread(png_files[0])
+
+# fig = plt.figure()
+# img = plt.imshow(sample, animated=True, aspect='equal')
+# plt.axis("off")
+
+# def update(frame):
+#     fname = png_files[frame]
+#     img.set_array(plt.imread(fname))
+#     # plt.title(os.path.basename(fname).replace(".png", ""), fontsize=14)
+#     return [img]
+
+# ani = animation.FuncAnimation(fig, update, frames=len(png_files), interval=100)
+
+# mp4_path = os.path.join(figdir, "wb_mld_daily_animation.mp4")
+# ani.save(mp4_path, writer="ffmpeg", dpi=150)
+# plt.close()
 
 print(f"Animation saved → {mp4_path}")

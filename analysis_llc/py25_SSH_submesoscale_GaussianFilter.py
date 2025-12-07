@@ -25,9 +25,9 @@ step_hours = delta_days * 24
 # Setup Dask cluster
 # =====================
 cluster = LocalCluster(
-    n_workers=32,
+    n_workers=64,
     threads_per_worker=1,
-    memory_limit="11GB",
+    memory_limit="5.5GB",
     processes=True
 )
 client = Client(cluster)
@@ -40,9 +40,9 @@ eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{d
 base_out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale"
 os.makedirs(base_out_dir, exist_ok=True)
 
-out_nc_path_submeso = os.path.join(base_out_dir, "SSH_Gaussian_submeso_20kmCutoff.nc")
-out_nc_path_meso = os.path.join(base_out_dir, "SSH_Gaussian_meso_20kmCutoff.nc")
-out_nc_path_meso_coarse = os.path.join(base_out_dir, "SSH_Gaussian_meso_20kmCutoff_1_12deg.nc")
+out_nc_path_submeso = os.path.join(base_out_dir, "SSH_Gaussian_submeso_14kmCutoff.nc")
+out_nc_path_meso = os.path.join(base_out_dir, "SSH_Gaussian_meso_14kmCutoff.nc")
+out_nc_path_meso_coarse = os.path.join(base_out_dir, "SSH_Gaussian_meso_14kmCutoff_1_12deg.nc")
 
 plot_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale"
 os.makedirs(plot_dir, exist_ok=True)
@@ -79,7 +79,7 @@ print(f"Grid spacing = {dx_km:.2f} km, Nyquist λ = {nyquist_wavelength:.2f} km"
 @delayed
 def process_one_timestep(t_index, date_str, eta_day, dx_km):
     """
-    Split SSH into submesoscale (<20 km) and mesoscale (>20 km) components
+    Split SSH into submesoscale (<14 km) and mesoscale (>14 km) components
     using Gaussian filtering, and coarse-grain the mesoscale field to 1/12°.
     """
     try:
@@ -87,7 +87,7 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
         eta_mean_removed = eta_day - eta_day.mean(dim=["i", "j"])
 
         # ---- Gaussian filter ----
-        sigma_km = 20.0 / np.sqrt(8 * np.log(2))
+        sigma_km = 14.0 / np.sqrt(8 * np.log(2))
         sigma_pts = sigma_km / dx_km
         print(f"[{date_str}] Gaussian sigma = {sigma_pts:.2f} grid pts")
 
@@ -101,12 +101,12 @@ def process_one_timestep(t_index, date_str, eta_day, dx_km):
         # ---- Submesoscale and mesoscale fields ----
         eta_submeso = eta_mean_removed - eta_large
         eta_submeso.name = "SSH_submesoscale"
-        eta_submeso.attrs["description"] = "SSH with >20 km scales removed via Gaussian filter"
-        eta_submeso.attrs["filter_cutoff_km"] = 20.0
+        eta_submeso.attrs["description"] = "SSH with >14 km scales removed via Gaussian filter"
+        eta_submeso.attrs["filter_cutoff_km"] = 14.0
 
         eta_meso = eta_large.rename("SSH_mesoscale")
-        eta_meso.attrs["description"] = "SSH with <20 km scales removed via Gaussian filter"
-        eta_meso.attrs["filter_cutoff_km"] = 20.0
+        eta_meso.attrs["description"] = "SSH with <14 km scales removed via Gaussian filter"
+        eta_meso.attrs["filter_cutoff_km"] = 14.0
 
         # ---- Coarse-grain mesoscale field only ----
         coarse_factor = 4  # 1/48° → 1/12°
