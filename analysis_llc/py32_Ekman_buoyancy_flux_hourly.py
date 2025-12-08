@@ -244,6 +244,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from set_constant import domain_name
+plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 
 in_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
 ts_file = f"{in_dir}/B_Ek_domain_mean_timeseries.nc"
@@ -256,7 +257,7 @@ B = ds.B_Ek_mean
 # 7-day rolling
 roll = B.rolling(time=24*7, center=True).mean()
 
-plt.figure(figsize=(14,5))
+plt.figure(figsize=(10,5))
 plt.plot(B.time, B, label="Domain mean hourly")
 plt.plot(B.time, roll, label="7-day rolling mean", lw=2)
 plt.legend()
@@ -287,7 +288,7 @@ import matplotlib.pyplot as plt
 import glob
 import os
 from datetime import datetime, timedelta
-from set_constant import domain_name
+from set_constant import domain_name, face, i, j, start_hours, end_hours
 
 print("Plotting maps of Ekman buoyancy flux from Sept 1–10, 2012...")
 
@@ -346,15 +347,14 @@ for t in B_Ek.time.values:
 
     fig, ax = plt.subplots(figsize=(8, 10))
 
-    max_Bnow = np.nanmax(np.abs(B_now))/20
-
+    max_Bnow = np.nanmax(np.abs(B_now))
     if max_Bnow == 0 or np.isnan(max_Bnow):
         print(f"Skipping time {t_str} because data is all zeros or NaN")
         continue
 
     im = ax.pcolormesh(lon, lat, B_now,
                     cmap="RdBu_r", shading="auto",
-                    vmin=vmin/10, vmax=vmax/10)
+                    vmin=vmin/20, vmax=vmax/20)
 
     ax.set_title(f"Ekman Buoyancy Flux at {t_str}", fontsize=14)
     ax.set_xlabel("Longitude")
@@ -364,3 +364,18 @@ for t in B_Ek.time.values:
     plt.close()
 
 print("DONE.")
+
+
+
+
+# ============================================================
+# Create animation
+# ============================================================
+print("Creating animation...")
+
+##### Convert images to video
+import os
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux/movie-Ekman_buoyancy_flux.mp4"
+os.system(f"ffmpeg -r 15 -pattern_type glob -i '{figdir}/EBF_map_20*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+

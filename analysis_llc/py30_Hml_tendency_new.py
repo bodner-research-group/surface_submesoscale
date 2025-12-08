@@ -73,11 +73,16 @@ hori_submeso_14 = -sigma_avg*Ce/abs_f * eta_submeso_grad2_14 * g*rho0/delta_rho 
 # ==============================================================
 # 5. Ekman buoyancy flux
 # ==============================================================
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/B_Ek_timeseries.nc"
-B_Ek_mean = xr.open_dataset(fname).B_Ek_mean.isel(time=slice(1, None))
-B_Ek_mean = B_Ek_mean.assign_coords(time=B_Ek_mean.time.dt.floor("D"))
+# fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/B_Ek_timeseries.nc"
+# B_Ek_mean = xr.open_dataset(fname).B_Ek_mean.isel(time=slice(1, None))
+# B_Ek_mean = B_Ek_mean.assign_coords(time=B_Ek_mean.time.dt.floor("D"))
+# tendency_ekman = -B_Ek_mean * rho0/g/delta_rho * 86400
 
-tendency_ekman = -B_Ek_mean * rho0/g/delta_rho * 86400
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/B_Ek_domain_mean_timeseries.nc"
+B_Ek_mean_hourly = xr.open_dataset(fname).B_Ek_mean
+B_Ek_mean = B_Ek_mean_hourly.resample(time="1D").mean().isel(time=slice(1, None)) # Compute daily mean
+tendency_ekman = B_Ek_mean * rho0/g/delta_rho * 86400
+
 
 diff = dHml_dt - vert - tendency_ekman
 
@@ -113,7 +118,7 @@ darkpink = '#d1007c'
 # ==============================================================
 # Plot 1 — Hml tendency
 # ==============================================================
-filename = f"{figdir}Hml_tendency_wbtotal_abs.png"
+filename = f"{figdir}Hml_tendency_wbtotal.png"
 plt.figure(figsize=(12, 6.5))
 
 plt.plot(dHml_dt.time, dHml_dt, label="dHml/dt (total)", color='k')
@@ -124,17 +129,17 @@ plt.plot(diff.time, diff, label="dHml/dt - surf - Ekman", linestyle='--', color=
 plt.plot(hori_steric.time, hori_steric, label="steric", color=darkpink)
 plt.plot(hori_submeso_14.time, hori_submeso_14, label="SSH submeso 14 km", color='orange', linestyle='-')
 # plt.plot(wb_eddy.time, wb_eddy, label=r"$rho0/g/delta_rho(\langle\vert\overline{wb}^z\vert\rangle-\langle\vert\overline{w}^z\overline{b}^z\vert\rangle)$", color='purple', linestyle='-')
-plt.plot(
-    wb_eddy.time,
-    wb_eddy,
-    label=(
-        r"$\rho_0 \,/\, g \,/\, \Delta\rho \,"
-        r"\left( \langle|\overline{wb}^z|\rangle"
-        r" - \langle|\overline{w}^z \, \overline{b}^z|\rangle \right)$"
-    ),
-    color="purple",
-    linestyle="-"
-)
+# plt.plot(
+#     wb_eddy.time,
+#     wb_eddy,
+#     label=(
+#         r"$\rho_0 \,/\, g \,/\, \Delta\rho \,"
+#         r"\left( \langle|\overline{wb}^z|\rangle"
+#         r" - \langle|\overline{w}^z \, \overline{b}^z|\rangle \right)$"
+#     ),
+#     color="purple",
+#     linestyle="-"
+# )
 
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
@@ -149,7 +154,7 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 # ==============================================================
 # Plot 2 — Cumulative integrals
 # ==============================================================
-filename = f"{figdir}Hml_cumulative_wbtotal_abs.png"
+filename = f"{figdir}Hml_cumulative_wbtotal.png"
 plt.figure(figsize=(12, 6.5))
 
 plt.plot(Hml_total_cum.time, Hml_total_cum, label="Cumulative (total)", color='k')
@@ -160,17 +165,17 @@ plt.plot(diff_cum.time, diff_cum, label="Cumulative (total - surf - Ekman)", lin
 plt.plot(hori_steric_cum.time, hori_steric_cum, label="steric", color=darkpink)
 plt.plot(hori_submeso_cum_14.time, hori_submeso_cum_14, label="SSH submeso 14 km", color='orange', linestyle='-')
 # plt.plot(wb_eddy_cum.time, wb_eddy_cum, label=r"$\rho_0/g/\Delta\rho\big(\langle\vert\overline{wb}^z\vert\rangle-\langle\vert\overline{w}^z\overline{b}^z\vert\rangle\big)$", color='purple', linestyle='-')
-plt.plot(
-    wb_eddy_cum.time,
-    wb_eddy_cum,
-    label=(
-        r"$\rho_0 \,/\, g \,/\, \Delta\rho \,"
-        r"\left( \langle|\overline{wb}^z|\rangle"
-        r" - \langle|\overline{w}^z \, \overline{b}^z|\rangle \right)$"
-    ),
-    color="purple",
-    linestyle="-"
-)
+# plt.plot(
+#     wb_eddy_cum.time,
+#     wb_eddy_cum,
+#     label=(
+#         r"$\rho_0 \,/\, g \,/\, \Delta\rho \,"
+#         r"\left( \langle|\overline{wb}^z|\rangle"
+#         r" - \langle|\overline{w}^z \, \overline{b}^z|\rangle \right)$"
+#     ),
+#     color="purple",
+#     linestyle="-"
+# )
 
 plt.title("Cumulative Integrated MLD Tendency (m)")
 plt.ylabel("Cumulative ΔHml [m]")
@@ -185,7 +190,7 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 # ==============================================================
 # Plot 3 — Reconstructed Hml
 # ==============================================================
-filename = f"{figdir}Hml_reconstructed_wbtotal_abs.png"
+filename = f"{figdir}Hml_reconstructed_wbtotal.png"
 plt.figure(figsize=(12, 6.5))
 
 H0 = Hml_mean.isel(time=0)
@@ -204,8 +209,8 @@ plt.plot(Hml_reconstructed_steric.time, Hml_reconstructed_steric,
 plt.plot(Hml_reconstructed_sub14.time, Hml_reconstructed_sub14, 
          label="Reconstructed SSH submeso 14 km", color='orange', linestyle='-')
 
-plt.plot(Hml_reconstructed_wbeddy.time, Hml_reconstructed_wbeddy, 
-         label="Reconstructed wb eddy", color='purple', linestyle='-')
+# plt.plot(Hml_reconstructed_wbeddy.time, Hml_reconstructed_wbeddy, 
+        #  label="Reconstructed wb eddy", color='purple', linestyle='-')
 
 plt.title("Reconstructed Mixed Layer Depth (m)")
 plt.ylabel("Cumulative ΔHml [m]")

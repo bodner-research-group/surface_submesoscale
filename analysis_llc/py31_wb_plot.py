@@ -163,4 +163,4 @@ os.system(f"ffmpeg -r 5 -pattern_type glob -i '{figdir}/wb_mld_daily_*.png' -vco
 # ani.save(mp4_path, writer="ffmpeg", dpi=150)
 # plt.close()
 
-print(f"Animation saved → {mp4_path}")
+# print(f"Animation saved → {mp4_path}")
