@@ -1,63 +1,53 @@
 """
-Compute Ekman buoyancy flux from LLC4320 hourly surf data.
-Steps:
-1. Compute Ekman buoyancy flux and save as NetCDF
-2. Compute domain-averaged flux (exclude 2 boundary points), save as NetCDF
-3. Plot hourly flux Jan 1–10 2011
+Compute Ekman Buoyancy Flux (B_Ek) from LLC4320 hourly surf data
+Memory-safe: process one day at a time
+Output: 1 NetCDF per day
 """
 
 import os
 import numpy as np
 import xarray as xr
 import gsw
-import matplotlib.pyplot as plt
-from dask.diagnostics import ProgressBar
-from xgcm import Grid
 from dask.distributed import Client, LocalCluster
+from xgcm import Grid
 
-# =====================
-# Setup Dask cluster
-# =====================
+# ==================================================
+# DASK CONFIG
+# ==================================================
 cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 
-# =====================
+# ==================================================
 # Domain settings
-# =====================
+# ==================================================
 from set_constant import domain_name, face, i, j, start_hours, end_hours
-time = slice(start_hours, end_hours, 1)
-# time = slice(start_hours, start_hours+24, 1)
 
-# =====================
-# Load dataset
-# =====================
-ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
-
-# =====================
-# Subset surface fields
-# =====================
-chunk_time = 1 
-salt = ds1.Salt.isel(face=face, i=i, j=j, k=0, time=time).chunk({"time": chunk_time, "j": -1, "i": -1})
-theta = ds1.Theta.isel(face=face, i=i, j=j, k=0, time=time).chunk({"time": chunk_time, "j": -1, "i": -1})
-
-taux = ds1.oceTAUX.isel(face=face, i_g=i, j=j, time=time).chunk({"time": chunk_time, "j": -1, "i_g": -1})
-tauy = ds1.oceTAUY.isel(face=face, i=i, j_g=j, time=time).chunk({"time": chunk_time, "j_g": -1, "i": -1})
-
-lon = ds1.XC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
-lat = ds1.YC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
-
-Coriolis = 4 * np.pi / 86164 * np.sin(lat * np.pi / 180)
+# ==================================================
+# Parameters
+# ==================================================
 rho0 = 1027.5
 gravity = 9.81
 
-# =====================
-# xgcm grid
-# =====================
-ds_grid_face = ds1.isel(face=face, i=i, j=j, i_g=i, j_g=j, k=0, k_p1=0, k_u=0)
+# ==================================================
+# Paths
+# ==================================================
+in_zarr = "/orcd/data/abodner/003/LLC4320/LLC4320"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
+os.makedirs(out_dir, exist_ok=True)
 
-if "time" in ds_grid_face:
-    ds_grid_face = ds_grid_face.isel(time=0, drop=True)
+# ==================================================
+# Load grid (static)
+# ==================================================
+ds = xr.open_zarr(in_zarr, consolidated=False)
+
+lon = ds.XC.isel(face=face, i=i, j=j)
+lat = ds.YC.isel(face=face, i=i, j=j)
+
+Coriolis = 4 * np.pi / 86164 * np.sin(lat * np.pi / 180)
+
+# Setup xgcm grid
+ds_grid = ds.isel(face=face, i=i, j=j, i_g=i, j_g=j, k=0, k_p1=0, k_u=0).isel(time=0, drop=True)
 
 coords = {
     "X": {"center": "i", "left": "i_g"},
@@ -67,134 +57,102 @@ metrics = {
     ("X",): ["dxC", "dxG"],
     ("Y",): ["dyC", "dyG"],
 }
-grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
+grid = Grid(ds_grid, coords=coords, metrics=metrics, periodic=False)
 
-# =====================
-# Compute wind stress (taux_c, tauy_c) 
-# =====================
-print("Interpolating wind stress to C-center (taux_c)...")
-taux_c = grid.interp(taux, axis="X", to="center")
-taux_c = taux_c.compute()  # Ensure taux_c is computed
+# ==================================================
+# Daily loop
+# ==================================================
+hours_per_day = 24
+for hour0 in range(start_hours, end_hours, hours_per_day):
 
-print("Interpolating wind stress to C-center (tauy_c)...")
-tauy_c = grid.interp(tauy, axis="Y", to="center")
-tauy_c = tauy_c.compute()  # Ensure tauy_c is computed
+    hour1 = min(hour0 + hours_per_day, end_hours)
+    print(f"\n===== PROCESSING HOURS {hour0} → {hour1} =====")
 
-# =====================
-# Compute potential density ρ(SA,CT)
-# =====================
-print("Computing SA...")
-SA = xr.apply_ufunc(
-    gsw.SA_from_SP, salt, 0, lon, lat,
-    input_core_dims=[["j","i"], [], ["j","i"], ["j","i"]],
-    output_core_dims=[["j","i"]],
-    vectorize=True, dask="parallelized", output_dtypes=[np.float32],
-)
-SA = SA.compute()  # Ensure SA is computed
+    # --------------------------------------------------
+    # Subset 24 hours
+    # --------------------------------------------------
+    ds_day = ds.isel(face=face, i=i, j=j, time=slice(hour0, hour1))
 
+    salt = ds_day.Salt.isel(k=0).chunk({"time": 24})
+    theta = ds_day.Theta.isel(k=0).chunk({"time": 24})
 
-print("Computing CT...")
-CT = xr.apply_ufunc(
-    gsw.CT_from_pt, SA, theta,
-    input_core_dims=[["j","i"], ["j","i"]],
-    output_core_dims=[["j","i"]],
-    vectorize=True, dask="parallelized", output_dtypes=[np.float32],
-)
-CT = CT.compute()  # Ensure CT is computed
+    taux = ds_day.oceTAUX.isel(j=j, i_g=i).chunk({"time": 24})
+    tauy = ds_day.oceTAUY.isel(i=i, j_g=j).chunk({"time": 24})
 
-print("Computing density (rho)...")
-rho = xr.apply_ufunc(
-    gsw.rho, SA, CT, 0,
-    input_core_dims=[["j","i"], ["j","i"], []],
-    output_core_dims=[["j","i"]],
-    vectorize=True, dask="parallelized", output_dtypes=[np.float32],
-)
-rho = rho.compute()  # Ensure rho is computed
+    # ==================================================
+    # Compute SA, CT, rho
+    # ==================================================
+    SA = xr.apply_ufunc(
+        gsw.SA_from_SP,
+        salt, 0, lon, lat,
+        input_core_dims=[["j","i"], [], ["j","i"], ["j","i"]],
+        output_core_dims=[["j","i"]],
+        dask="parallelized",
+        vectorize=True,
+        output_dtypes=[np.float32],
+    )
 
-# rho = rho.astype(np.float32)
+    CT = xr.apply_ufunc(
+        gsw.CT_from_pt,
+        SA, theta,
+        input_core_dims=[["j","i"], ["j","i"]],
+        output_core_dims=[["j","i"]],
+        dask="parallelized",
+        vectorize=True,
+        output_dtypes=[np.float32],
+    )
 
-# =====================
-# Surface buoyancy
-# =====================
-buoy = -gravity * (rho - rho0) / rho0
+    rho = xr.apply_ufunc(
+        gsw.rho,
+        SA, CT, 0,
+        input_core_dims=[["j","i"], ["j","i"], []],
+        output_core_dims=[["j","i"]],
+        dask="parallelized",
+        vectorize=True,
+        output_dtypes=[np.float32],
+    )
 
-# =====================
-# Compute gradients ∂b/∂x, ∂b/∂y
-# =====================
-def grad_center(var): 
-    dx = grid.derivative(var, axis="X") 
-    dy = grid.derivative(var, axis="Y") 
-    dx = grid.interp(dx, axis="X", to="center") 
-    dy = grid.interp(dy, axis="Y", to="center") 
-    return dx, dy
+    buoy = -gravity * (rho - rho0) / rho0
 
+    # ==================================================
+    # Gradients
+    # ==================================================
+    dbdx = grid.interp(grid.derivative(buoy, axis="X"), axis="X", to="center")
+    dbdy = grid.interp(grid.derivative(buoy, axis="Y"), axis="Y", to="center")
 
-print("Computing gradients of buoyancy...")
-dbdx, dbdy = grad_center(buoy)
+    # ==================================================
+    # Wind stress to C-grid
+    # ==================================================
+    taux_c = grid.interp(taux, axis="X", to="center")
+    tauy_c = grid.interp(tauy, axis="Y", to="center")
 
-dbdx = dbdx.compute()  # Ensure dbdx is computed
-dbdy = dbdy.compute()  # Ensure dbdy is computed
+    # ==================================================
+    # Ekman buoyancy flux
+    # ==================================================
+    B_Ek = (tauy_c * dbdx - taux_c * dbdy) / (rho0 * Coriolis)
+    B_Ek = B_Ek.rename("B_Ek")
+    B_Ek.attrs["units"] = "m^2/s^3"
 
-dbdx = dbdx.chunk({"j": -1, "i": -1})
-dbdy = dbdy.chunk({"j": -1, "i": -1})
+    # ==================================================
+    # Compute + Save
+    # ==================================================
+    print("Computing + writing daily file...")
 
+    # out_nc = f"{out_dir}/B_Ek_day_{hour0//24:03d}.nc"
 
-# =====================
-# Ekman buoyancy flux B_Ek
-# =====================
-B_Ek = (tauy_c * dbdx - taux_c * dbdy) / (rho0 * Coriolis)
-B_Ek = B_Ek.rename("B_Ek")
-B_Ek.attrs["units"] = "m^2/s^3"
-B_Ek.attrs["long_name"] = "Ekman Buoyancy Flux"
-B_Ek = B_Ek.compute()  # Ensure B_Ek is computed
+    # Get datetime of first timestep in this daily chunk
+    t0 = ds_day.time.isel(time=0).load().values
+    date_str = np.datetime_as_string(t0, unit="D")  # returns '2011-01-01'
 
-# =====================
-# Save Full Field as NetCDF
-# =====================
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
-os.makedirs(out_dir, exist_ok=True)
+    # Build filename: B_Ek_20110101.nc
+    out_nc = f"{out_dir}/B_Ek_{date_str.replace('-', '')}.nc"
 
-print("Saving full Ekman buoyancy flux...")
-fout_field = f"{out_dir}/Ekman_buoyancy_flux_hourly_1stday.nc"
-B_Ek.to_netcdf(fout_field)
+    # Compute in Dask, write to disk
+    B_Ek.compute().to_netcdf(out_nc)
 
-# =====================
-# Compute domain-mean B_Ek (exclude 2 boundary points)
-# =====================
-print("Computing domain-averaged Ekman buoyancy flux...")
-Bsub = B_Ek.isel(i=slice(2, -2), j=slice(2, -2))
-Bmean = Bsub.mean(dim=("i", "j")).rename("B_Ek_mean")
+    print(f"Saved: {out_nc}")
 
-fout_mean = f"{out_dir}/Ekman_buoyancy_flux_hourly_domain_mean.nc"
-Bmean.to_netcdf(fout_mean)
-
-# =====================
-# Plot time series Jan 1–10, 2011
-# =====================
-print("Plotting hourly Ekman buoyancy flux Jan 1–10, 2011...")
-
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
-os.makedirs(figdir, exist_ok=True)
-
-# Convert model time to datetime
-t = xr.decode_cf(Bmean).time
-
-# Select time window
-B10 = Bmean.sel(time=slice("2011-01-01", "2011-01-10"))
-
-plt.figure(figsize=(12, 5))
-plt.plot(B10.time, B10, lw=1.3)
-plt.grid(True)
-plt.title(f"Ekman Buoyancy Flux (Domain Mean)\n{domain_name} | Jan 1–10, 2011")
-plt.ylabel("B_Ek (m²/s³)")
-plt.xlabel("Time (UTC)")
-plt.tight_layout()
-
-fig_out = f"{out_dir}/B_Ek_timeseries_Jan1_10_2011.png"
-plt.savefig(fig_out, dpi=150)
-plt.close()
-
-print("DONE.")
+print("ALL DONE.")
 
 
 
@@ -204,92 +162,87 @@ print("DONE.")
 
 
 
-# =====================
-# 1. Plot Timeseries (Domain-averaged EBF)
-# =====================
-print("Plotting domain-averaged Ekman buoyancy flux with weekly rolling mean...")
-
-# Convert model time to datetime for plotting (if it's not already)
-t = xr.decode_cf(Bmean).time
-
-# Plotting the domain-averaged Ekman buoyancy flux
-plt.figure(figsize=(12, 6))
-
-# Plot the domain-mean EBF (original)
-plt.plot(t, Bmean, lw=1.5, label="Domain-averaged EBF", color='blue')
-
-# Calculate a 7-day (weekly) rolling mean of the domain-averaged EBF
-Bmean_rolling = Bmean.rolling(time=7, center=True).mean()
-
-# Plot the weekly rolling mean
-plt.plot(t, Bmean_rolling, lw=2, label="7-day Rolling Mean", color='red')
-
-# Add labels and title
-plt.title(f"Domain Averaged Ekman Buoyancy Flux with 7-Day Rolling Mean\n{domain_name}", fontsize=16)
-plt.xlabel("Time (UTC)", fontsize=14)
-plt.ylabel("B_Ek (m²/s³)", fontsize=14)
-plt.legend(loc="upper right")
-plt.grid(True)
-plt.tight_layout()
-
-# Save the figure
-fig_out = f"{out_dir}/B_Ek_timeseries_with_rolling_mean.png"
-plt.savefig(fig_out, dpi=150)
-plt.close()
-
-print(f"Figure saved to: {fig_out}")
 
 
 
+##### ------------------------------------------------------------
+##### SCRIPT 2 — COMPUTE DOMAIN-MEAN TIMESERIES FROM DAILY FILES
+##### ------------------------------------------------------------
 
 
-import matplotlib.pyplot as plt
+import xarray as xr
 import numpy as np
+import os
 
-# =====================
-# 2. Plot Maps of EBF from Jan 1 to Jan 10
-# =====================
-print("Plotting maps of Ekman buoyancy flux from Jan 1–10, 2011...")
+from set_constant import domain_name
 
-# Select data from Jan 1 to Jan 10, 2011
-B10 = B_Ek.sel(time=slice("2011-01-01", "2011-01-10"))
+in_dir  = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux_daily"
+out_nc  = f"{in_dir}/B_Ek_domain_mean_timeseries.nc"
 
-# Set up figure
-fig, ax = plt.subplots(figsize=(12, 6))
+files = sorted([f for f in os.listdir(in_dir) if f.startswith("B_Ek_day_")])
 
-# Define the number of time steps (hours)
-times = B10.time.values
+means = []
+times = []
 
-# Create a plot for each time step
-for i, time_step in enumerate(times):
-    # Select the Ekman buoyancy flux for the current time step
-    B_current = B10.sel(time=time_step)
-    
-    # Create a contour plot
-    im = ax.contourf(lon, lat, B_current, levels=np.linspace(-np.max(np.abs(B_current)), np.max(np.abs(B_current)), 21),
-                     cmap='RdBu_r', extend='both')
+for f in files:
+    ds = xr.open_dataset(os.path.join(in_dir, f))
+    B = ds.B_Ek
 
-    # Title with the current time
-    ax.set_title(f"Ekman Buoyancy Flux at {np.datetime_as_string(time_step)}", fontsize=14)
-    
-    # Add a colorbar
-    cbar = plt.colorbar(im, ax=ax, orientation="horizontal", pad=0.1)
-    cbar.set_label("Ekman Buoyancy Flux (m²/s³)", fontsize=12)
+    # remove boundary
+    Bsub = B.isel(i=slice(2,-2), j=slice(2,-2))
+    Bmean = Bsub.mean(["i","j"])
 
-    # Set plot limits for latitude and longitude
-    ax.set_xlim([lon.min(), lon.max()])
-    ax.set_ylim([lat.min(), lat.max()])
-    
-    # Add grid
-    ax.grid(True)
+    means.append(Bmean.values)
+    times.append(Bmean.time.values)
 
-    # Save figure for each time step
-    fig_out_map = f"{figdir}/EBF_map_{np.datetime_as_string(time_step)}.png"
-    plt.savefig(fig_out_map, dpi=150)
-    plt.clf()  # Clear the plot to avoid overlap
+Bmean_ts = xr.DataArray(
+    data=np.concatenate(means),
+    coords={"time": np.concatenate(times)},
+    dims="time",
+    name="B_Ek_mean",
+)
+Bmean_ts.attrs["units"] = "m^2/s^3"
+Bmean_ts.to_netcdf(out_nc)
 
-    print(f"Saved map for {np.datetime_as_string(time_step)} to {fig_out_map}")
+print("Saved:", out_nc)
 
-plt.close()
 
-print("DONE.")
+
+
+
+
+
+
+
+
+##### ------------------------------------------------------------
+##### SCRIPT 3 — PLOT FULL TIMESERIES + ROLLING MEAN
+##### ------------------------------------------------------------
+
+import xarray as xr
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from set_constant import domain_name
+
+in_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux_daily"
+ts_file = f"{in_dir}/B_Ek_domain_mean_timeseries.nc"
+
+ds = xr.open_dataset(ts_file)
+B = ds.B_Ek_mean
+
+# 7-day rolling
+roll = B.rolling(time=24*7, center=True).mean()
+
+plt.figure(figsize=(14,5))
+plt.plot(B.time, B, label="Domain mean hourly")
+plt.plot(B.time, roll, label="7-day rolling mean", lw=2)
+plt.legend()
+plt.grid()
+plt.title("Domain-mean Ekman Buoyancy Flux")
+plt.xlabel("Time")
+plt.ylabel("B_Ek (m²/s³)")
+plt.tight_layout()
+
+plt.savefig(f"{in_dir}/B_Ek_timeseries.png", dpi=150)
+print("Saved figure.")
