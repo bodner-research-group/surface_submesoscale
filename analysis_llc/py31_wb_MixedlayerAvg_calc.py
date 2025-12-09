@@ -1,4 +1,5 @@
 ### Compute mixed-layer depth-averaged w, b, wb 
+### Exclude regions where |Hml| <10m
 
 import xarray as xr
 import numpy as np
@@ -15,7 +16,7 @@ from set_constant import domain_name, face, i, j
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
 w_dir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
 
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_unfiltered"
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -183,9 +184,7 @@ for rho_file, Hml_file in zip(rho_files, hml_files):
     w_matched = W_all.isel(time=t_index)
 
     # compute integrals
-    wb_avg, w_avg, b_avg, wb_fact = compute_mld_integrals_one_time(
-        rho, Hml, w_matched
-    )
+    wb_avg, w_avg, b_avg, wb_fact = compute_mld_integrals_one_time(rho, Hml, w_matched)
 
     # save
     ds_out = xr.Dataset({
