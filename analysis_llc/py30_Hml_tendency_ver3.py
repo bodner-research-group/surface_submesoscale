@@ -47,7 +47,7 @@ vert = -Bflux_daily_avg * rho0/g/delta_rho * 86400
 # ==============================================================
 # 4. wb
 # ==============================================================
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily/wb_mld_horizontal_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_16deg/wb_mld_horizontal_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
 wb_eddy = - 10* wb_eddy_mean * rho0/g/delta_rho * 86400 
@@ -86,6 +86,7 @@ tendency_ekman = B_Ek_mean * rho0/g/delta_rho * 86400
 
 diff = dHml_dt - vert - tendency_ekman
 
+residual = dHml_dt - vert - tendency_ekman - wb_eddy
 
 # ==============================================================
 # 7. Cumulative integrals
@@ -97,12 +98,12 @@ def cumulative(ds):
 
 Hml_total_cum = cumulative(dHml_dt)
 
-# #### when vert <= 0 , set vert = 0
+#### when vert <= 0 , set vert = 0
 # vert_clipped = vert.where((vert+tendency_ekman) > 0, 0)
 # vert_cum = vert_clipped.cumsum(dim="time")
 vert_cum = cumulative(vert)
 
-# #### when tendency_ekman <= 0 , set tendency_ekman = 0
+#### when tendency_ekman <= 0 , set tendency_ekman = 0
 # tendency_ekman_clipped = tendency_ekman.where((vert+tendency_ekman) > 0, 0)
 # tendency_ek_cum = tendency_ekman_clipped.cumsum(dim="time")
 tendency_ek_cum = cumulative(tendency_ekman)
@@ -127,7 +128,7 @@ darkpink = '#d1007c'
 # ==============================================================
 # Plot 1 — Hml tendency
 # ==============================================================
-filename = f"{figdir}Hml_tendency_old.png"
+filename = f"{figdir}Hml_tendency.png"
 plt.figure(figsize=(12, 6.5))
 
 plt.plot(dHml_dt.time, dHml_dt, label="dHml/dt (total)", color='k')
@@ -149,6 +150,8 @@ plt.plot(wb_eddy.time, wb_eddy, label=r"$B_{eddy}$", color='purple', linestyle='
 #     color="purple",
 #     linestyle="-"
 # )
+plt.plot(residual.time, residual, label="Residual", color='gray', linestyle='-')
+
 
 plt.title("Mixed Layer Depth Tendency")
 plt.ylabel("Rate of change of MLD [m/day]")
@@ -160,8 +163,122 @@ plt.tight_layout()
 plt.savefig(filename, dpi=200, bbox_inches='tight')
 
 
+
+# ==============================================================
+# Plot 2 — Reconstructed Hml
+# ==============================================================
+filename = f"{figdir}Hml_reconstructed.png"
+plt.figure(figsize=(12, 6.5))
+
+H0 = Hml_mean.isel(time=0)
+
+Hml_reconstructed_steric = H0 + vert_cum + tendency_ek_cum + hori_steric_cum
+Hml_reconstructed_sub14 = H0 + vert_cum + tendency_ek_cum + hori_submeso_cum_14
+
+Hml_reconstructed_wbeddy = H0 + vert_cum + tendency_ek_cum + wb_eddy_cum
+
+Hml_total_recon = H0 + Hml_total_cum
+
+plt.plot(Hml_total_recon.time, Hml_total_recon, label="Total MLD", color='k')
+plt.plot(Hml_reconstructed_steric.time, Hml_reconstructed_steric,
+         label="Reconstructed steric height", color=darkpink)
+
+plt.plot(Hml_reconstructed_sub14.time, Hml_reconstructed_sub14, 
+         label="Reconstructed SSH submeso 14 km", color='orange', linestyle='-')
+
+plt.plot(Hml_reconstructed_wbeddy.time, Hml_reconstructed_wbeddy, 
+         label=r"Reconstructed $B_{eddy}$", color='purple', linestyle='-')
+
+plt.title("Reconstructed Mixed Layer Depth (m)")
+plt.ylabel("Hml [m]")
+plt.xlabel("Time")
+plt.grid(True, linestyle='--', alpha=0.5)
+
+plt.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=12)
+plt.tight_layout()
+plt.savefig(filename, dpi=200, bbox_inches='tight')
+
+
+
+
+
+
+
+# ==============================================================
+# 7-day rolling mean — Hml tendency
+# ==============================================================
+
+# 7-day rolling mean
+window = 7
+
+dHml_dt_rm = dHml_dt.rolling(time=window, center=True).mean()
+vert_rm = vert.rolling(time=window, center=True).mean()
+tendency_ekman_rm = tendency_ekman.rolling(time=window, center=True).mean()
+diff_rm = diff.rolling(time=window, center=True).mean()
+hori_steric_rm = hori_steric.rolling(time=window, center=True).mean()
+hori_submeso_14_rm = hori_submeso_14.rolling(time=window, center=True).mean()
+wb_eddy_rm = wb_eddy.rolling(time=window, center=True).mean()
+residual_rm = residual.rolling(time=window, center=True).mean()
+
+
+# ==============================================================
+# Plot — 7-day rolling mean tendency
+# ==============================================================
+
+filename = f"{figdir}Hml_tendency_7day_rolling.png"
+plt.figure(figsize=(12, 6.5))
+
+plt.plot(dHml_dt_rm.time, dHml_dt_rm,
+         label="dHml/dt (total)", color='k')
+
+plt.plot(vert_rm.time, vert_rm,
+         label="Surface buoyancy flux", color='tab:blue')
+
+plt.plot(tendency_ekman_rm.time, tendency_ekman_rm,
+         label="Ekman buoyancy flux", color='cyan')
+
+plt.plot(diff_rm.time, diff_rm,
+         label="dHml/dt - surf - Ekman", linestyle='--', color='tab:green')
+
+plt.plot(hori_steric_rm.time, hori_steric_rm,
+         label="steric", color=darkpink)
+
+plt.plot(hori_submeso_14_rm.time, hori_submeso_14_rm,
+         label="SSH submeso 14 km", color='orange')
+
+plt.plot(wb_eddy_rm.time, wb_eddy_rm,
+         label=r"$B_{eddy}$", color='purple')
+
+# Residual — thicker line, lighter gray
+plt.plot(residual_rm.time, residual_rm,
+         label="Residual",
+         color='lightgray',
+         linewidth=2)
+
+
+plt.title("Mixed Layer Depth Tendency (7-day rolling mean)")
+plt.ylabel("Rate of change of MLD [m/day]")
+plt.xlabel("Time")
+plt.grid(True, linestyle='--', alpha=0.5)
+
+plt.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=12)
+plt.tight_layout()
+plt.savefig(filename, dpi=200, bbox_inches='tight')
+
+
+
+
+
+
+
+
+
+
+
+
+
 # # ==============================================================
-# # Plot 2 — Cumulative integrals
+# # Plot 3 — Cumulative integrals
 # # ==============================================================
 # filename = f"{figdir}Hml_cumulative_wbtotal.png"
 # plt.figure(figsize=(12, 6.5))
@@ -194,38 +311,3 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 # plt.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=12)
 # plt.tight_layout()
 # plt.savefig(filename, dpi=200, bbox_inches='tight')
-
-
-# ==============================================================
-# Plot 3 — Reconstructed Hml
-# ==============================================================
-filename = f"{figdir}Hml_reconstructed_old.png"
-plt.figure(figsize=(12, 6.5))
-
-H0 = Hml_mean.isel(time=0)
-
-Hml_reconstructed_steric = H0 + vert_cum + tendency_ek_cum + hori_steric_cum
-Hml_reconstructed_sub14 = H0 + vert_cum + tendency_ek_cum + hori_submeso_cum_14
-
-Hml_reconstructed_wbeddy = H0 + vert_cum + tendency_ek_cum + wb_eddy_cum
-
-Hml_total_recon = H0 + Hml_total_cum
-
-plt.plot(Hml_total_recon.time, Hml_total_recon, label="Total MLD", color='k')
-plt.plot(Hml_reconstructed_steric.time, Hml_reconstructed_steric,
-         label="Reconstructed steric height", color=darkpink)
-
-plt.plot(Hml_reconstructed_sub14.time, Hml_reconstructed_sub14, 
-         label="Reconstructed SSH submeso 14 km", color='orange', linestyle='-')
-
-plt.plot(Hml_reconstructed_wbeddy.time, Hml_reconstructed_wbeddy, 
-         label=r"Reconstructed $B_{eddy}$", color='purple', linestyle='-')
-
-plt.title("Reconstructed Mixed Layer Depth (m)")
-plt.ylabel("Hml [m]")
-plt.xlabel("Time")
-plt.grid(True, linestyle='--', alpha=0.5)
-
-plt.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=12)
-plt.tight_layout()
-plt.savefig(filename, dpi=200, bbox_inches='tight')

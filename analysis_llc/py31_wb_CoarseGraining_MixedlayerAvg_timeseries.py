@@ -9,11 +9,13 @@ from glob import glob
 # ============================================================
 from set_constant import domain_name, face, i, j
 
-data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily"
+data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_16deg"
 boundary = 2
 
 ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries.nc")
-figfile = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily/wb_mld_horizontal_timeseries.png"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_16deg"
+os.makedirs(figdir, exist_ok=True)
+figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries.png")
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
