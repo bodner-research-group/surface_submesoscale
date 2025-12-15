@@ -9,8 +9,13 @@ from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
+start_hours = start_hours - 12
+end_hours = end_hours + 12 + 24*6
+
+
 # ========== Paths ==========
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
+# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TS_24h_avg_for_time_derivative"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Open dataset ==========
@@ -60,15 +65,21 @@ def compute_and_save_weekly(var_name, label):
 # ========== Main ==========
 if __name__ == "__main__":
     # ========== Dask cluster setup ==========
-    cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
+    cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
     client = Client(cluster)
     print("Dask dashboard:", client.dashboard_link)
 
+    # variable_map = {
+    #     "Theta": "tt",
+    #     "Salt": "ss",
+    #     "W": "ww"
+    # }
+
     variable_map = {
         "Theta": "tt",
-        "Salt": "ss",
-        "W": "ww"
+        "Salt": "ss"
     }
+
 
     for var_name, label in variable_map.items():
         compute_and_save_weekly(var_name, label)
