@@ -14,15 +14,107 @@ output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data
 fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/LHS_integrated_buoyancy_tendency"
 os.makedirs(fig_dir, exist_ok=True)
 
+
+ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
+lat = ds1['YC'].isel(face=face, i=i, j=j)
+lon = ds1['XC'].isel(face=face, i=i, j=j)
+
 # ========================================
 # Load all LHS files
 # ========================================
 lhs_files = sorted(glob(os.path.join(output_dir, "LHS_*.nc")))
 date_tags = [os.path.basename(f).split("_")[1].replace(".nc","") for f in lhs_files]
 
-# # Only first 30 days
-# lhs_files_30 = lhs_files[:30]
-# date_tags_30 = date_tags[:30]
+# Only first 30 days
+lhs_files_30 = lhs_files[:180]
+date_tags_30 = date_tags[:180]
+
+# ========================================
+# Pass 1: compute global color limits
+# ========================================
+vmin = np.inf
+vmax = -np.inf
+
+for f in lhs_files_30:
+    ds = xr.open_dataset(f)
+
+    for var in ["LHS_true", "LHS_bs"]:
+        data = ds[var]
+        vmin = min(vmin, float(data.min()))
+        vmax = max(vmax, float(data.max()))
+
+    ds.close()
+
+vabs = max(abs(vmin), abs(vmax))
+vmin, vmax = -vabs/10, vabs/10
+
+print(f"Global colorbar limits: vmin={vmin:.3e}, vmax={vmax:.3e}")
+
+
+# ========================================
+# Pass 2: plotting
+# ========================================
+for f, tag in zip(lhs_files_30, date_tags_30):
+    ds = xr.open_dataset(f)
+
+    LHS_true = ds["LHS_true"]
+    LHS_bs   = ds["LHS_bs"]
+
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6), constrained_layout=True)
+
+    # ---- Panel 1: LHS_true ----
+    im0 = axs[0].pcolormesh(
+        lon,
+        lat,
+        LHS_true,
+        cmap="RdBu_r",
+        vmin=vmin,
+        vmax=vmax,
+        shading="auto"
+    )
+    axs[0].set_title(f"LHS_true {tag}")
+    axs[0].set_xlabel("Longitude")
+    axs[0].set_ylabel("Latitude")
+
+    # ---- Panel 2: LHS_bs ----
+    im1 = axs[1].pcolormesh(
+        lon,
+        lat,
+        LHS_bs,
+        cmap="RdBu_r",
+        vmin=vmin,
+        vmax=vmax,
+        shading="auto"
+    )
+    axs[1].set_title(f"LHS_bs {tag}")
+    axs[1].set_xlabel("Longitude")
+
+    # ---- Shared colorbar ----
+    cbar = fig.colorbar(
+        im0,
+        ax=axs,
+        orientation="vertical",
+        fraction=0.046,
+        pad=0.04
+    )
+    cbar.set_label("Integrated buoyancy tendency")
+
+    # ---- Save ----
+    fig_file = os.path.join(fig_dir, f"LHS_maps_{tag}.png")
+    plt.savefig(fig_file, dpi=150)
+    plt.close(fig)
+
+    ds.close()
+    print(f"Saved map figure → {fig_file}")
+
+
+##### Convert images to video
+import os
+output_movie = f"{fig_dir}/LHS_true_bs.mp4"
+os.system(f"ffmpeg -r 15 -pattern_type glob -i '{fig_dir}/LHS_maps_*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+
+print(f"Movie saved → {output_movie}")
+
 
 # # ========================================
 # # Plot 2-panel map figure for first 30 days
@@ -87,7 +179,7 @@ print(f"Saved timeseries → {ts_file}")
 # ========================================
 plt.figure(figsize=(12,5))
 plt.plot(dates, LHS_true_avg, label="LHS_true")
-# plt.plot(dates, LHS_bs_avg, label="LHS_bs")
+plt.plot(dates, LHS_bs_avg, label="LHS_bs")
 plt.xlabel("Date")
 plt.ylabel("Domain-averaged LHS [m^2/s^3]")
 plt.title("Domain-averaged Mixed-layer Integrated Buoyancy Tendency")
