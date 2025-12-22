@@ -67,8 +67,8 @@ grid = Grid(ds_grid, coords=coords, metrics=metrics, periodic=False)
 # Daily loop
 # ==================================================
 hours_per_day = 24
-# for hour0 in range(start_hours, end_hours, hours_per_day):
-for hour0 in range(end_hours - hours_per_day, start_hours - hours_per_day, -hours_per_day):
+for hour0 in range(start_hours, end_hours, hours_per_day):
+# for hour0 in range(end_hours - hours_per_day, start_hours - hours_per_day, -hours_per_day):
 
     # -------------------------
     # Get datetime of first timestep in this daily chunk and build filename
@@ -249,7 +249,8 @@ plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 in_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
 ts_file = f"{in_dir}/B_Ek_domain_mean_timeseries.nc"
 
-firdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+os.makedirs(figdir, exist_ok=True)
 
 ds = xr.open_dataset(ts_file)
 B = ds.B_Ek_mean
@@ -267,7 +268,7 @@ plt.xlabel("Time")
 plt.ylabel("B_Ek (m²/s³)")
 plt.tight_layout()
 
-plt.savefig(f"{firdir}/B_Ek_timeseries.png", dpi=150)
+plt.savefig(f"{figdir}/B_Ek_timeseries.png", dpi=150)
 print("Saved figure.")
 
 

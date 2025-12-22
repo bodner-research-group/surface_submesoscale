@@ -8,14 +8,19 @@ from glob import glob
 # USER PARAMETERS
 # ============================================================
 from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
-data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_16deg"
+data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
 boundary = 2
 
-ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries.nc")
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_16deg"
+ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries_1_12deg.nc")
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_12deg"
 os.makedirs(figdir, exist_ok=True)
-figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries.png")
+figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries_1_12deg.png")
 
 # Global font size setting for figures
 plt.rcParams.update({'font.size': 16})
@@ -99,7 +104,7 @@ ax.plot(ts.time, ts.wb_mean_mean,
         label=r"$\langle\overline{\overline{w}^{xy}}^z\overline{\overline{b}^{xy}}^z\rangle$")
 
 ax.plot(ts.time, ts.wb_eddy_mean,
-        label=r"$\langle\overline{\overline{wb}^{xy}}^z-\overline{\overline{w}^{xy}}^z\overline{\overline{b}^{xy}}^z\rangle$")
+        label=r"$\langle\overline{\overline{wb}^{xy}}^z-\overline{\overline{w}^{xy}\overline{b}^{xy}}^z\rangle$")
 
 ax.axhline(0, color='k', lw=0.7)
 

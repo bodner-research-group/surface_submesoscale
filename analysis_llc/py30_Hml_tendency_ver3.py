@@ -8,6 +8,12 @@ plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 
 # ========== Domain ==========
 from set_constant import domain_name, face, i, j
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
 
 ##### Load LLC dataset
 ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
@@ -47,10 +53,10 @@ vert = -Bflux_daily_avg * rho0/g/delta_rho * 86400
 # ==============================================================
 # 4. wb
 # ==============================================================
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_16deg/wb_mld_horizontal_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg/wb_mld_horizontal_timeseries_1_4deg.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
-wb_eddy = - 10* wb_eddy_mean * rho0/g/delta_rho * 86400 
+wb_eddy = - 5* wb_eddy_mean * rho0/g/delta_rho * 86400 
 
 
 # ==============================================================
@@ -99,14 +105,16 @@ def cumulative(ds):
 Hml_total_cum = cumulative(dHml_dt)
 
 #### when vert <= 0 , set vert = 0
-# vert_clipped = vert.where((vert+tendency_ekman) > 0, 0)
-# vert_cum = vert_clipped.cumsum(dim="time")
-vert_cum = cumulative(vert)
+vert_clipped = vert.where((vert+tendency_ekman) > 0, 0)
+vert_cum = vert_clipped.cumsum(dim="time")
+
+# vert_cum = cumulative(vert)
 
 #### when tendency_ekman <= 0 , set tendency_ekman = 0
-# tendency_ekman_clipped = tendency_ekman.where((vert+tendency_ekman) > 0, 0)
-# tendency_ek_cum = tendency_ekman_clipped.cumsum(dim="time")
-tendency_ek_cum = cumulative(tendency_ekman)
+tendency_ekman_clipped = tendency_ekman.where((vert+tendency_ekman) > 0, 0)
+tendency_ek_cum = tendency_ekman_clipped.cumsum(dim="time")
+
+# tendency_ek_cum = cumulative(tendency_ekman)
 
 diff_cum = cumulative(diff)
 

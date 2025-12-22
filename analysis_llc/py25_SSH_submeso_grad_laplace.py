@@ -12,13 +12,13 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from xgcm import Grid
 
-# from set_constant import domain_name, face, i, j
+from set_constant import domain_name, face, i, j
 
-# ========== Domain ==========
-domain_name = "icelandic_basin"
-face = 2
-i = slice(527, 1007)   # icelandic_basin -- larger domain
-j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# # ========== Domain ==========
+# domain_name = "icelandic_basin"
+# face = 2
+# i = slice(527, 1007)   # icelandic_basin -- larger domain
+# j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # # =====================
 # # Setup Dask cluster
