@@ -94,6 +94,10 @@ def process_column(salt_col, theta_col, depth_col, drF_col, lon, lat):
 input_files = sorted(glob(os.path.join(input_dir, "rho_Hml_TS_daily_*.nc")))
 
 for input_file in tqdm(input_files, desc="Processing time steps"):
+# for i in tqdm(range(len(input_files) - 1, -1, -1), desc="Processing time steps"):
+#     input_file = input_files[i]
+
+
     # input_file = os.path.join(input_dir, "rho_Hml_TS_7d_20120421.nc")
     date_tag = os.path.basename(input_file).split("_")[-1].replace(".nc", "")
     output_file = os.path.join(output_dir, f"rho_insitu_pres_hydro_{date_tag}.nc")

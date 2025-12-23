@@ -7,12 +7,12 @@ from glob import glob
 # ============================================================
 # USER PARAMETERS
 # ============================================================
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
 boundary = 2
