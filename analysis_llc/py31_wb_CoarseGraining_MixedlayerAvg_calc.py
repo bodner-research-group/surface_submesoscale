@@ -21,7 +21,7 @@ j = slice(2960, 3441)  # icelandic_basin -- larger domain
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
 w_dir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
 
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -221,7 +221,7 @@ print(f"W_all loaded: shape={W_all.shape}, ntimes={len(W_times)}")
 # ============================================================
 #                      COARSE-GRAINING FUNCTION
 # ============================================================
-def coarse_grain(data, window_size=12):
+def coarse_grain(data, window_size=4):
     """
     Coarse-grains the input data by averaging over a window of size (window_size, window_size) in the horizontal plane.
     
@@ -301,6 +301,11 @@ for date_tag in sorted(rho_dict.keys()):
 
     ds_out.to_netcdf(out_file)
     print(f"Saved → {out_file}")
+
+    del rho, Hml, ds_out
+    import gc
+    gc.collect()
+
 
 client.close()
 cluster.close()

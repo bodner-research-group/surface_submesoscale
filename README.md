@@ -16,10 +16,8 @@
 - **py03_Hml_daily.py**  
   Compute surface (0.5-m) referenced mixed layer depth.
 
-
 - **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
   Compute total, mean, and eddy vertical buoyancy fluxes. Compute their domain averages, and plot the time series.
-
 
 - **py23_rho_insitu_hydrostatic_pressure.py**  
   Compute in-situ density and estimate hydrostatic pressure.
@@ -27,8 +25,8 @@
 - **py24_steric_height_Wang25_timeseries.py**  
   Compute and save the domain-averaged time series of steric height anomaly following Jinbo Wang et al. (2025).
 
-- **py32_Ekman_buoyancy_flux_hourly.py**  
-  Compute Ekman buoyancy flux using hourly model output.
+- **py28_Ekman_buoyancy_flux_hourly.py, py28_Ekman_buoyancy_flux_daily.py**  
+  Compute Ekman buoyancy flux using hourly or daily model output.
 
 - **py25_SSH_submesoscale_GaussianFilter.py**  
   Compute submesoscale sea surface height (SSH) gradient by applying a Gaussian filter to SSH.
