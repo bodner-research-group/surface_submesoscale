@@ -7,8 +7,13 @@ import os
 from glob import glob
 from dask.distributed import Client, LocalCluster
 
-from set_constant import domain_name, face, i, j
+# from set_constant import domain_name, face, i, j
 
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ============================================================
 #                      DIRECTORIES
@@ -148,7 +153,41 @@ def compute_mld_integrals_one_time(rho, Hml, w_kp1):
     # Eddy buoyancy flux
     B_eddy = wb_avg - wb_fact
 
-    return wb_avg, wb_fact, B_eddy, w_avg, b_avg, Hml_cg
+    # --------------------------------------------------------
+    # Eddy flux at surface (k = 0)
+    # --------------------------------------------------------
+    wb_eddy_surf = (
+        wb_cg.isel(k=0)
+        - w_cg.isel(k=0) * b_cg.isel(k=0)
+    )
+
+    # --------------------------------------------------------
+    # Eddy flux at local mixed-layer base (Dask-safe)
+    # --------------------------------------------------------
+    z3d, H3d = xr.broadcast(depth, Hml_cg)
+    ml_mask = z3d >= -H3d
+
+    # mask values outside mixed layer
+    wb_masked = wb_cg.where(ml_mask)
+    w_masked  = w_cg.where(ml_mask)
+    b_masked  = b_cg.where(ml_mask)
+
+    # take deepest valid k
+    wb_mlb = wb_masked.isel(k=slice(None, None, -1)).max("k")
+    w_mlb  = w_masked.isel(k=slice(None, None, -1)).max("k")
+    b_mlb  = b_masked.isel(k=slice(None, None, -1)).max("k")
+    
+    wb_eddy_mlb = wb_mlb - w_mlb * b_mlb
+
+    return (
+        wb_avg, wb_fact, B_eddy,
+        w_avg, b_avg,
+        wb_eddy_surf,
+        wb_eddy_mlb,
+        Hml_cg
+    )
+
+    # return wb_avg, wb_fact, B_eddy, w_avg, b_avg, Hml_cg
 
 
 
@@ -237,17 +276,27 @@ for date_tag in sorted(rho_dict.keys()):
 
     w_matched = W_all.isel(time=t_index)
 
-    # compute MLD quantities after coarse-graining
-    wb_avg, wb_fact, B_eddy, w_avg, b_avg, Hml_cg = compute_mld_integrals_one_time(rho, Hml, w_matched)
+    # compute MLD quantities after coarse-graining    
+    (
+        wb_avg, wb_fact, B_eddy,
+        w_avg, b_avg,
+        wb_eddy_surf,
+        wb_eddy_mlb,
+        Hml_cg
+    ) = compute_mld_integrals_one_time(rho, Hml, w_matched)
 
-    # save results
+    # wb_avg, wb_fact, B_eddy, w_avg, b_avg, Hml_cg = compute_mld_integrals_one_time(rho, Hml, w_matched)
+
+
     ds_out = xr.Dataset({
-        "wb_avg":  wb_avg,
-        "wb_fact": wb_fact,
-        "B_eddy":  B_eddy,
-        "w_avg":   w_avg,
-        "b_avg":   b_avg,
-        "Hml_cg":  Hml_cg
+        "wb_avg":         wb_avg,
+        "wb_fact":        wb_fact,
+        "B_eddy":         B_eddy,
+        "w_avg":          w_avg,
+        "b_avg":          b_avg,
+        "wb_eddy_surf":   wb_eddy_surf,
+        "wb_eddy_mlb":    wb_eddy_mlb,
+        "Hml_cg":         Hml_cg,
     })
 
     ds_out.to_netcdf(out_file)
