@@ -275,108 +275,104 @@ print("Saved figure.")
 
 
 
+# ##### ------------------------------------------------------------
+# ##### SCRIPT 4 — Plot Maps of EBF from Jan 1 to Jan 10 (From NC Files)
+# ##### ------------------------------------------------------------
+
+# import xarray as xr
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import glob
+# import os
+# from datetime import datetime, timedelta
+# from set_constant import domain_name, face, i, j, start_hours, end_hours
+
+# print("Plotting maps of Ekman buoyancy flux from Sept 1–10, 2012...")
+
+# # Coordinate
+# ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
+# lon = ds1.XC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
+# lat = ds1.YC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
+
+# # Directories
+# out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+# os.makedirs(figdir, exist_ok=True)
+
+# # Get files
+# nc_files = sorted(glob.glob(f"{out_dir}/B_Ek_201209*.nc"))
+
+# # keep only Jan 1–10
+# nc_files = [f for f in nc_files if "2012090" in f or "20120910" in f]  # safe filtering
+
+# if len(nc_files) == 0:
+#     raise RuntimeError("No .nc files found for Jan 1–10, 2012!")
+
+
+# # =====================================================
+# # Open and add correct time coordinates
+# # =====================================================
+# all_days = []
+# for fpath in nc_files:
+#     fname = os.path.basename(fpath)
+#     date_str = fname.split("_")[2].split(".")[0]  # '20120101'
+#     day0 = datetime.strptime(date_str, "%Y%m%d")
+
+#     ds = xr.open_dataset(fpath)
+#     # Create hourly time coordinate
+#     times = [day0 + timedelta(hours=h) for h in range(ds.dims["time"])]
+#     ds = ds.assign_coords(time=("time", times))
+
+#     all_days.append(ds)
+
+# # Concatenate along time
+# ds_all = xr.concat(all_days, dim="time")
+
+# # Extract B_Ek
+# B_Ek = ds_all["B_Ek"]
+
+# vmax = np.nanmax(np.abs(B_Ek))  # maximum absolute value across all data
+# vmin = -vmax                     # symmetric around zero
+
+# # =====================================================
+# # Plot maps for each hour
+# # =====================================================
+# for t in B_Ek.time.values:
+#     B_now = B_Ek.sel(time=t)
+
+#     t_str = np.datetime_as_string(t, unit='h')
+
+#     fig, ax = plt.subplots(figsize=(8, 10))
+
+#     max_Bnow = np.nanmax(np.abs(B_now))
+#     if max_Bnow == 0 or np.isnan(max_Bnow):
+#         print(f"Skipping time {t_str} because data is all zeros or NaN")
+#         continue
+
+#     im = ax.pcolormesh(lon, lat, B_now,
+#                     cmap="RdBu_r", shading="auto",
+#                     vmin=vmin/20, vmax=vmax/20)
+
+#     ax.set_title(f"Ekman Buoyancy Flux at {t_str}", fontsize=14)
+#     ax.set_xlabel("Longitude")
+#     ax.set_ylabel("Latitude")
+#     fig.colorbar(im, ax=ax, orientation="horizontal", pad=0.1, label="B_Ek (m²/s³)")
+#     plt.savefig(f"{figdir}/EBF_map_{t_str}.png", dpi=150)
+#     plt.close()
+
+# print("DONE.")
 
 
 
 
-##### ------------------------------------------------------------
-##### SCRIPT 4 — Plot Maps of EBF from Jan 1 to Jan 10 (From NC Files)
-##### ------------------------------------------------------------
+# # ============================================================
+# # Create animation
+# # ============================================================
+# print("Creating animation...")
 
-import xarray as xr
-import numpy as np
-import matplotlib.pyplot as plt
-import glob
-import os
-from datetime import datetime, timedelta
-from set_constant import domain_name, face, i, j, start_hours, end_hours
-
-print("Plotting maps of Ekman buoyancy flux from Sept 1–10, 2012...")
-
-# Coordinate
-ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
-lon = ds1.XC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
-lat = ds1.YC.isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
-
-# Directories
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux"
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
-os.makedirs(figdir, exist_ok=True)
-
-# Get files
-nc_files = sorted(glob.glob(f"{out_dir}/B_Ek_201209*.nc"))
-
-# keep only Jan 1–10
-nc_files = [f for f in nc_files if "2012090" in f or "20120910" in f]  # safe filtering
-
-if len(nc_files) == 0:
-    raise RuntimeError("No .nc files found for Jan 1–10, 2012!")
-
-
-# =====================================================
-# Open and add correct time coordinates
-# =====================================================
-all_days = []
-for fpath in nc_files:
-    fname = os.path.basename(fpath)
-    date_str = fname.split("_")[2].split(".")[0]  # '20120101'
-    day0 = datetime.strptime(date_str, "%Y%m%d")
-
-    ds = xr.open_dataset(fpath)
-    # Create hourly time coordinate
-    times = [day0 + timedelta(hours=h) for h in range(ds.dims["time"])]
-    ds = ds.assign_coords(time=("time", times))
-
-    all_days.append(ds)
-
-# Concatenate along time
-ds_all = xr.concat(all_days, dim="time")
-
-# Extract B_Ek
-B_Ek = ds_all["B_Ek"]
-
-vmax = np.nanmax(np.abs(B_Ek))  # maximum absolute value across all data
-vmin = -vmax                     # symmetric around zero
-
-# =====================================================
-# Plot maps for each hour
-# =====================================================
-for t in B_Ek.time.values:
-    B_now = B_Ek.sel(time=t)
-
-    t_str = np.datetime_as_string(t, unit='h')
-
-    fig, ax = plt.subplots(figsize=(8, 10))
-
-    max_Bnow = np.nanmax(np.abs(B_now))
-    if max_Bnow == 0 or np.isnan(max_Bnow):
-        print(f"Skipping time {t_str} because data is all zeros or NaN")
-        continue
-
-    im = ax.pcolormesh(lon, lat, B_now,
-                    cmap="RdBu_r", shading="auto",
-                    vmin=vmin/20, vmax=vmax/20)
-
-    ax.set_title(f"Ekman Buoyancy Flux at {t_str}", fontsize=14)
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
-    fig.colorbar(im, ax=ax, orientation="horizontal", pad=0.1, label="B_Ek (m²/s³)")
-    plt.savefig(f"{figdir}/EBF_map_{t_str}.png", dpi=150)
-    plt.close()
-
-print("DONE.")
-
-
-
-
-# ============================================================
-# Create animation
-# ============================================================
-print("Creating animation...")
-
-##### Convert images to video
-import os
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
-output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux/movie-Ekman_buoyancy_flux.mp4"
-os.system(f"ffmpeg -r 15 -pattern_type glob -i '{figdir}/EBF_map_20*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
+# ##### Convert images to video
+# import os
+# figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux"
+# output_movie = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Ekman_buoyancy_flux/movie-Ekman_buoyancy_flux.mp4"
+# os.system(f"ffmpeg -r 15 -pattern_type glob -i '{figdir}/EBF_map_20*.png' -vcodec mpeg4 -q:v 1 -pix_fmt yuv420p {output_movie}")
 

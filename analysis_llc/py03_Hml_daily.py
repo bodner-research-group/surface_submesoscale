@@ -5,12 +5,6 @@ from glob import glob
 import gc
 
 from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "Kerguelen_Plateau"  
-# face = 4
-# i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
-# j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
-
 
 # ---------- HML computation function ----------
 def compute_Hml(rho_profile, depth_profile, threshold=0.03):

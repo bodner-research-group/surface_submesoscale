@@ -9,13 +9,13 @@ from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j, start_hours, end_hours, step_hours
 
-start_hours = start_hours - 12
-end_hours = end_hours + 12 + 24*6
+# start_hours = start_hours - 12
+# end_hours = end_hours + 12 + 24*6
 
 
 # ========== Paths ==========
-# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TS_24h_avg_for_time_derivative"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
+# output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TS_24h_avg_for_time_derivative"
 os.makedirs(output_dir, exist_ok=True)
 
 # ========== Open dataset ==========
@@ -23,7 +23,7 @@ ds1 = xr.open_zarr("/orcd/data/abodner/003/LLC4320/LLC4320", consolidated=False)
 
 # ========== Chunking ==========
 # chunk_dict = {'time': 24, 'i': 120, 'j': 120}
-chunk_dict = {'time': 24}
+chunk_dict = {'time': 24, 'i': -1, 'j': -1}
 
 
 # ========== Function to process and save ==========
@@ -69,15 +69,10 @@ if __name__ == "__main__":
     client = Client(cluster)
     print("Dask dashboard:", client.dashboard_link)
 
-    # variable_map = {
-    #     "Theta": "tt",
-    #     "Salt": "ss",
-    #     "W": "ww"
-    # }
-
     variable_map = {
         "Theta": "tt",
-        "Salt": "ss"
+        "Salt": "ss",
+        "W": "ww"
     }
 
 

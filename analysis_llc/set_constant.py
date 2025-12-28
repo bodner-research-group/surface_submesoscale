@@ -1,10 +1,32 @@
 ###### Set constants for all python scripts
 
+
+# ========== Time settings ==========
+nday_avg = 28
+delta_days = 7
+start_hours = (49 + 91) * 24
+end_hours = start_hours + 24 * nday_avg
+step_hours = delta_days * 24
+
 # ========== Domain ==========
-domain_name = "Kerguelen_Plateau"  
-face = 4
-i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
-j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
+domain_name = "test_small"
+face = 2
+i=slice(700,700+100,1)   
+j=slice(3100,3100+100,1) 
+
+
+# # ========== Time settings ==========
+# nday_avg = 364
+# delta_days = 7
+# start_hours = 49 * 24
+# end_hours = start_hours + 24 * nday_avg
+# step_hours = delta_days * 24
+
+# # ========== Domain ==========
+# domain_name = "Kerguelen_Plateau"  
+# face = 4
+# i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
+# j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
 
 # # ========== Domain ==========
 # domain_name = "icelandic_basin"
@@ -55,14 +77,6 @@ j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
 
 # i=slice(450,760,1)
 # j=slice(450,761,1)
-
-
-# ========== Time settings ==========
-nday_avg = 364
-delta_days = 7
-start_hours = 49 * 24
-end_hours = start_hours + 24 * nday_avg
-step_hours = delta_days * 24
 
 
 

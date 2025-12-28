@@ -9,12 +9,6 @@ from dask.distributed import Client, LocalCluster
 
 from set_constant import domain_name, face, i, j
 
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
-
 
 # ============================================================
 #                      DIRECTORIES
@@ -22,7 +16,7 @@ from set_constant import domain_name, face, i, j
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
 w_dir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
 
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg"
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -86,7 +80,7 @@ def ml_integrated_profile(var_profile, Hml_value, depth_profile, dz_profile, min
 # ============================================================
 #    XARRAY WRAPPER USING apply_ufunc FOR (k,j,i) ARRAYS
 # ============================================================
-def ml_integral(var, Hml, depth, dz, min_H=0):
+def ml_integral(var, Hml, depth, dz, min_H=10.0):
     """
     Compute MLD depth-average of var(k,j,i).
     """
@@ -139,9 +133,9 @@ def compute_mld_integrals_one_time(rho, Hml, w_kp1):
     # ------------------------------------------------------------------
     # Vertical MLD averages
     # ------------------------------------------------------------------
-    wb_avg = ml_integral(wb_cg, Hml_cg, depth, dz_cg)
-    b_avg  = ml_integral(b_cg,  Hml_cg, depth, dz_cg)
-    w_avg  = ml_integral(w_cg,  Hml_cg, depth, dz_cg)
+    wb_avg = ml_integral(wb_cg, Hml_cg, depth, dz_cg, min_H=10.0)
+    b_avg  = ml_integral(b_cg,  Hml_cg, depth, dz_cg, min_H=10.0)
+    w_avg  = ml_integral(w_cg,  Hml_cg, depth, dz_cg, min_H=10.0)
 
     # separated product
 
@@ -149,7 +143,7 @@ def compute_mld_integrals_one_time(rho, Hml, w_kp1):
     # wb_fact = w_avg * b_avg
 
     ####### version2 -- correct: \overline{w'b'}^{xyz} = \overline{wb}^{xyz} - \overline{ \overline{w}^{xy} * \overline{b}^{xy} }^z
-    wb_fact = ml_integral(w_cg*b_cg,  Hml_cg, depth, dz_cg)
+    wb_fact = ml_integral(w_cg*b_cg,  Hml_cg, depth, dz_cg, min_H=10.0)
 
     # Eddy buoyancy flux
     B_eddy = wb_avg - wb_fact
@@ -188,7 +182,7 @@ print(f"W_all loaded: shape={W_all.shape}, ntimes={len(W_times)}")
 # ============================================================
 #                      COARSE-GRAINING FUNCTION
 # ============================================================
-def coarse_grain(data, window_size=4):
+def coarse_grain(data, window_size=12):
     """
     Coarse-grains the input data by averaging over a window of size (window_size, window_size) in the horizontal plane.
     

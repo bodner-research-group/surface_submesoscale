@@ -11,6 +11,7 @@ from dask.distributed import Client, LocalCluster
 from set_constant import domain_name, face, i, j
 
 
+
 # ========== Hml computation function ==========
 def compute_Hml(rho_profile, depth_profile, threshold=0.03):
     rho_10m = rho_profile[6]  # density at ~10m depth
@@ -21,7 +22,7 @@ def compute_Hml(rho_profile, depth_profile, threshold=0.03):
 
 # def main():
 # ========== Dask cluster setup ==========
-cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
+cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 

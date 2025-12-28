@@ -4,6 +4,23 @@
 
 ## analysis_llc
 
+- **set_constant.py**  
+  Set domain name, horizontal indices, and the start and end time indices.
+
+- **py01_24h_avg_TSW.py**  
+  Compute daily mean temperature, salinity, and vertical velocity.
+
+- **py03_rho_daily.py**  
+  Compute daily mean potential density and 10-m referenced mixed layer depth.
+
+- **py03_Hml_daily.py**  
+  Compute surface (0.5-m) referenced mixed layer depth.
+
+
+- **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
+  Compute total, mean, and eddy vertical buoyancy fluxes. Compute their domain averages, and plot the time series.
+
+
 - **py23_rho_insitu_hydrostatic_pressure.py**  
   Compute in-situ density and estimate hydrostatic pressure.
 
