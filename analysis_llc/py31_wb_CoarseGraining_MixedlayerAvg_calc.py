@@ -46,7 +46,8 @@ dz3d, _, _ = xr.broadcast(dz, lon, lat)
 #                      FILE LISTS
 # ============================================================
 rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_TS_daily_*.nc")))
-hml_files = sorted(glob(os.path.join(rho_dir, "Hml_daily_surface_reference_*.nc")))
+# hml_files = sorted(glob(os.path.join(rho_dir, "Hml_daily_surface_reference_*.nc")))
+hml_files = rho_files
 ww_files  = sorted(glob(os.path.join(w_dir,  "ww_24h_*.nc")))
 
 
@@ -194,7 +195,7 @@ def compute_mld_integrals_one_time(rho, Hml, w_kp1):
 # ============================================================
 #                        DASK
 # ============================================================
-cluster = LocalCluster(n_workers=64, threads_per_worker=1, memory_limit="5.5GB")
+cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
 client = Client(cluster)
 print("Dask dashboard:", client.dashboard_link)
 

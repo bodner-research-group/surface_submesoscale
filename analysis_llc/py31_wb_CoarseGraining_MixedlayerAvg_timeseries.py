@@ -15,14 +15,14 @@ i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 
-data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg"
+data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
 boundary = 2
 
-ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries_1_4deg.nc")
+ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries_1_12deg.nc")
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_4deg"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_12deg"
 os.makedirs(figdir, exist_ok=True)
-figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries_1_4deg.png")
+figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries_1_12deg.png")
 
 plt.rcParams.update({'font.size': 16})
 

@@ -51,18 +51,17 @@ dHml_dt = dHml_dt.assign_coords(time=dHml_dt.time.dt.floor("D"))
 # ==============================================================
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/qnet_fwflx_daily_7day_Bflux.nc"
 Bflux_daily_avg = xr.open_dataset(fname).Bflux_daily_avg
-Bflux_daily_avg = -Bflux_daily_avg
 Bflux_daily_avg = Bflux_daily_avg.assign_coords(time=dHml_dt.time.dt.floor("D"))
 
-vert = -Bflux_daily_avg * rho0/g/delta_rho * 86400
+vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 
 
 # ==============================================================
 # 4. wb
 # ==============================================================
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg/wb_mld_horizontal_timeseries_1_4deg.nc"
-# wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
-wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
+wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
+# wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
 
 
 wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 

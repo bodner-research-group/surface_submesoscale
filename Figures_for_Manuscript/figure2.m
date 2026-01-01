@@ -11,7 +11,7 @@ load_colors
 
 POSITION = [52 526 764 291];
 fontsize = 16;
-figdir = '~/surface_submesoscale/figs/icelandic_basin/timeseries/';
+figdir = '~/surface_submesoscale/Figures_for_Manuscript/figure2/';
 
 % Convert time strings to datetime
 time_qnet = datetime(time_qnet, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
@@ -60,13 +60,14 @@ hold on;
 % Left y-axis: Bflux_7day_smooth
 yyaxis left
 l11 = plot(time_qnet, Bflux_7day_smooth*1e7, 'Color',blue, 'LineWidth', 2);
-l111 = plot(time_qnet, vertical_bf_submeso_mld*300*1e7, 'Color',purple, 'LineWidth', 2);
+% l111 = plot(time_qnet, vertical_bf_submeso_mld*300*1e7, 'Color',purple, 'LineWidth', 2);
 
 
-% ylabel('\boldmath$\mathcal{Q}_\mathrm{net}\ (\mathrm{W/m^2})$','Interpreter','latex');
-ylabel('\boldmath$\mathrm{Buoyancy\ flux}\ (10^{-7}\,\mathrm{m^2/s^3})$','Interpreter','latex');
+ylabel('\boldmath$B_0\ (\mathrm{m^2/s^3})$','Interpreter','latex');
+% ylabel('\boldmath$\mathrm{Buoyancy\ flux}\ (10^{-7}\,\mathrm{m^2/s^3})$','Interpreter','latex');
 ax1 = gca;
-ax1.YColor =  (blue + purple)/2; % Blue axis
+% ax1.YColor =  (blue + purple)/2; % Blue axis
+ax1.YColor =  blue;
 set(gca,'FontSize', fontsize);
 % ylim([-400 170]);  % Set y-axis limits correctly
 l111 = plot(time_qnet, zeros(1,length(time_qnet)),'--' ,'Color',blue, 'LineWidth', 0.75);
@@ -102,11 +103,11 @@ annotation('textbox', [0.1, 0.82, 0.3, 0.1], ...   % [x, y, width, height] in no
            'FontSize', fontsize+1, ...
            'EdgeColor', 'none');               
 
-annotation('textbox', [0.23, 0.74, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
-           'String', 'Submesoscale vertical buoyancy flux \times300', ...
-           'Color', purple, ...               
-           'FontSize', fontsize+1, ...
-           'EdgeColor', 'none'); 
+% annotation('textbox', [0.23, 0.74, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
+%            'String', 'Submesoscale vertical buoyancy flux \times300', ...
+%            'Color', purple, ...               
+%            'FontSize', fontsize+1, ...
+%            'EdgeColor', 'none'); 
 
 % Define custom tick locations (every 2 months from Nov 2011 to Nov 2012)
 xticks_custom = datetime(2011,11,1) : calmonths(2) : datetime(2012,11,1);
@@ -173,7 +174,7 @@ set(gca, 'FontSize', fontsize);
 
 box(ax1, 'on');       % For the main axes
 
-print('-dpng','-r300',[figdir 'icelandic_fig1.png']);
+print('-dpng','-r300',[figdir 'figure2_part1.png']);
 
 
 
@@ -230,7 +231,7 @@ set(gca, 'FontSize', fontsize);
 
 box(ax1, 'on');       % For the main axes
 
-print('-dpng','-r300',[figdir 'icelandic_fig2.png']);
+print('-dpng','-r300',[figdir 'figure2_part2.png']);
 
 
 
@@ -309,7 +310,7 @@ xticks(xticks_custom);
 xticklabels(datestr(xticks_custom, 'mmm yyyy'));  % or use datestr for full control
 
 set(gca,'FontSize',fontsize);
-print('-dpng','-r300',[figdir 'icelandic_fig3.png']);
+% print('-dpng','-r300',[figdir 'icelandic_fig3.png']);
 
 
 
