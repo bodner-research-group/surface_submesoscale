@@ -19,7 +19,7 @@
 - **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
   Compute total, mean, and eddy vertical buoyancy fluxes using daily averaged data. Compute their domain averages, and plot the time series.
 
-- **py31_wb_CoarseGraining_MixedlayerAvg_calc_hourly.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
+- **py31_hourly_rho.py, py31_hourly_wb.py**  
   Compute total, mean, and eddy vertical buoyancy fluxes using hourly model output. 
 
 - **py23_rho_insitu_hydrostatic_pressure.py**  

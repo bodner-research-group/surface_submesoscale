@@ -25,9 +25,9 @@ print("Dask dashboard:", client.dashboard_link)
 # ============================================================
 #                      DIRECTORIES
 # ============================================================
-rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
-w_dir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TSW_24h_avg"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg_new"
+rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_hourly"
+w_dir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_hourly"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_hourly_1_12deg"
 os.makedirs(output_dir, exist_ok=True)
 
 
@@ -48,9 +48,9 @@ dz3d, _, _ = xr.broadcast(dz, lon, lat)
 # ============================================================
 #                      FILE LISTS
 # ============================================================
-rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_TS_daily_*.nc")))
-hml_files = sorted(glob(os.path.join(rho_dir, "Hml_daily_surface_reference_*.nc")))
-# hml_files = rho_files
+rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
+hml_files = rho_files
+
 ww_files  = sorted(glob(os.path.join(w_dir,  "ww_24h_*.nc")))
 min_H = 10.0
 
@@ -179,7 +179,7 @@ for date_tag in sorted(rho_dict.keys())[61:61+91]:
     # ------------------------------------------------------------------
     # ⬇ COARSE-GRAINING APPLIED HERE BEFORE VERTICAL INTEGRAL ⬇
     # ------------------------------------------------------------------
-    window_size=12
+    window_size=4
 
     Hml_cg = Hml.coarsen(i=window_size, j=window_size, boundary="trim").mean()
     b_cg  = b.coarsen(i=window_size, j=window_size, boundary="trim").mean()
