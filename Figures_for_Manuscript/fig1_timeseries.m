@@ -7,11 +7,12 @@
 clear; close all;
 
 
-load('~/surface_submesoscale/figs/icelandic_basin/timeseries_data.mat')
+load('~/surface_submesoscale/figs/icelandic_basin/timeseries_data_new.mat')
 
 Lambda_MLI_mean = [NaN NaN NaN Lambda_MLI_mean NaN NaN NaN];
+N2ml_mean = [NaN NaN NaN N2ml_mean NaN NaN NaN];
 
-addpath colormap
+addpath ~/surface_submesoscale/analysis_llc/colormap
 load_colors
 
 
@@ -20,17 +21,18 @@ fontsize = 16;
 figdir = '~/surface_submesoscale/Figures_for_Manuscript/figure1/';
 
 % Convert time strings to datetime
-time_qnet = datetime(time_qnet, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_N2 = datetime(time_N2, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
 time_Hml = datetime(time_Hml, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
 time_Tu = datetime(time_Tu, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_wind = datetime(time_wind, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
 
 % Handle zeros or negative values in N2ml_mean (replace with small positive value)
 N2ml_mean_logsafe = squeeze(N2ml_mean);
 N2ml_mean_logsafe(N2ml_mean_logsafe <= 0) = NaN; % or a small positive number like 1e-10 if you prefer
 
 % Define start and end of time
-t_start = dateshift(min(time_qnet), 'start', 'month');
-t_end   = dateshift(max(time_qnet), 'start', 'month') + calmonths(1);
+t_start = dateshift(min(time_N2), 'start', 'month');
+t_end   = dateshift(max(time_N2), 'start', 'month') + calmonths(1);
 
 % Generate monthly ticks (every month)
 monthly_ticks = t_start : calmonths(1) : t_end;
@@ -50,7 +52,7 @@ monthly_ticks = t_start : calmonths(1) : t_end;
 
 
 
-%% === Figure 1: Air-sea interaction (3 y-axes) ===
+%%% === Figure 1: Air-sea interaction (3 y-axes) ===
 figure(1); clf;
 set(gcf, 'Color', 'w', 'Position', [52 526 764+60 291])
 set(gca, 'Position', [0.1 0.1100 0.725 0.8150])
@@ -65,7 +67,7 @@ hold on;
 
 % Left y-axis: Bflux_7day_smooth
 yyaxis left
-l11 = plot(time_qnet, Bflux_7day_smooth*1e7, 'Color',blue, 'LineWidth', 2);
+l11 = plot(time_qnet, Bflux_daily_avg*1e7, 'Color',blue, 'LineWidth', 2);
 % l111 = plot(time_qnet, vertical_bf_submeso_mld*300*1e7, 'Color',purple, 'LineWidth', 2);
 
 
@@ -130,7 +132,7 @@ ax3 = axes('Position', ax1_pos, ...
 hold(ax3, 'on');
 set(ax3, 'YScale', 'log');
 
-plot(ax3, time_Hml, N2ml_mean_logsafe, 'Color',green, 'LineWidth', 2);
+plot(ax3, time_qnet, N2ml_mean_logsafe, 'Color',green, 'LineWidth', 2);
 ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex');
 set(ax3, 'FontSize', fontsize);
 ylim([1e-7 1.5e-4])
@@ -180,7 +182,7 @@ set(gca, 'FontSize', fontsize);
 
 box(ax1, 'on');       % For the main axes
 
-print('-dpng','-r300',[figdir 'fig1_timeseries1.png']);
+% print('-dpng','-r300',[figdir 'fig1_timeseries1.png']);
 
 
 
@@ -237,54 +239,7 @@ set(gca, 'FontSize', fontsize);
 
 box(ax1, 'on');       % For the main axes
 
-print('-dpng','-r300',[figdir 'fig1_timeseries2.png']);
-
-
-
-%% === Figure 2: Surface diagnostics (2 y-axes) ===
-% figure(2); clf;
-% set(gcf,'Color','w','Position',POSITION)
-% 
-% % Add 12 grid lines per year (1 per month)
-% for t = monthly_ticks
-%     xline(t, 'Color', [0.8 0.8 0.8], 'LineStyle', ':', 'LineWidth', 0.5); % light gray lines
-% end
-% 
-% hold on;
-% 
-% yyaxis left
-% % l21 = plot(time_qnet, squeeze(Tu_agreements_pct), 'LineWidth', 2);
-% % ylabel('\boldmath$\%\ \mathrm{of}\ \big\vert\mathrm{Tu}_V - \mathrm{Tu}_H\big\vert \leq 10^\circ$','Interpreter','latex');
-% l21 = plot(time_qnet, squeeze(Tu_diff_means), 'LineWidth', 2);
-% ylabel('\boldmath$\mathrm{Mean}\ \big\vert\mathrm{Tu}_V - \mathrm{Tu}_H\big\vert$','Interpreter','latex');
-% set(gca, 'YDir', 'reverse');
-% ylim([0 60]); 
-% 
-% 
-% 
-% yyaxis right
-% l22 = plot(time_qnet, squeeze(eta_grad_mag_weekly)*1e6, 'LineWidth', 2);
-% ylabel('\boldmath$\big\vert\nabla\eta\big\vert\ \mathrm{(10^{-3}\ m/km)}$ ','Interpreter','latex');
-% ylim([1.8 3.5])
-% grid on;grid minor;
-% 
-% % Define custom tick locations (every 2 months from Nov 2011 to Nov 2012)
-% xticks_custom = datetime(2011,11,1) : calmonths(2) : datetime(2012,11,1);
-% xlim([min(time_qnet), datetime(2012,11,1)]);
-% xticks(xticks_custom);
-% xticklabels(datestr(xticks_custom, 'mmm yyyy'));  % or use datestr for full control
-% 
-% set(gca,'FontSize',fontsize);
-% 
-% leg2 = legend([l21 l22],{'Turner Angle Agreement', 'SSH gradient magnitude'},...
-%     'Location', 'northwest','FontSize',fontsize+2,'Position', [0.1309 0.7425+0.02 0.3128 0.1632]);
-% legend boxon
-% 
-% box on;
-% 
-% 
-% % print('-dpng','-r300',[figdir 'icelandic_fig2.png']);
-
+% print('-dpng','-r300',[figdir 'fig1_timeseries2.png']);
 
 
 

@@ -14,7 +14,7 @@ plt.rcParams.update({'font.size': 16})
 # ============================================================
 data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily"
 grid_dir = "/orcd/data/abodner/003/LLC4320/LLC4320"
-figdir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily"
+figdir   = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/wb_mld_daily"
 os.makedirs(figdir, exist_ok=True)
 
 # ============================================================

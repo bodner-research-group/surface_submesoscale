@@ -133,7 +133,7 @@ hori_submeso_cum_14 = cumulative(hori_submeso_14)
 # 6. Plots
 # ==============================================================
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Hml_tendency/"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/Hml_tendency/"
 os.makedirs(figdir, exist_ok=True)
 darkpink = '#d1007c'
 

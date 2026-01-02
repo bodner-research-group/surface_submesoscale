@@ -15,14 +15,15 @@ i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 
-data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_12deg"
+
+data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg_test"
 boundary = 2
 
-ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries_1_12deg.nc")
+ts_outfile = os.path.join(data_dir, "wb_mld_horizontal_timeseries_1_4deg_test.nc")
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wb_mld_daily_1_12deg"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/wb_mld_daily_1_4deg_test"
 os.makedirs(figdir, exist_ok=True)
-figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries_1_12deg.png")
+figfile = os.path.join(figdir, "wb_mld_horizontal_timeseries_1_4deg_test.png")
 
 plt.rcParams.update({'font.size': 16})
 
@@ -43,9 +44,9 @@ wb_total_list = []
 wb_mean_list  = []
 wb_eddy_list  = []
 
-wb_eddy_surf_list = []   # ⟨w'b'|surf⟩
-wb_eddy_mlb_list  = []   # ⟨w'b'|mlb⟩
-delta_wb_eddy_list = []  # ⟨w'b'|surf − w'b'|mlb⟩
+# wb_eddy_surf_list = []   # ⟨w'b'|surf⟩
+# wb_eddy_mlb_list  = []   # ⟨w'b'|mlb⟩
+# delta_wb_eddy_list = []  # ⟨w'b'|surf − w'b'|mlb⟩
 
 # ============================================================
 # LOOP OVER FILES
@@ -63,8 +64,8 @@ for path in nc_files:
     wb_mean  = ds["wb_fact"]
     wb_eddy  = ds["B_eddy"]
 
-    wb_eddy_surf = ds["wb_eddy_surf"]
-    wb_eddy_mlb  = ds["wb_eddy_mlb"]
+    # wb_eddy_surf = ds["wb_eddy_surf"]
+    # wb_eddy_mlb  = ds["wb_eddy_mlb"]
 
     # --------------------------------------------------------
     # Remove boundary
@@ -78,8 +79,8 @@ for path in nc_files:
     wb_mean_inner  = wb_mean.isel(**slicer)
     wb_eddy_inner  = wb_eddy.isel(**slicer)
 
-    wb_eddy_surf_inner = wb_eddy_surf.isel(**slicer)
-    wb_eddy_mlb_inner  = wb_eddy_mlb.isel(**slicer)
+    # wb_eddy_surf_inner = wb_eddy_surf.isel(**slicer)
+    # wb_eddy_mlb_inner  = wb_eddy_mlb.isel(**slicer)
 
     # --------------------------------------------------------
     # Horizontal means
@@ -88,22 +89,22 @@ for path in nc_files:
     wb_mean_list.append(float(wb_mean_inner.mean(skipna=True)))
     wb_eddy_list.append(float(wb_eddy_inner.mean(skipna=True)))
 
-    wb_eddy_surf_list.append(
-        float(wb_eddy_surf_inner.mean(skipna=True))
-    )
-    wb_eddy_mlb_list.append(
-        float(wb_eddy_mlb_inner.mean(skipna=True))
-    )
+    # wb_eddy_surf_list.append(
+    #     float(wb_eddy_surf_inner.mean(skipna=True))
+    # )
+    # wb_eddy_mlb_list.append(
+    #     float(wb_eddy_mlb_inner.mean(skipna=True))
+    # )
 
-    delta_wb_eddy_list.append(
-        float((wb_eddy_surf_inner - wb_eddy_mlb_inner).mean(skipna=True))
-    )
+    # delta_wb_eddy_list.append(
+    #     float((wb_eddy_surf_inner - wb_eddy_mlb_inner).mean(skipna=True))
+    # )
 
     print(
         f"{date_tag}: "
         f"<wb>={wb_total_list[-1]:.3e}, "
-        f"<w'b'|surf>={wb_eddy_surf_list[-1]:.3e}, "
-        f"<w'b'|mlb>={wb_eddy_mlb_list[-1]:.3e}"
+        # f"<w'b'|surf>={wb_eddy_surf_list[-1]:.3e}, "
+        # f"<w'b'|mlb>={wb_eddy_mlb_list[-1]:.3e}"
     )
 
 # ============================================================
@@ -114,9 +115,9 @@ ts = xr.Dataset(
         "wb_total_mean":         ("time", wb_total_list),
         "wb_mean_mean":          ("time", wb_mean_list),
         "wb_eddy_mean":          ("time", wb_eddy_list),
-        "wb_eddy_surf_mean":     ("time", wb_eddy_surf_list),
-        "wb_eddy_mlb_mean":      ("time", wb_eddy_mlb_list),
-        "delta_wb_eddy_mean":    ("time", delta_wb_eddy_list),
+        # "wb_eddy_surf_mean":     ("time", wb_eddy_surf_list),
+        # "wb_eddy_mlb_mean":      ("time", wb_eddy_mlb_list),
+        # "delta_wb_eddy_mean":    ("time", delta_wb_eddy_list),
     },
     coords={"time": np.array(dates)}
 )
@@ -138,17 +139,17 @@ ax.plot(ts.time, ts.wb_mean_mean,
 ax.plot(ts.time, ts.wb_eddy_mean,
         label=r"$\langle w'b'\rangle = \langle\overline{\overline{wb}^{xy}}^z - \overline{\overline{w}^{xy}\overline{b}^{xy}}^z\rangle$")
 
-ax.plot(ts.time, ts.wb_eddy_surf_mean,
-        lw=2, linestyle=":",
-        label=r"$\langle w'b'|_{\mathrm{surf}}\rangle$")
+# ax.plot(ts.time, ts.wb_eddy_surf_mean,
+#         lw=2, linestyle=":",
+#         label=r"$\langle w'b'|_{\mathrm{surf}}\rangle$")
 
-ax.plot(ts.time, ts.wb_eddy_mlb_mean,
-        lw=2, linestyle="--",
-        label=r"$\langle w'b'|_{\mathrm{mlb}}\rangle$")
+# ax.plot(ts.time, ts.wb_eddy_mlb_mean,
+#         lw=2, linestyle="--",
+#         label=r"$\langle w'b'|_{\mathrm{mlb}}\rangle$")
 
-ax.plot(ts.time, -ts.delta_wb_eddy_mean,
-        lw=2.5, linestyle="-.",
-        label=r"$\langle w'b'|_{\mathrm{mlb}} - w'b'|_{\mathrm{surf}}\rangle$")
+# ax.plot(ts.time, -ts.delta_wb_eddy_mean,
+#         lw=2.5, linestyle="-.",
+#         label=r"$\langle w'b'|_{\mathrm{mlb}} - w'b'|_{\mathrm{surf}}\rangle$")
 
 ax.axhline(0, color='k', lw=0.7)
 
