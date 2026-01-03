@@ -131,11 +131,14 @@ for fpath in hml_files:
         print(f"⏭️  Skipping {date_tag}, output already exists.")
         continue
 
+    # Hml = ds["Hml_7d"].load()
+    # rho = ds["rho_7d"].load()  # (k, j, i)
     Hml = ds["Hml_daily"].load()
 
     raw_file = f"{hml_dir}/rho_Hml_TS_daily_{date_tag}.nc"
     ds_rho = xr.open_dataset(raw_file)
     rho = ds_rho["rho_daily"].load()  # (k, j, i)
+
 
     # Depth broadcast
     depth_broadcasted = xr.DataArray(
@@ -145,6 +148,7 @@ for fpath in hml_files:
     )
 
     # Compute N²
+    # N2 = compute_N2_xr(rho, depth_broadcasted)
     N2 = compute_N2_xr(rho, depth_broadcasted, grid)
 
     # Find index of Hml base
@@ -156,6 +160,7 @@ for fpath in hml_files:
     k_indices, _, _ = xr.broadcast(N2["k"], N2["j"], N2["i"])
     k_indices = k_indices.astype(int)
     in_range_mask = k_indices <= k_hml_base_da
+
 
     ### Compute depth bounds (50%-90%) of mixed layer
     # Hml_upper = Hml * 0.5

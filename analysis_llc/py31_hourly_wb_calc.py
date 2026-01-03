@@ -102,7 +102,7 @@ rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
 # ============================================================
 #                     MAIN LOOP
 # ============================================================
-for f in rho_files[300*24:366*24]:
+for f in rho_files[180*24-1 : 120*24-1 : -1]:
 
     tag = os.path.basename(f).replace("rho_Hml_", "").replace(".nc", "")
     out_file = os.path.join(out_dir, f"wb_eddy_{tag}.nc")

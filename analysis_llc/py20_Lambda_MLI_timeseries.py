@@ -4,12 +4,13 @@ import numpy as np
 from glob import glob
 import matplotlib.pyplot as plt
 
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "Kerguelen_Plateau"  
-# face = 4
-# i = slice(1056,1894+1,1)       #lon_min, lon_max = 74.01, 91.5 
-# j = slice(0,884+1,1)           #lat_min, lat_max = -57.0, -46.2
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
 
 plt.rcParams.update({'font.size': 16})  # Global font size setting for figures
 
