@@ -85,7 +85,7 @@ for path in nc_files:
 
     print(
         f"{date_tag}: "
-        f"<wb>={wb_total_list[-1]:.3e} "
+        f"<wb>={wb_eddy_list[-1]:.3e} "
     )
 
 # ============================================================
