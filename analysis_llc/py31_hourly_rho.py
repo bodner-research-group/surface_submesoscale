@@ -18,8 +18,8 @@ i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Time settings ==========
-ndays = 90
-start_hours = (49 + 31) * 24
+ndays = 120
+start_hours = (49) * 24   
 end_hours = start_hours + 24 * ndays
 time = slice(start_hours,end_hours)
 
@@ -30,7 +30,7 @@ def main():
     print("Dask dashboard:", client.dashboard_link)
 
     # ========== Paths ==========
-    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_hourly"
+    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
     os.makedirs(output_dir, exist_ok=True)
 
     # ========== Open LLC4320 Dataset ==========

@@ -19,7 +19,7 @@ j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Time settings ==========
 ndays = 60
-start_hours = (49 + 91) * 24
+start_hours = (49+120) * 24   
 end_hours = start_hours + 24 * ndays
 time = slice(start_hours,end_hours)
 
@@ -30,7 +30,7 @@ def main():
     print("Dask dashboard:", client.dashboard_link)
 
     # ========== Paths ==========
-    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_hourly"
+    output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
     os.makedirs(output_dir, exist_ok=True)
 
     # ========== Open LLC4320 Dataset ==========
@@ -56,16 +56,16 @@ def main():
         return float(depth_profile[mask].max())
 
     def compute_Hml_SurfRef(rho_profile, depth_profile, threshold=0.03):
-        rho_10m = rho_profile[0]  # density at ~ -0.5m depth
-        mask = rho_profile > rho_10m + threshold
+        rho_surf = rho_profile[0]  # density at ~ -0.5m depth
+        mask = rho_profile > rho_surf + threshold
         if not np.any(mask):
             return 0.0
         return float(depth_profile[mask].max())
 
 
     # ========== Main Loop ==========
-    # for t in range(num_times):
-    for t in range(num_times-1, -1, -1):
+    for t in range(num_times):
+    # for t in range(num_times-1, -1, -1):
 
         tt = tt_all.isel(time=t)
         ss = ss_all.isel(time=t)
