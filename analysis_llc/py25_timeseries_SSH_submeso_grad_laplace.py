@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 from xgcm import Grid
 from tqdm import tqdm
 
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ==============================================================
 # Set parameters
@@ -31,7 +31,7 @@ eta_dir = os.path.join(base_dir, "surface_24h_avg")
 out_dir = os.path.join(base_dir, "SSH_submesoscale")
 os.makedirs(out_dir, exist_ok=True)
 
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/SSH_submesoscale/"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/SSH_submesoscale/"
 os.makedirs(figdir, exist_ok=True)
 
 # ==============================================================
@@ -62,7 +62,8 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-shortname = "SSH_Gaussian_submeso_14kmCutoff"
+# shortname = "SSH_Gaussian_submeso_14kmCutoff"
+shortname = "SSH_Gaussian_submeso_LambdaMLI"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
 # eta_submeso = xr.open_dataset(fname).eta_submeso ### Only for GCMFilters

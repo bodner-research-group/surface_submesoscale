@@ -52,6 +52,7 @@ eta_grad_mag_weekly = xr.open_dataset(fname).eta_grad_mag_weekly
 
 ### 3.1 Wavelength of the most unstable mixed-layer-instability (MLI) waves
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_7d_rolling.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
 Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 ### 3.2 Surface energy injection scale (TO DO)

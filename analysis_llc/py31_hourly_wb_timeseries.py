@@ -23,7 +23,6 @@ ts_outfile = os.path.join(data_dir, "hourly_wb_eddy_1_12deg_timeseries.nc")
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/hourly_wb_eddy_1_12deg"
 os.makedirs(figdir, exist_ok=True)
-figfile = os.path.join(figdir, "hourly_wb_eddy_1_12deg_timeseries.png")
 
 plt.rcParams.update({'font.size': 16})
 
@@ -106,6 +105,8 @@ print(f"Saved timeseries → {ts_outfile}")
 # ============================================================
 # FIGURE
 # ============================================================
+figfile = os.path.join(figdir, "hourly_wb_1_12deg_timeseries.png")
+
 fig, ax = plt.subplots(1, 1, figsize=(12, 6))
 
 ax.plot(ts.time, ts.wb_total_mean,
@@ -113,6 +114,38 @@ ax.plot(ts.time, ts.wb_total_mean,
 
 ax.plot(ts.time, ts.wb_mean_mean,
         label=r"$\langle\overline{\overline{w}^{xy}}^z\overline{\overline{b}^{xy}}^z\rangle$")
+
+ax.plot(ts.time, ts.wb_eddy_mean,
+        label=r"$\langle w'b'\rangle = \langle\overline{\overline{wb}^{xy}}^z - \overline{\overline{w}^{xy}\overline{b}^{xy}}^z\rangle$")
+
+ax.axhline(0, color='k', lw=0.7)
+
+ax.set_title("Horizontal Mean (⟨⋅⟩ₓᵧ)")
+ax.set_xlabel("Time")
+ax.grid(alpha=0.3)
+ax.legend(ncol=2)
+
+plt.tight_layout()
+plt.savefig(figfile, dpi=150)
+plt.close()
+
+print(f"Saved figure → {figfile}")
+
+
+# ============================================================
+# FIGURE
+# ============================================================
+
+figfile = os.path.join(figdir, "hourly_wb_eddy_1_12deg_timeseries.png")
+
+
+fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+
+# ax.plot(ts.time, ts.wb_total_mean,
+#         label=r"$\langle\overline{\overline{wb}^{xy}}^z\rangle$")
+
+# ax.plot(ts.time, ts.wb_mean_mean,
+#         label=r"$\langle\overline{\overline{w}^{xy}}^z\overline{\overline{b}^{xy}}^z\rangle$")
 
 ax.plot(ts.time, ts.wb_eddy_mean,
         label=r"$\langle w'b'\rangle = \langle\overline{\overline{wb}^{xy}}^z - \overline{\overline{w}^{xy}\overline{b}^{xy}}^z\rangle$")
