@@ -18,8 +18,8 @@ i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Time settings ==========
-ndays = 30
-start_hours = (49 + 61) * 24
+ndays = 90
+start_hours = (49 + 31) * 24
 end_hours = start_hours + 24 * ndays
 time = slice(start_hours,end_hours)
 
@@ -56,8 +56,8 @@ def main():
         return float(depth_profile[mask].max())
 
     def compute_Hml_SurfRef(rho_profile, depth_profile, threshold=0.03):
-        rho_10m = rho_profile[0]  # density at ~ -0.5m depth
-        mask = rho_profile > rho_10m + threshold
+        rho_surf = rho_profile[0]  # density at ~ -0.5m depth
+        mask = rho_profile > rho_surf + threshold
         if not np.any(mask):
             return 0.0
         return float(depth_profile[mask].max())

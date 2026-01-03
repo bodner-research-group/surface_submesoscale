@@ -18,8 +18,8 @@ i = slice(527, 1007)   # icelandic_basin -- larger domain
 j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ========== Time settings ==========
-ndays = 30
-start_hours = (49 + 61) * 24
+ndays = 60
+start_hours = (49 + 91) * 24
 end_hours = start_hours + 24 * ndays
 time = slice(start_hours,end_hours)
 
