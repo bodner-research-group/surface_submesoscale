@@ -1,10 +1,14 @@
+###############################################################
+#  Compute hourly mixed-layer eddy buoyancy flux wb_eddy
+#  using hourly rho/Hml and model W
+###############################################################
+
 import xarray as xr
 import numpy as np
 import os
 import gc
 from glob import glob
-from dask.distributed import Client, LocalCluster, as_completed
-from dask import delayed
+from dask.distributed import Client, LocalCluster
 
 # ============================================================
 #                       DOMAIN
@@ -45,6 +49,7 @@ def main():
     # ============================================================
     #                 HOURLY VERTICAL VELOCITY
     # ============================================================
+    ####### Important!! Don't change the time indices.
     ndays = 366
     start_hours = 49 * 24
     end_hours   = start_hours + 24 * ndays
@@ -87,6 +92,7 @@ def main():
     gravity = 9.81
     rho0 = 1027.5
     min_H = 10.0
+    # window = 4  # 1/12 degree
     window = 12  # 1/4 degree
 
     # ============================================================
@@ -97,15 +103,15 @@ def main():
     # ============================================================
     #                     MAIN LOOP
     # ============================================================
-    # Use Dask Delayed to parallelize the file processing
-    @delayed
-    def process_file(f):
+    # for f in rho_files[180*24-1 : 120*24-1 : -1]:
+    for f in rho_files[0:60*24]:
+
         tag = os.path.basename(f).replace("rho_Hml_", "").replace(".nc", "")
         out_file = os.path.join(out_dir, f"wb_eddy_{tag}.nc")
 
         if os.path.exists(out_file):
             print(f"Skipping {tag}")
-            return
+            continue
 
         print(f"Processing {tag}")
 
@@ -168,14 +174,6 @@ def main():
         del ds_out, rho, Hml, w_k
         gc.collect()
 
-    # Use Dask to run in parallel across the time dimension
-    futures = client.compute([process_file(f) for f in rho_files[0:150*24]])  # Adjust the range as needed
-
-    # Gather the results in parallel and handle them
-    for future in as_completed(futures):
-        pass  # You can print or handle any outputs here, if needed
-
-    # Close Dask cluster
     ds_grid.close()
     client.close()
     cluster.close()

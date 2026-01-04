@@ -31,7 +31,7 @@ abs_f = np.abs(Coriolis.mean(dim=("i","j")).values)
 g = 9.81
 rho0 = 1027.5
 delta_rho = 0.03
-Ce = 0.065
+Ce = 0.06
 sigma_avg = 1
 
 
@@ -59,12 +59,15 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 # ==============================================================
 # 4. wb
 # ==============================================================
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg/wb_mld_horizontal_timeseries_1_4deg.nc"
+# fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/wb_mld_daily_1_4deg/wb_mld_horizontal_timeseries_1_4deg.nc"
+# # wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
+# wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
+
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_1_12deg/hourly_wb_eddy_1_12deg_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
-# wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
 
-
-wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
+wb_eddy_daily = wb_eddy_mean.resample(time="1D").mean()
+wb_eddy = - wb_eddy_daily * rho0/g/delta_rho * 86400 
 
 
 # ==============================================================
@@ -79,8 +82,10 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # ==============================================================
 # SSH submesoscale 
 # ==============================================================
-fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_14kmCutoff_timeseries.nc"
-eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
+# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_14kmCutoff_timeseries.nc"
+fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+# eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
+eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_meso_grad2_mean
 
 hori_submeso_14 = -sigma_avg*Ce/abs_f * eta_submeso_grad2_14 * g*rho0/delta_rho * 86400 
 
@@ -112,11 +117,12 @@ def cumulative(ds):
 
 Hml_total_cum = cumulative(dHml_dt)
 
-#### when vert  <= 0 , set vert = 0; when tendency_ekman <=0, set tendency_ekman = 0
-condition1 = vert > 0
-vert_cum = vert.where(condition1, 0).cumsum(dim="time")
-condition2 = tendency_ekman > 0
-tendency_ek_cum = tendency_ekman.where(condition2, 0).cumsum(dim="time")
+# #### when vert + tendency_ekman <= 0 , set vert = 0, tendency_ekman = 0
+condition = (vert+tendency_ekman)>0
+# condition1 = vert > 0
+# condition2 = tendency_ekman > 0
+vert_cum = vert.where(condition, 0).cumsum(dim="time")
+tendency_ek_cum = tendency_ekman.where(condition, 0).cumsum(dim="time")
 
 # vert_cum = cumulative(vert)
 # tendency_ek_cum = cumulative(tendency_ekman)
@@ -150,7 +156,7 @@ plt.plot(tendency_ekman.time, tendency_ekman, label="Ekman buoyancy flux", color
 plt.plot(diff.time, diff, label="dHml/dt - surf - Ekman", linestyle='--', color='tab:green')
 
 plt.plot(hori_steric.time, hori_steric, label="steric", color=darkpink)
-plt.plot(hori_submeso_14.time, hori_submeso_14, label="SSH submeso 14 km", color='orange', linestyle='-')
+plt.plot(hori_submeso_14.time, hori_submeso_14, label="SSH submeso, time-varying filter", color='orange', linestyle='-')
 plt.plot(wb_eddy.time, wb_eddy, label=r"$B_{eddy}$", color='purple', linestyle='-')
 # plt.plot(
 #     wb_eddy.time,
@@ -197,7 +203,7 @@ plt.plot(Hml_reconstructed_steric.time, Hml_reconstructed_steric,
          label="Reconstructed steric height", color=darkpink)
 
 plt.plot(Hml_reconstructed_sub14.time, Hml_reconstructed_sub14, 
-         label="Reconstructed SSH submeso 14 km", color='orange', linestyle='-')
+         label="Reconstructed SSH submeso, time-varying filter", color='orange', linestyle='-')
 
 plt.plot(Hml_reconstructed_wbeddy.time, Hml_reconstructed_wbeddy, 
          label=r"Reconstructed $B_{eddy}$", color='purple', linestyle='-')
@@ -257,7 +263,7 @@ plt.plot(hori_steric_rm.time, hori_steric_rm,
          label="steric", color=darkpink)
 
 plt.plot(hori_submeso_14_rm.time, hori_submeso_14_rm,
-         label="SSH submeso 14 km", color='orange')
+         label="SSH submeso, time-varying filter", color='orange')
 
 plt.plot(wb_eddy_rm.time, wb_eddy_rm,
          label=r"$B_{eddy}$", color='purple')
