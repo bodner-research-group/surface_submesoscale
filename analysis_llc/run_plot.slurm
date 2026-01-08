@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=hourly_wb_calc3
-#SBATCH --output=hourly_wb_calc3.out
-#SBATCH --error=hourly_wb_calc3.err
+#SBATCH --job-name=hourly_wb_calc6
+#SBATCH --output=hourly_wb_calc6.out
+#SBATCH --error=hourly_wb_calc6.err
 #SBATCH --partition=mit_preemptable
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                # IMPORTANT: use 1 task (you use 64 threads inside Dask)
@@ -11,8 +11,8 @@
 
 source ~/.bashrc-conda
 
-python3 py31_hourly_wb_calc3.py
-echo "Complete: py31_hourly_wb_calc3"
+python3 py31_hourly_wb_calc6.py
+echo "Complete: py31_hourly_wb_calc6"
 
 # python3 py31_hourly_rho5.py
 # echo "Complete: py31_hourly_rho5"

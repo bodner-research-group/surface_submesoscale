@@ -26,7 +26,7 @@ def main():
     #                       PATHS
     # ============================================================
     rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
-    out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_1_4deg"
+    out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_window14"
     os.makedirs(out_dir, exist_ok=True)
 
     # ============================================================
@@ -87,7 +87,7 @@ def main():
     gravity = 9.81
     rho0 = 1027.5
     min_H = 10.0
-    window = 12  # 1/4 degree
+    window = 14  # 14/48 degree
 
     # ============================================================
     #                     FILE LIST
@@ -169,7 +169,7 @@ def main():
         gc.collect()
 
     # Use Dask to run in parallel across the time dimension
-    futures = client.compute([process_file(f) for f in rho_files[0:150*24]])  # Adjust the range as needed
+    futures = client.compute([process_file(f) for f in rho_files[0:60*24]])  # Adjust the range as needed
 
     # Gather the results in parallel and handle them
     for future in as_completed(futures):

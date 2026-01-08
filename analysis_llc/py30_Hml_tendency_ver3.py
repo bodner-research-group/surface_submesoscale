@@ -32,8 +32,8 @@ g = 9.81
 rho0 = 1027.5
 delta_rho = 0.03
 Ce = 0.06
-sigma_avg = 1
-
+sigma_avg = 44/63 ### mixed-layer averaged mu(z)
+# sigma_avg = 1
 
 # ==============================================================
 # 1. dHml/dt from MLD
@@ -67,7 +67,8 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
 wb_eddy_daily = wb_eddy_mean.resample(time="1D").mean()
-wb_eddy = - wb_eddy_daily * rho0/g/delta_rho * 86400 
+# wb_eddy = - 1.45*wb_eddy_daily * rho0/g/delta_rho * 86400 
+wb_eddy = - 2.4*wb_eddy_daily * rho0/g/delta_rho * 86400 
 
 
 # ==============================================================
@@ -84,8 +85,7 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # ==============================================================
 # fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_14kmCutoff_timeseries.nc"
 fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
-# eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
-eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_meso_grad2_mean
+eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
 
 hori_submeso_14 = -sigma_avg*Ce/abs_f * eta_submeso_grad2_14 * g*rho0/delta_rho * 86400 
 
@@ -118,14 +118,14 @@ def cumulative(ds):
 Hml_total_cum = cumulative(dHml_dt)
 
 # #### when vert + tendency_ekman <= 0 , set vert = 0, tendency_ekman = 0
-condition = (vert+tendency_ekman)>0
-# condition1 = vert > 0
-# condition2 = tendency_ekman > 0
-vert_cum = vert.where(condition, 0).cumsum(dim="time")
-tendency_ek_cum = tendency_ekman.where(condition, 0).cumsum(dim="time")
+# condition = (vert+tendency_ekman)>0
+# # condition1 = vert > 0
+# # condition2 = tendency_ekman > 0
+# vert_cum = vert.where(condition, 0).cumsum(dim="time")
+# tendency_ek_cum = tendency_ekman.where(condition, 0).cumsum(dim="time")
 
-# vert_cum = cumulative(vert)
-# tendency_ek_cum = cumulative(tendency_ekman)
+vert_cum = cumulative(vert)
+tendency_ek_cum = cumulative(tendency_ekman)
 
 wb_eddy_cum = cumulative(wb_eddy)
 diff_cum = cumulative(diff)
@@ -287,8 +287,106 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 
 
 
+import pandas as pd
+filename = f"{figdir}Hml_reconstructed_winter.png"
+
+# ==============================================================
+# Select start date
+# ==============================================================
+start_date = np.datetime64("2012-01-13")
+
+end_date = np.datetime64("2012-06-01")
 
 
+def sel2012(da):
+    return da.sortby("time").sel(time=slice(start_date, end_date))
+
+Hml_mean_2012        = sel2012(Hml_mean)
+vert_2012            = sel2012(vert)
+tendency_ekman_2012  = sel2012(tendency_ekman)
+hori_steric_2012     = sel2012(hori_steric)
+hori_submeso_2012    = sel2012(hori_submeso_14)
+wb_eddy_2012         = sel2012(wb_eddy)
+
+dt = 1.0  # day
+
+def zero_start(cum):
+    return cum - cum.isel(time=0)
+
+vert_cum_2012          = zero_start(vert_2012.cumsum(dim="time"))
+tendency_ek_cum_2012   = zero_start(tendency_ekman_2012.cumsum(dim="time"))
+hori_steric_cum_2012   = zero_start(hori_steric_2012.cumsum(dim="time"))
+hori_submeso_cum_2012  = zero_start(hori_submeso_2012.cumsum(dim="time"))
+wb_eddy_cum_2012       = zero_start(wb_eddy_2012.cumsum(dim="time"))
+
+# vert_cum_2012           = vert_2012.cumsum(dim="time")
+# tendency_ek_cum_2012    = tendency_ekman_2012.cumsum(dim="time")
+# hori_steric_cum_2012    = hori_steric_2012.cumsum(dim="time")
+# hori_submeso_cum_2012   = hori_submeso_2012.cumsum(dim="time")
+# wb_eddy_cum_2012        = wb_eddy_2012.cumsum(dim="time")
+
+H0_2012 = Hml_mean_2012.isel(time=0)
+
+Hml_recon_steric_2012 = (
+    H0_2012
+    + vert_cum_2012
+    + tendency_ek_cum_2012
+    + hori_steric_cum_2012
+)
+
+Hml_recon_submeso_2012 = (
+    H0_2012
+    + vert_cum_2012
+    + tendency_ek_cum_2012
+    + hori_submeso_cum_2012
+)
+
+Hml_recon_wbeddy_2012 = (
+    H0_2012
+    + vert_cum_2012
+    + tendency_ek_cum_2012
+    + wb_eddy_cum_2012
+)
+
+
+plt.figure(figsize=(12, 6.5))
+
+plt.plot(
+    Hml_mean_2012.time, Hml_mean_2012,
+    label="Total MLD", color="k"
+)
+
+plt.plot(
+    Hml_recon_steric_2012.time, Hml_recon_steric_2012,
+    label="Reconstructed steric height",
+    color=darkpink
+)
+
+plt.plot(
+    Hml_recon_submeso_2012.time, Hml_recon_submeso_2012,
+    label="Reconstructed SSH submeso, time-varying filter",
+    color="orange"
+)
+
+plt.plot(
+    Hml_recon_wbeddy_2012.time, Hml_recon_wbeddy_2012,
+    label=r"Reconstructed $B_{eddy}$",
+    color="purple"
+)
+
+plt.title("Reconstructed Mixed Layer Depth (from 2012-01-01)")
+# plt.ylim([545,860])
+plt.ylabel("Hml [m]")
+plt.xlabel("Time")
+plt.grid(True, linestyle="--", alpha=0.5)
+
+# plt.legend(loc="center bottom", bbox_to_anchor=(1.02, 0.5), fontsize=12)
+plt.legend(
+    loc="lower right",
+    fontsize=12
+)
+plt.tight_layout()
+plt.savefig(filename, dpi=200, bbox_inches="tight")
 
 
 
@@ -330,3 +428,5 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 # plt.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=12)
 # plt.tight_layout()
 # plt.savefig(filename, dpi=200, bbox_inches='tight')
+
+
