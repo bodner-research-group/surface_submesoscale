@@ -63,12 +63,14 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 # # wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
 # wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
 
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_1_12deg/hourly_wb_eddy_1_12deg_timeseries.nc"
+shortname = "hourly_wb_eddy_window22"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}/{shortname}_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
 wb_eddy_daily = wb_eddy_mean.resample(time="1D").mean()
+wb_eddy = - 1.2*wb_eddy_daily * rho0/g/delta_rho * 86400 
 # wb_eddy = - 1.45*wb_eddy_daily * rho0/g/delta_rho * 86400 
-wb_eddy = - 2.4*wb_eddy_daily * rho0/g/delta_rho * 86400 
+# wb_eddy = - 2.4*wb_eddy_daily * rho0/g/delta_rho * 86400 
 
 
 # ==============================================================

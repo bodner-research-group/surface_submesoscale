@@ -30,7 +30,7 @@ print("Dask dashboard:", client.dashboard_link)
 #                       PATHS
 # ============================================================
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_1_4deg"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_window14"
 os.makedirs(out_dir, exist_ok=True)
 
 # ============================================================
@@ -92,8 +92,7 @@ def ml_integral(var, Hml, depth, dz, min_H):
 gravity = 9.81
 rho0 = 1027.5
 min_H = 10.0
-# window = 4  # 1/12 degree
-window = 12  # 1/4 degree
+window = 14  # 14/48 degree
 
 # ============================================================
 #                     FILE LIST

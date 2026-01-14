@@ -5,17 +5,23 @@ import matplotlib.pyplot as plt
 from glob import glob
 from tqdm import tqdm
 
-from set_constant import domain_name
+# from set_constant import domain_name
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ==============================================================
 # Paths
 # ==============================================================
 base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
-out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+# out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries_surface_reference")
 
 figdir = (
     f"/orcd/data/abodner/002/ysi/surface_submesoscale/"
-    f"analysis_llc/figs/{domain_name}/steric_height/"
+    f"figs/{domain_name}/steric_height_surface_reference/"
 )
 os.makedirs(figdir, exist_ok=True)
 

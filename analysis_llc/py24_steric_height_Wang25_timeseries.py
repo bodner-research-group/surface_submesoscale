@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 from xgcm import Grid
 from tqdm import tqdm
 
-from set_constant import domain_name, face, i, j
-# # ========== Domain ==========
-# domain_name = "icelandic_basin"
-# face = 2
-# i = slice(527, 1007)   # icelandic_basin -- larger domain
-# j = slice(2960, 3441)  # icelandic_basin -- larger domain
+# from set_constant import domain_name, face, i, j
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 # ==============================================================
 # Set parameters
@@ -27,9 +27,11 @@ p_atm = 101325.0 / 1e4  # dbar
 base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}"
 eta_dir = os.path.join(base_dir, "surface_24h_avg")
 rho_dir = os.path.join(base_dir, "rho_insitu_hydrostatic_pressure_daily")
-Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
+# Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
+Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily_surface_reference.nc")
 
-out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+# out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
+out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries_surface_reference")
 os.makedirs(out_dir, exist_ok=True)
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/steric_height/"
@@ -105,7 +107,8 @@ eta_prime_grad2_list = []
 # ==============================================================
 # Main loop over time steps
 # ==============================================================
-for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
+# for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
+for t in tqdm(range(len(Eta.time) - 1, -1, -1), desc="Processing time steps"):
     time_val = Eta.time.isel(time=t).values
     date_tag = np.datetime_as_string(time_val, unit="D").replace("-", "")
 
