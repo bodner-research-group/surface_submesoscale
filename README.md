@@ -16,9 +16,17 @@
   Compute daily mean potential density and 10-m referenced mixed layer depth.
   Compute surface (0.5-m) referenced mixed layer depth.
 
-### Surface strain, vorticity, and divergence
 - **py08_vorticity_strain_calc.py, py08_vorticity_strain_plot.py**
   Compute and plot surface strain rate, surface vorticity, and surface divergence
+
+
+### Surface forcing:
+- **py28_Ekman_buoyancy_flux_hourly.py, py28_Ekman_buoyancy_flux_daily.py**  
+  Compute Ekman buoyancy flux using hourly or daily model output.
+
+- **py07_Qnet_mean.py**  
+  Compute surface buoyancy flux (contributed by net heat flux/freshwater flux)
+
 
 ### Submesoscale SSH anomaly:
 
@@ -48,12 +56,6 @@
 - **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_plot.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
   Compute total, mean, and eddy vertical buoyancy fluxes using daily averaged data. Compute their domain averages, and plot the time series.
 
-### Surface buoyancy flux (contributed by net heat flux/freshwater flux):
-- **py07_Qnet_mean.py**  
-
-### Ekman buoyancy flux:
-- **py28_Ekman_buoyancy_flux_hourly.py, py28_Ekman_buoyancy_flux_daily.py**  
-  Compute Ekman buoyancy flux using hourly or daily model output.
 
 ### Turner Angles:
 
