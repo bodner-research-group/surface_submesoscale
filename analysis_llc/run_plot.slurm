@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=hourly_wb_calc42
-#SBATCH --output=hourly_wb_calc42.out
-#SBATCH --error=hourly_wb_calc42.err
+#SBATCH --job-name=job6_hourly_wb_Gaussian_calc
+#SBATCH --output=job6_hourly_wb_Gaussian_calc.out
+#SBATCH --error=job6_hourly_wb_Gaussian_calc.err
 #SBATCH --partition=mit_preemptable
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                # IMPORTANT: use 1 task (you use 64 threads inside Dask)
@@ -11,8 +11,10 @@
 
 source ~/.bashrc-conda
 
-python3 py31_hourly_wb_calc42.py
-echo "Complete: py31_hourly_wb_calc42"
+cd 3_eddy_buoyancy_flux
+
+python3 hourly_wb_Gaussian_calc6.py
+echo "Complete: hourly_wb_Gaussian_calc6"
 
 # python3 py31_hourly_rho5.py
 # echo "Complete: py31_hourly_rho5"

@@ -63,7 +63,8 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 # # wb_eddy_mean = -xr.open_dataset(fname).delta_wb_eddy_mean
 # wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
 
-shortname = "hourly_wb_eddy_window22"
+# shortname = "hourly_wb_eddy_window22"
+shortname = "hourly_wb_eddy_gaussian_wide"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}/{shortname}_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 

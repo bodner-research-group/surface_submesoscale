@@ -16,7 +16,7 @@ face = 2
 i = slice(527, 1007)
 j = slice(2960, 3441)
 
-shortname = "hourly_wb_eddy_window30"
+shortname = "hourly_wb_eddy_gaussian"
 data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}"
 boundary = 2
 
@@ -63,8 +63,11 @@ def process_file(path):
         i=slice(boundary, -boundary),
     )
 
-    wb_total = ds["wb_avg"].isel(**slicer).mean(skipna=True)
-    wb_mean  = ds["wb_fact"].isel(**slicer).mean(skipna=True)
+    # wb_total = ds["wb_avg"].isel(**slicer).mean(skipna=True)
+    # wb_mean  = ds["wb_fact"].isel(**slicer).mean(skipna=True)
+
+    wb_total = ds["wb_total"].isel(**slicer).mean(skipna=True)
+    wb_mean  = ds["wb_mean"].isel(**slicer).mean(skipna=True)
     wb_eddy  = ds["B_eddy"].isel(**slicer).mean(skipna=True)
 
     return dt, wb_total, wb_mean, wb_eddy
