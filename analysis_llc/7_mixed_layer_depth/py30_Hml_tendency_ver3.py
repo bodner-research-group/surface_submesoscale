@@ -9,7 +9,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
+plt.rcParams.update({'font.size': 18}) # Global font size setting for figures
 
 # ========== Domain ==========
 # from set_constant import domain_name, face, i, j
@@ -69,7 +69,7 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
 wb_eddy_daily = wb_eddy_mean.resample(time="1D").mean()
-wb_eddy = - 1.2*wb_eddy_daily * rho0/g/delta_rho * 86400 
+wb_eddy = - 1.25*wb_eddy_daily * rho0/g/delta_rho * 86400 
 # wb_eddy = - 1.45*wb_eddy_daily * rho0/g/delta_rho * 86400 
 # wb_eddy = - 2.4*wb_eddy_daily * rho0/g/delta_rho * 86400 
 

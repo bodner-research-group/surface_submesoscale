@@ -102,7 +102,7 @@ def main():
     # ================= Lambda_MLI (time-mean) =================
     ds_lambda = xr.open_dataset(Lambda_file)
     # lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 91))
-    lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 61+60))
+    lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 61+62))
     lambda_km = float(lambda_window.mean().values) / 1000.0
 
     # sigma_km = lambda_km / np.sqrt(8.0 * np.log(2.0))

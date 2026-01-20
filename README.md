@@ -19,6 +19,8 @@
 - **py08_vorticity_strain_calc.py, py08_vorticity_strain_plot.py**
   Compute and plot surface strain rate, surface vorticity, and surface divergence
 
+- **save_data_timeseries_manuscript.py**
+  Save timeseries and spatial fields needed for creating figures for the manuscript.
 
 ### 2_surface_forcing:
 - **py28_Ekman_buoyancy_flux_hourly.py, py28_Ekman_buoyancy_flux_daily.py**  
@@ -31,7 +33,7 @@
 - **py31_hourly_rho.py**  
   Compute hourly potential density, surface referenced mixed layer depth, and 10-m referenced mixed layer depth. 
 
-- **hourly_wb_Gaussian_calc.py**
+- **hourly_wb_Gaussian_calc.py (parallel), py31_hourly_wb_timeseries_sequential.py**
   Compute total, mean, and eddy vertical buoyancy fluxes using hourly model output and a Gaussian filter, exclude regions where the mixed layer depth is shallower than 10m. The filter size is determined from the 60-day average wavelength of the most unstable mode of mixed-layer instability.
 
 - **py31_hourly_wb_calc.py**
