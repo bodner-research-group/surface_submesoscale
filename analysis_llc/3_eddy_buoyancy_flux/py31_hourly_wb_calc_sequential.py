@@ -143,24 +143,29 @@ for f in rho_files:
     w_cg   = w_k.coarsen(i=window, j=window, boundary="trim").mean()
     dz_cg  = dz3d.coarsen(i=window, j=window, boundary="trim").mean()
 
-    wb_cg = (w_k * b).coarsen(i=window, j=window, boundary="trim").mean()
+    # wb_cg = (w_k * b).coarsen(i=window, j=window, boundary="trim").mean()
 
     # ========================================================
     #              MIXED-LAYER AVERAGES
     # ========================================================
-    wb_avg  = ml_integral(wb_cg,       Hml_cg, depth, dz_cg, min_H)
-    wb_fact = ml_integral(w_cg * b_cg, Hml_cg, depth, dz_cg, min_H)
+    # wb_total  = ml_integral(wb_cg,       Hml_cg, depth, dz_cg, min_H)
+    # wb_total  = ml_integral(w_k * b,       Hml_cg, depth, dz3d, min_H)
+    # wb_mean   = ml_integral(w_cg * b_cg,   Hml_cg, depth, dz_cg, min_H)
 
-    B_eddy = wb_avg - wb_fact
+    wb_total_hires  = ml_integral(w_k * b,       Hml, depth, dz3d, min_H)
+    wb_total = wb_total_hires.coarsen(i=window, j=window, boundary="trim").mean()
+    wb_mean   = ml_integral(w_cg * b_cg,   Hml_cg, depth, dz_cg, min_H)
+    wb_eddy = wb_total - wb_mean
 
+    
     # ========================================================
     #                     SAVE
     # ========================================================
     ds_out = xr.Dataset(
         {
-            "wb_avg": wb_avg,
-            "wb_fact": wb_fact,
-            "B_eddy": B_eddy,
+            "wb_total": wb_total,
+            "wb_mean": wb_mean,
+            "wb_eddy": wb_eddy,
             "Hml": Hml_cg,
         },
         coords={"time": rho.time},

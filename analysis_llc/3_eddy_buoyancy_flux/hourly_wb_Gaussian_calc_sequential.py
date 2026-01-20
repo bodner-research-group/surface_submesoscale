@@ -172,22 +172,26 @@ for f in target_files:
             mode="reflect",
         )
 
-    w_f  = xr.apply_ufunc(gfilter, w_k,       dask="parallelized", output_dtypes=[float])
-    b_f  = xr.apply_ufunc(gfilter, b,         dask="parallelized", output_dtypes=[float])
-    wb_f = xr.apply_ufunc(gfilter, w_k * b,   dask="parallelized", output_dtypes=[float])
+    w_f = xr.apply_ufunc(gfilter, w_k, dask="parallelized", output_dtypes=[float])
+    b_f = xr.apply_ufunc(gfilter, b,   dask="parallelized", output_dtypes=[float])
+    # wb_f = xr.apply_ufunc(gfilter, w_k * b, dask="parallelized", output_dtypes=[float])
 
     # ================= MIXED-LAYER AVERAGES =================
-    wb_total = ml_integral(wb_f,      Hml, depth, dz3d, min_H)
-    wb_mean  = ml_integral(w_f * b_f, Hml, depth, dz3d, min_H)
-    B_eddy   = wb_total - wb_mean
+    # wb_total = ml_integral(wb_f,        Hml, depth, dz3d, min_H)
+    # wb_mean  = ml_integral(w_f * b_f,   Hml, depth, dz3d, min_H)
+    # wb_eddy   = wb_total - wb_mean
 
+    wb_eddy   = ml_integral((w_k-w_f)*(b-b_f), Hml, depth, dz3d, min_H)
+    wb_total  = ml_integral(w_k * b,           Hml, depth, dz3d, min_H)
+    wb_mean   = wb_total - wb_eddy
+    
     # ================= SAVE =================
     ds_out = xr.Dataset(
         {
             "wb_total": wb_total,
             "wb_mean": wb_mean,
-            "B_eddy": B_eddy,
-            "Hml": Hml,
+            "wb_eddy": wb_eddy,
+            # "Hml": Hml,
         },
         coords={"time": rho.time},
     )

@@ -26,7 +26,7 @@ min_H = 10.0
 #                       PATHS
 # ============================================================
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_wide"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_65km"
 os.makedirs(out_dir, exist_ok=True)
 
 Lambda_file = (
@@ -106,14 +106,15 @@ def main():
     lambda_km = float(lambda_window.mean().values) / 1000.0
 
     # sigma_km = lambda_km / np.sqrt(8.0 * np.log(2.0))
-    sigma_km = lambda_km
+    # sigma_km = lambda_km
+    sigma_km = 65
     sigma_pts = sigma_km / dx_km
 
     print(f"Gaussian filter: Λ̄_MLI = {lambda_km:.2f} km → σ = {sigma_pts:.2f} grid pts")
 
     # ================= FILE LIST =================
     rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
-    target_files = rho_files[0 * 24 : 366 * 24+1]
+    target_files = rho_files[(61+15*3) * 24 : (61+15*4) * 24+1]
 
     # ============================================================
     #                   PROCESS ONE FILE
@@ -154,20 +155,25 @@ def main():
 
         w_f = xr.apply_ufunc(gfilter, w_k, dask="parallelized", output_dtypes=[float])
         b_f = xr.apply_ufunc(gfilter, b,   dask="parallelized", output_dtypes=[float])
-        wb_f = xr.apply_ufunc(gfilter, w_k * b, dask="parallelized", output_dtypes=[float])
+        # wb_f = xr.apply_ufunc(gfilter, w_k * b, dask="parallelized", output_dtypes=[float])
 
         # ================= MIXED-LAYER AVERAGES =================
-        wb_total = ml_integral(wb_f,        Hml, depth, dz3d, min_H)
-        wb_mean  = ml_integral(w_f * b_f,   Hml, depth, dz3d, min_H)
-        B_eddy   = wb_total - wb_mean
+        # wb_total = ml_integral(wb_f,        Hml, depth, dz3d, min_H)
+        # wb_mean  = ml_integral(w_f * b_f,   Hml, depth, dz3d, min_H)
+        # wb_eddy   = wb_total - wb_mean
+
+        wb_eddy   = ml_integral((w_k-w_f)*(b-b_f), Hml, depth, dz3d, min_H)
+        wb_total  = ml_integral(w_k * b,           Hml, depth, dz3d, min_H)
+        wb_mean   = wb_total - wb_eddy
+        
 
         # ================= SAVE =================
         ds_out = xr.Dataset(
             {
                 "wb_total": wb_total,
                 "wb_mean": wb_mean,
-                "B_eddy": B_eddy,
-                "Hml": Hml,
+                "wb_eddy": wb_eddy,
+                # "Hml": Hml,
             },
             coords={"time": rho.time},
         )
