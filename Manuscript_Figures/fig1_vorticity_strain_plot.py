@@ -59,8 +59,8 @@ delta_norm = ds["divergence"] / f0_mean
 # ==== Daily Maps ====
 print("\nGenerating daily maps...")
 # for t in range(len(ds.time)):
-# t = 133
-t = 300
+t = 133
+# t = 300
 
 date_str = str(ds.time[t].values)[:10]
 
@@ -112,3 +112,25 @@ for ax in axes:
 outpath = os.path.join(figdir, f"combined_norm_map_{date_str}.png")
 plt.savefig(outpath, dpi=300)
 plt.close()
+
+
+# ==== Save plotting data to NetCDF ====
+plot_ds = xr.Dataset(
+    data_vars=dict(
+        zeta_norm=(("j_g", "i_g"), v0.data),
+        sigma_norm=(("j", "i"), v1.data),
+        delta_norm=(("j", "i"), v2.data),
+        lon=(("j_g", "i_g"), lon_g.data),
+        lat=(("j_g", "i_g"), lat_g.data),
+    ),
+    attrs=dict(
+        date=date_str,
+        description="Normalized vorticity, strain, and divergence for plotting",
+        domain=domain_name,
+        face=face,
+        f0_mean=float(f0_mean),
+    ),
+)
+
+out_nc = os.path.join(figdir, f"plot_data_{date_str}.nc")
+plot_ds.to_netcdf(out_nc)
