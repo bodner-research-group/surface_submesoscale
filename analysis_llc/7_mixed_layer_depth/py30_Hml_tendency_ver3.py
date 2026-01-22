@@ -65,8 +65,9 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 
 # shortname = "hourly_wb_eddy_window22"
 # shortname = "hourly_wb_eddy_gaussian_wide_correct"
-# shortname = "hourly_wb_eddy_gaussian_30km"
-shortname = "hourly_wb_eddy_gaussian_50km"
+# shortname = "hourly_wb_eddy_gaussian_30km" ### 1.18 times wb_eddy
+# shortname = "hourly_wb_eddy_gaussian_60km"
+shortname = "hourly_wb_eddy_gaussian_2sigma"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}/{shortname}_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
@@ -88,8 +89,8 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # ==============================================================
 # SSH submesoscale 
 # ==============================================================
-# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_14kmCutoff_timeseries.nc"
-fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_17.50kmCutoff_timeseries.nc"
+# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
 eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
 
 hori_submeso_14 = -sigma_avg*Ce/abs_f * eta_submeso_grad2_14 * g*rho0/delta_rho * 86400 
@@ -298,7 +299,7 @@ filename = f"{figdir}Hml_reconstructed_winter.png"
 # ==============================================================
 # Select start date
 # ==============================================================
-start_date = np.datetime64("2012-01-13")
+start_date = np.datetime64("2012-01-12")
 
 end_date = np.datetime64("2012-06-01")
 

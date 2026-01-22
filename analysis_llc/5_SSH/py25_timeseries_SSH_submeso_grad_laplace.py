@@ -62,7 +62,7 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-# shortname = "SSH_Gaussian_submeso_14kmCutoff"
+# shortname = "SSH_Gaussian_submeso_17.50kmCutoff"
 shortname = "SSH_Gaussian_submeso_LambdaMLI"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
@@ -94,6 +94,7 @@ def compute_grad_laplace(var, grid):
 # ==============================================================
 times = []
 eta_submeso_grad2_list = []
+eta_submeso_grad_list = []
 
 # ==============================================================
 # Main loop over time steps
@@ -118,6 +119,10 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
     # Domain-mean submesoscale |∇η′|². Exclude 2 grid points on each boundary (mask edges)
     eta_submeso_grad2_mean = (eta_submeso_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))**2).mean(dim=["i", "j"])
     eta_submeso_grad2_list.append(eta_submeso_grad2_mean)
+
+    eta_submeso_grad_mean = (eta_submeso_grad_mag.isel(i=slice(2, -2), j=slice(2, -2))).mean(dim=["i", "j"])
+    eta_submeso_grad_list.append(eta_submeso_grad_mean)
+
     times.append(time_val)
 
     # # ==============================================================
@@ -146,6 +151,7 @@ for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
 ts_ds = xr.Dataset(
     {
         "eta_submeso_grad2_mean": xr.concat(eta_submeso_grad2_list, dim="time"),
+        "eta_submeso_grad_mean": xr.concat(eta_submeso_grad_list, dim="time"),
     },
     coords={"time": ("time", times)},
 )

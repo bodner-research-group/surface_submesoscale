@@ -34,21 +34,23 @@
   Compute hourly potential density, surface referenced mixed layer depth, and 10-m referenced mixed layer depth. 
 
 - **hourly_wb_Gaussian_calc.py (parallel), py31_hourly_wb_timeseries_sequential.py**
-  Compute total, mean, and eddy vertical buoyancy fluxes using hourly model output and a Gaussian filter, exclude regions where the mixed layer depth is shallower than 10m. The filter size is determined from the 60-day average wavelength of the most unstable mode of mixed-layer instability.
+  Compute total, mean, and eddy vertical buoyancy fluxes using hourly model output and a Gaussian filter, exclude regions where the mixed layer depth is shallower than 10m. The filter size is a constant (e.g., 60 km), or determined from the 60-day average wavelength of the most unstable mode of mixed-layer instability.
 
-- **py31_hourly_wb_calc.py**
+- **py31_hourly_wb_calc.py (parallel), py31_hourly_wb_calc_sequential.py**
   Compute total, mean, and eddy vertical buoyancy fluxes using hourly model output and coarse-graining ("box filter"), exclude regions where the mixed layer depth is shallower than 10m.
 
 - **py31_hourly_wb_timeseries.py**
   Compute the domain averaged eddy vertical buoyancy fluxes, and plot the time series.  
 
-- **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_plot.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
-  Compute total, mean, and eddy vertical buoyancy fluxes using daily averaged data. Compute their domain averages, and plot the time series.
+<!-- - **py31_wb_CoarseGraining_MixedlayerAvg_calc.py, py31_wb_CoarseGraining_MixedlayerAvg_plot.py, py31_wb_CoarseGraining_MixedlayerAvg_timeseries.py**  
+  Compute total, mean, and eddy vertical buoyancy fluxes using daily averaged data. Compute their domain averages, and plot the time series. -->
 
 
 ### 4_steric_height:
-- **py23_rho_insitu_hydrostatic_pressure.py, py24_steric_height_Wang25_timeseries.py**  
+- **py23_rho_insitu_hydrostatic_pressure.py**  
   Compute in-situ density and estimate hydrostatic pressure.
+
+- **py24_steric_height_Wang25_timeseries.py**
   Compute and save the domain-averaged time series of steric height anomaly following Jinbo Wang et al. (2025).
 
 
