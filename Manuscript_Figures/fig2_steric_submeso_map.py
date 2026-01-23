@@ -38,8 +38,8 @@ gravity = 9.81
 # ==============================================================
 # Plot settings
 # ==============================================================
-plt.rcParams.update({"font.size": 20})
-plt.rcParams.update({"axes.titlesize": 27})
+plt.rcParams.update({"font.size": 19})
+plt.rcParams.update({"axes.titlesize": 25})
 
 cmap_rb = "RdBu_r"
 cmap_grad = "viridis"
@@ -82,7 +82,7 @@ im00 = axes[0, 0].pcolormesh(
     cmap=cmap_rb, shading="auto",
     vmin=-ssh_lim, vmax=ssh_lim
 )
-axes[0, 0].set_title(r"$\eta-\langle \eta \rangle$")
+axes[0, 0].set_title(r"SSH Anomaly $\eta-\langle \eta \rangle$")
 axes[0, 0].set_ylabel("Latitude")
 # axes[0, 0].text(0.02, 0.96, "(a)", transform=axes[0, 0].transAxes,
                 # fontweight="bold", va="top")
@@ -92,14 +92,14 @@ im01 = axes[0, 1].pcolormesh(
     cmap=cmap_rb, shading="auto",
     vmin=-ssh_lim, vmax=ssh_lim
 )
-axes[0, 1].set_title(r"$\eta_{\mathrm{steric}}$")
+axes[0, 1].set_title(r"Steric Height $\eta_{\mathrm{steric}}$")
 
 im02 = axes[0, 2].pcolormesh(
     lon, lat, ds.eta_submeso.squeeze(),
     cmap=cmap_rb, shading="auto",
     vmin=-ssh_lim, vmax=ssh_lim
 )
-axes[0, 2].set_title(r"$\eta_{\mathrm{submeso}}$")
+axes[0, 2].set_title(r"Submesoscale SSH $\eta_{\mathrm{submeso}}$")
 
 cbar0 = fig.colorbar(
     im02, ax=axes[0, :],

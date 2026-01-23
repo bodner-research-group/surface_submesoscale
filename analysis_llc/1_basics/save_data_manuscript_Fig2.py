@@ -22,28 +22,38 @@ os.makedirs(output_dir, exist_ok=True)
 
 # --- Load datasets ---
 
+###### Total SSH gradient magnitude
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_gradient/SSH_gradient_magnitude.nc"
+eta_grad_mag_daily = xr.open_dataset(fname).eta_grad_mag_daily
 
-###### Steric height
+###### Steric height gradient magnitude
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/steric_height_anomaly_timeseries_surface_reference/grad2_timeseries.nc"
+eta_steric_grad_mean = xr.open_dataset(fname).eta_prime_grad_mean
+eta_grad_mean = xr.open_dataset(fname).eta_grad_mean
 
-
-###### Submesoscale SSH
-# maps
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI.nc"
-SSH_submesoscale_map = xr.open_dataset(fname).SSH_submesoscale.isel(time=61+45)
-# timeseries
+###### Submesoscale SSH gradient magnitude
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
 eta_submeso_grad_mean = xr.open_dataset(fname).eta_submeso_grad_mean
 
 
-
+###### Wavelength of the most unstable mixed-layer-instability (MLI) waves
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
+Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 
 # --- Prepare dictionary to save ---
 mat_data = {
-    "SSH_submesoscale_map": SSH_submesoscale_map.values,
+    "eta_grad_mag_daily":eta_grad_mag_daily.values,
+    "eta_grad_mean":eta_grad_mean.values,
+    "eta_steric_grad_mean":eta_steric_grad_mean.values,
     "eta_submeso_grad_mean":eta_submeso_grad_mean.values,
+    "Lambda_MLI_mean": Lambda_MLI_mean.values,
     # Optional: Save coordinates (e.g. time) if needed
+    "time_SSH": eta_grad_mag_daily.time.values.astype('datetime64[s]').astype(str),
+    "time_SSH_mean": eta_grad_mean.time.values.astype('datetime64[s]').astype(str),
+    "time_steric": eta_steric_grad_mean.time.values.astype('datetime64[s]').astype(str),
     "time_submesoSSH": eta_submeso_grad_mean.time.values.astype('datetime64[s]').astype(str),
+    "time_lambda": Lambda_MLI_mean.time.values.astype('datetime64[s]').astype(str),
     # Add others as needed
 }
 

@@ -46,10 +46,13 @@ times = []
 eta_grad2_mean_list = []
 eta_prime_grad2_mean_list = []
 
+eta_grad_mean_list = []
+eta_prime_grad_mean_list = []
+
 # ==============================================================
 # Loop over day files
 # ==============================================================
-for f in tqdm(file_list, desc="Computing domain-mean |∇η|²"):
+for f in tqdm(file_list, desc="Computing domain-mean |∇η|² and |∇η|"):
     ds = xr.open_dataset(f)
 
     # ---- time ----
@@ -70,8 +73,15 @@ for f in tqdm(file_list, desc="Computing domain-mean |∇η|²"):
     eta_grad2_mean = (eta_grad_mag ** 2).mean(dim=("i", "j"))
     eta_prime_grad2_mean = (eta_prime_grad_mag ** 2).mean(dim=("i", "j"))
 
+    eta_grad_mean = eta_grad_mag.mean(dim=("i", "j"))
+    eta_prime_grad_mean = eta_prime_grad_mag.mean(dim=("i", "j"))
+
     eta_grad2_mean_list.append(eta_grad2_mean)
     eta_prime_grad2_mean_list.append(eta_prime_grad2_mean)
+
+    eta_grad_mean_list.append(eta_grad_mean)
+    eta_prime_grad_mean_list.append(eta_prime_grad_mean)
+
     times.append(time_val)
 
     ds.close()
@@ -83,6 +93,8 @@ ts_ds = xr.Dataset(
     {
         "eta_grad2_mean": xr.concat(eta_grad2_mean_list, dim="time"),
         "eta_prime_grad2_mean": xr.concat(eta_prime_grad2_mean_list, dim="time"),
+        "eta_grad_mean": xr.concat(eta_grad_mean_list, dim="time"),
+        "eta_prime_grad_mean": xr.concat(eta_prime_grad_mean_list, dim="time"),
     },
     coords={"time": ("time", times)},
 )
@@ -120,6 +132,35 @@ plt.grid(True, linestyle="--", alpha=0.5)
 plt.tight_layout()
 
 figfile = os.path.join(figdir, "grad2_timeseries.png")
+plt.savefig(figfile, dpi=150)
+plt.close()
+
+
+plt.figure(figsize=(8, 4))
+
+ts_ds["eta_grad_mean"].plot(
+    label="⟨|∇η|⟩", color="tab:blue"
+)
+ts_ds["eta_prime_grad_mean"].plot(
+    label="⟨|∇η′|⟩", color="tab:orange"
+)
+
+# 7-day rolling mean
+ts_ds["eta_grad_mean"].rolling(time=7, center=True).mean().plot(
+    linestyle="--", color="tab:blue", label="⟨|∇η|⟩ (7d)"
+)
+ts_ds["eta_prime_grad_mean"].rolling(time=7, center=True).mean().plot(
+    linestyle="--", color="tab:orange", label="⟨|∇η′|⟩ (7d)"
+)
+
+plt.title("Domain-mean ⟨|∇η|⟩ and ⟨|∇η′|")
+plt.ylabel("m² m⁻²")
+plt.xlabel("Time")
+plt.legend()
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.tight_layout()
+
+figfile = os.path.join(figdir, "grad_timeseries.png")
 plt.savefig(figfile, dpi=150)
 plt.close()
 

@@ -1,0 +1,156 @@
+%%% Figure 2:
+
+clear;close all;
+set(groot, 'DefaultFigureRenderer', 'painters')
+
+load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/timeseries_steric_submesoSSH.mat')
+
+
+addpath ~/surface_submesoscale/analysis_llc/colormap
+load_colors
+
+POSITION = [52 526 764 291];
+fontsize = 19;
+figdir = '~/surface_submesoscale/Manuscript_Figures/figure2/';
+
+% Convert time strings to datetime
+time_SSH = datetime(time_SSH, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_SSH_mean = datetime(time_SSH_mean, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_steric = datetime(time_steric, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_submesoSSH = datetime(time_submesoSSH, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+time_lambda = datetime(time_lambda, 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss');
+
+
+% Define start and end of time
+t_start = dateshift(min(time_submesoSSH), 'start', 'month');
+t_end   = dateshift(max(time_submesoSSH), 'start', 'month') + calmonths(1);
+
+% Generate monthly ticks (every month)
+monthly_ticks = t_start : calmonths(1) : t_end;
+
+%%% === Figure 1:  ===
+figure(1); clf;
+% set(gcf, 'Color', 'w', 'Position', [52 526 764+60 291])
+set(gcf, 'Color', 'w', 'Position', [52 526 1000 350])
+set(gca, 'Position', [0.1 0.1100 0.725 0.8150])
+
+% Add 12 grid lines per year (1 per month)
+for t = monthly_ticks
+    xline(t, 'Color', [0.8 0.8 0.8], 'LineStyle', ':', 'LineWidth', 0.5); % light gray lines
+end
+
+hold on;
+
+
+
+
+
+%%
+% Left y-axis: Gradient magnitude of mixed-layer steric height
+yyaxis left
+l11 = plot(time_steric, 1e6*eta_steric_grad_mean, 'Color',blue, 'LineWidth', 2);
+
+ylabel('\boldmath$\vert\nabla \eta_\mathrm{steric}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ax1 = gca;
+% ax1.YColor =  (blue + purple)/2; % Blue axis
+ax1.YColor =  blue;
+set(gca,'FontSize', fontsize);
+ylim([0 1.2])
+% l111 = plot(time_steric, zeros(1,length(time_steric)),'--' ,'Color',blue, 'LineWidth', 0.75);
+
+
+
+
+%%
+% Right y-axis: Gradient magnitude of submesoscale SSH
+yyaxis right
+l12 = plot(time_submesoSSH, 1e6*eta_submeso_grad_mean,'k', 'LineWidth', 2);
+% ylabel('\boldmath$H_\mathrm{ML} (\mathrm{m})$','Interpreter','latex');
+ylabel('\boldmath$\vert\nabla\eta_\mathrm{submeso}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ax1.YColor = 'k';  % Black axis
+set(gca,'FontSize', fontsize);
+ylim([0 1.2])
+
+
+%%
+% Add third y-axis manually 
+ax1 = gca;  % current axes
+ax1_pos = ax1.Position;  % position of first axes
+
+annotation('textbox', [0.4928, 0.52, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
+           'String', 'Wavelength of the most unstable mode', ...
+           'Color', green, ...               % green color
+           'FontSize', fontsize+2, ...
+           'EdgeColor', 'none');                 % remove box border
+
+annotation('textbox', [0.38, 0.82, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
+           'String', 'Submesoscale SSH', ...
+           'Color', 'k', ...               
+           'FontSize', fontsize+2, ...
+           'EdgeColor', 'none');               
+
+annotation('textbox', [0.22, 0.52, 0.15, 0.1], ...   % [x, y, width, height] in normalized figure units
+           'String', 'Mixed-layer steric height', ...
+           'Color', blue, ...               
+           'FontSize', fontsize+2, ...
+           'EdgeColor', 'none');               
+
+% Define custom tick locations (every 2 months from Nov 2011 to Nov 2012)
+xticks_custom = datetime(2011,11,1) : calmonths(2) : datetime(2012,11,1);
+xlim([datetime(2011,11,1), datetime(2012,11,1)]);
+xticks(xticks_custom);
+xticklabels(datestr(xticks_custom, 'mmm yyyy'));  % or use datestr for full control
+
+% Create ax3 for plotting N2ml_mean (aligned with main axes)
+ax3 = axes('Position', ax1_pos, ...
+           'Color', 'none', ...
+           'YAxisLocation', 'right', ...
+           'XAxisLocation', 'bottom', ...
+           'XColor', 'none', 'YColor', 'g');
+hold(ax3, 'on');
+% set(ax3, 'YScale', 'log');
+
+plot(ax3, time_lambda, Lambda_MLI_mean, '-.','Color',green, 'LineWidth', 2);
+ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex');
+set(ax3, 'FontSize', fontsize);
+ylim([0 24])
+
+ax3.YColor = 'none';
+ax3.YTick = [0:4:24];
+
+% Now create a new axes only for the y-axis labels and ticks, shifted right
+ax3_label = axes('Position', ax1_pos, ...
+                 'Color', 'none', ...
+                 'YAxisLocation', 'right', ...
+                 'XAxisLocation', 'bottom', ...
+                 'XColor', 'none', 'YColor', green);
+
+% Shift this axis right
+ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
+
+% Hide the plot in ax3_label, only show y-axis
+set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
+set(ax3_label, 'YLim', get(ax3, 'YLim'));
+% set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
+ylabel(ax3_label, '\boldmath$\lambda_\mathrm{MLI}\ (\mathrm{m})$ ','Interpreter','latex');
+set(ax3_label, 'FontSize', fontsize);
+
+% Hide x-axis and box for the label axis
+ax3_label.XColor = 'none';
+ax3_label.Box = 'off';
+ax3_label.Visible = 'on';
+
+% Link y-limits of both ax3 and ax3_label
+linkaxes([ax3, ax3_label], 'y');
+
+
+grid(ax1, 'on'); grid(ax1, 'minor');
+
+set(gca, 'FontSize', fontsize);
+
+box(ax1, 'on');       % For the main axes
+
+print(gcf,'-dpng','-r300',[figdir 'fig2_timeseries.png']);
+
+
+
