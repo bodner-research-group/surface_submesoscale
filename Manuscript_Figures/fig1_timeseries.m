@@ -3,7 +3,7 @@
 clear; close all;
 
 
-set(groot, 'DefaultFigureRenderer', 'painters')
+% set(groot, 'DefaultFigureRenderer', 'painters')
 
 % % ===== Lock graphics defaults (2024a-like) =====
 % set(groot, ...
@@ -30,7 +30,7 @@ load_colors
 
 
 POSITION = [52 526 764 291];
-fontsize = 17;
+fontsize = 19;
 figdir = '~/surface_submesoscale/Manuscript_Figures/figure1/';
 
 % Convert time strings to datetime
@@ -84,12 +84,12 @@ l11 = plot(time_Hml, Bflux_daily_avg*1e7, 'Color',blue, 'LineWidth', 2);
 % l111 = plot(time_qnet, vertical_bf_submeso_mld*300*1e7, 'Color',purple, 'LineWidth', 2);
 
 
-ylabel('\boldmath$B_0\ (\mathrm{m^2/s^3})$','Interpreter','latex');
+ylabel('\boldmath$B_0\ (\mathrm{m^2/s^3})$','Interpreter','latex','FontSize',fontsize+1);
 % ylabel('\boldmath$\mathrm{Buoyancy\ flux}\ (10^{-7}\,\mathrm{m^2/s^3})$','Interpreter','latex');
 ax1 = gca;
 % ax1.YColor =  (blue + purple)/2; % Blue axis
 ax1.YColor =  blue;
-set(gca,'FontSize', fontsize);
+set(gca,'FontSize', fontsize-2);
 % ylim([-400 170]);  % Set y-axis limits correctly
 l111 = plot(time_Hml, zeros(1,length(time_Hml)),'--' ,'Color',blue, 'LineWidth', 0.75);
 
@@ -100,26 +100,28 @@ l12 = plot(time_Hml, -(Hml_mean),'k-.', 'LineWidth', 2.5);
 % ylabel('\boldmath$H_\mathrm{ML} (\mathrm{m})$','Interpreter','latex');
 ylabel('\boldmath$-\langle H\rangle (\mathrm{m})$','Interpreter','latex');
 ax1.YColor = 'k';  % Black axis
-set(gca,'FontSize', fontsize);
-% ylim([0 900])
+set(gca,'FontSize', fontsize-2);
+ylim([-800 1])
 
 % Add third y-axis manually (for N^2, log scale)
 ax1 = gca;  % current axes
 ax1_pos = ax1.Position;  % position of first axes
 
-annotation('textbox', [0.498, 0.48, 0.2, 0.1], ...   % [x, y, width, height] in normalized figure units
-           'String', 'Mixed layer stratification', ...
+% annotation('textbox', [0.54, 0.56, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
+annotation('textbox', [0.51, 0.49, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
+            'String', 'Mixed layer stratification', ...
            'Color', green, ...               % green color
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');                 % remove box border
 
-annotation('textbox', [0.63, 0.77, 0.2, 0.1], ...   % [x, y, width, height] in normalized figure units
-           'String', 'Mixed layer base', ...
+annotation('textbox', [0.625, 0.75, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
+...% annotation('textbox', [0.505, 0.805, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
+            'String', 'Mixed layer base', ...
            'Color', 'k', ...               
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');               
 
-annotation('textbox', [0.1, 0.82, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
+annotation('textbox', [0.1, 0.83, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
            'String', 'Surface buoyancy flux', ...
            'Color', blue, ...               
            'FontSize', fontsize+2, ...
@@ -147,9 +149,9 @@ hold(ax3, 'on');
 set(ax3, 'YScale', 'log');
 
 plot(ax3, time_Hml, N2ml_mean_logsafe, 'Color',green, 'LineWidth', 2);
-ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex');
-set(ax3, 'FontSize', fontsize);
-ylim([3e-7 1.8e-4])
+ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex','FontSize',fontsize+1);
+set(ax3, 'FontSize', fontsize-2);
+ylim([3e-7 3e-4])
 
 ax3.YColor = 'none';
 ax3.YTick = [1e-6 1e-5 1e-4];
@@ -167,7 +169,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 % Hide the plot in ax3_label, only show y-axis
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$N^2\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex');
+ylabel(ax3_label, '\boldmath$N^2\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex','FontSize',fontsize+1);
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis
@@ -192,7 +194,7 @@ grid(ax1, 'on'); grid(ax1, 'minor');
 % l13.Box = 'off';  % Hide box
 % legend(ax3, 'boxoff');
 
-set(gca, 'FontSize', fontsize);
+set(gca, 'FontSize', fontsize-2);
 
 box(ax1, 'on');       % For the main axes
 

@@ -62,8 +62,8 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-# shortname = "SSH_Gaussian_submeso_17.50kmCutoff"
-shortname = "SSH_Gaussian_submeso_LambdaMLI"
+shortname = "SSH_Gaussian_submeso_16.50kmCutoff"
+# shortname = "SSH_Gaussian_submeso_LambdaMLI"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
 # eta_submeso = xr.open_dataset(fname).eta_submeso ### Only for GCMFilters

@@ -24,7 +24,8 @@ cmap = WhiteBlueGreenYellowRed()
 omega = 7.2921e-5  # [rad/s]
 
 # Global font size setting for figures
-plt.rcParams.update({'font.size': 17})
+plt.rcParams.update({'font.size': 19})
+plt.rcParams.update({"axes.titlesize": 25})
 
 # ==== Paths ====
 data_path = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/strain_vorticity/strain_vorticity_daily.nc"
@@ -59,8 +60,11 @@ delta_norm = ds["divergence"] / f0_mean
 # ==== Daily Maps ====
 print("\nGenerating daily maps...")
 # for t in range(len(ds.time)):
-t = 133
-# t = 300
+t = 300
+
+# t = 61+45 ### Feb 15, 2012
+# t = 61+45+14+13 ### Mar 13, 2012
+# t = 61+45+14+5 ### Mar 5, 2012
 
 date_str = str(ds.time[t].values)[:10]
 

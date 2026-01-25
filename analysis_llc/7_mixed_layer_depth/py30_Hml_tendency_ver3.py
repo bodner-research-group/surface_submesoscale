@@ -64,10 +64,11 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 # wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
 
 # shortname = "hourly_wb_eddy_window22"
-# shortname = "hourly_wb_eddy_gaussian_wide_correct"
+shortname = "hourly_wb_eddy_gaussian_wide_correct"
+# shortname = "hourly_wb_eddy_gaussian_wide"
 # shortname = "hourly_wb_eddy_gaussian_30km" ### 1.18 times wb_eddy
 # shortname = "hourly_wb_eddy_gaussian_60km"
-shortname = "hourly_wb_eddy_gaussian_2sigma"
+# shortname = "hourly_wb_eddy_gaussian_2sigma"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}/{shortname}_timeseries.nc"
 wb_eddy_mean = xr.open_dataset(fname).wb_eddy_mean
 
@@ -89,11 +90,11 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # ==============================================================
 # SSH submesoscale 
 # ==============================================================
-fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_17.50kmCutoff_timeseries.nc"
-# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
-eta_submeso_grad2_14 = xr.open_dataset(fname14).eta_submeso_grad2_mean
+# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_17.50kmCutoff_timeseries.nc"
+fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+eta_submeso_grad2 = xr.open_dataset(fname14).eta_submeso_grad2_mean
 
-hori_submeso_14 = -sigma_avg*Ce/abs_f * eta_submeso_grad2_14 * g*rho0/delta_rho * 86400 
+hori_submeso = -sigma_avg*Ce/abs_f * eta_submeso_grad2 * g*rho0/delta_rho * 86400 
 
 # ==============================================================
 # 5. Ekman buoyancy flux
@@ -111,7 +112,9 @@ tendency_ekman = B_Ek_mean * rho0/g/delta_rho * 86400
 
 diff = dHml_dt - vert - tendency_ekman
 
-residual = dHml_dt - vert - tendency_ekman - wb_eddy
+# residual = dHml_dt - vert - tendency_ekman - wb_eddy
+residual = dHml_dt - vert - tendency_ekman - hori_submeso
+
 
 # ==============================================================
 # 7. Cumulative integrals
@@ -137,7 +140,7 @@ wb_eddy_cum = cumulative(wb_eddy)
 diff_cum = cumulative(diff)
 
 hori_steric_cum = cumulative(hori_steric)
-hori_submeso_cum_14 = cumulative(hori_submeso_14)
+hori_submeso_cum = cumulative(hori_submeso)
 
 
 
@@ -162,7 +165,7 @@ plt.plot(tendency_ekman.time, tendency_ekman, label="Ekman buoyancy flux", color
 plt.plot(diff.time, diff, label="dHml/dt - surf - Ekman", linestyle='--', color='tab:green')
 
 plt.plot(hori_steric.time, hori_steric, label="steric", color=darkpink)
-plt.plot(hori_submeso_14.time, hori_submeso_14, label="SSH submeso, time-varying filter", color='orange', linestyle='-')
+plt.plot(hori_submeso.time, hori_submeso, label="SSH submeso, time-varying filter", color='orange', linestyle='-')
 plt.plot(wb_eddy.time, wb_eddy, label=r"$B_{eddy}$", color='purple', linestyle='-')
 # plt.plot(
 #     wb_eddy.time,
@@ -198,7 +201,7 @@ plt.figure(figsize=(12, 6.5))
 H0 = Hml_mean.isel(time=0)
 
 Hml_reconstructed_steric = H0 + vert_cum + tendency_ek_cum + hori_steric_cum
-Hml_reconstructed_sub14 = H0 + vert_cum + tendency_ek_cum + hori_submeso_cum_14
+Hml_reconstructed_sub14 = H0 + vert_cum + tendency_ek_cum + hori_submeso_cum
 
 Hml_reconstructed_wbeddy = H0 + vert_cum + tendency_ek_cum + wb_eddy_cum
 
@@ -241,7 +244,7 @@ vert_rm = vert.rolling(time=window, center=True).mean()
 tendency_ekman_rm = tendency_ekman.rolling(time=window, center=True).mean()
 diff_rm = diff.rolling(time=window, center=True).mean()
 hori_steric_rm = hori_steric.rolling(time=window, center=True).mean()
-hori_submeso_14_rm = hori_submeso_14.rolling(time=window, center=True).mean()
+hori_submeso_rm = hori_submeso.rolling(time=window, center=True).mean()
 wb_eddy_rm = wb_eddy.rolling(time=window, center=True).mean()
 residual_rm = residual.rolling(time=window, center=True).mean()
 
@@ -268,7 +271,7 @@ plt.plot(diff_rm.time, diff_rm,
 plt.plot(hori_steric_rm.time, hori_steric_rm,
          label="steric", color=darkpink)
 
-plt.plot(hori_submeso_14_rm.time, hori_submeso_14_rm,
+plt.plot(hori_submeso_rm.time, hori_submeso_rm,
          label="SSH submeso, time-varying filter", color='orange')
 
 plt.plot(wb_eddy_rm.time, wb_eddy_rm,
@@ -299,9 +302,10 @@ filename = f"{figdir}Hml_reconstructed_winter.png"
 # ==============================================================
 # Select start date
 # ==============================================================
-start_date = np.datetime64("2012-01-12")
+# start_date = np.datetime64("2012-01-12")
+start_date = np.datetime64("2011-11-01")
 
-end_date = np.datetime64("2012-06-01")
+end_date = np.datetime64("2012-10-31")
 
 
 def sel2012(da):
@@ -311,7 +315,7 @@ Hml_mean_2012        = sel2012(Hml_mean)
 vert_2012            = sel2012(vert)
 tendency_ekman_2012  = sel2012(tendency_ekman)
 hori_steric_2012     = sel2012(hori_steric)
-hori_submeso_2012    = sel2012(hori_submeso_14)
+hori_submeso_2012    = sel2012(hori_submeso)
 wb_eddy_2012         = sel2012(wb_eddy)
 
 dt = 1.0  # day
@@ -353,6 +357,12 @@ Hml_recon_wbeddy_2012 = (
     + tendency_ek_cum_2012
     + wb_eddy_cum_2012
 )
+
+
+Hml_recon_steric_2012 = Hml_recon_steric_2012-Hml_recon_steric_2012.isel(time=61+12-1)+Hml_mean_2012[61+12-1]
+Hml_recon_submeso_2012 = Hml_recon_submeso_2012-Hml_recon_submeso_2012.isel(time=61+12-1)+Hml_mean_2012[61+12-1]
+Hml_recon_wbeddy_2012 = Hml_recon_wbeddy_2012-Hml_recon_wbeddy_2012.isel(time=12-1)+Hml_mean_2012[61+12-1]
+
 
 
 plt.figure(figsize=(12, 6.5))
@@ -400,6 +410,67 @@ plt.savefig(filename, dpi=200, bbox_inches="tight")
 
 
 
+
+from scipy.io import savemat
+
+def to_matlab_time(xr_time):
+    """Convert xarray datetime64 to MATLAB datenum-style floats"""
+    return xr_time.values.astype('datetime64[s]').astype(float) / 86400 + 719529
+
+
+
+datadir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/Manuscript_Data/{domain_name}/"
+
+mat_data = {
+
+    # ===== Time =====
+    "time": to_matlab_time(dHml_dt.time),
+    "time_rm": to_matlab_time(dHml_dt_rm.time),
+    "time_rec": to_matlab_time(Hml_mean_2012.time),
+    "time_wbeddy": to_matlab_time(wb_eddy.time),
+    "time_wbeddy_rm": to_matlab_time(wb_eddy_rm.time),
+    "time_Hml_recon_steric_2012": to_matlab_time(Hml_recon_steric_2012.time),
+    "time_Hml_recon_wbeddy_2012": to_matlab_time(Hml_recon_wbeddy_2012.time),
+
+    # ===== Raw tendencies =====
+    "dHml_dt": dHml_dt.values,
+    "vert": vert.values,
+    "tendency_ekman": tendency_ekman.values,
+    "diff": diff.values,
+    "hori_steric": hori_steric.values,
+    "hori_submeso": hori_submeso.values,
+    "wb_eddy": wb_eddy.values,
+    "residual": residual.values,
+
+    # ===== Rolling means =====
+    "dHml_dt_rm": dHml_dt_rm.values,
+    "vert_rm": vert_rm.values,
+    "tendency_ekman_rm": tendency_ekman_rm.values,
+    "diff_rm": diff_rm.values,
+    "hori_steric_rm": hori_steric_rm.values,
+    "hori_submeso_rm": hori_submeso_rm.values,
+    "wb_eddy_rm": wb_eddy_rm.values,
+    "residual_rm": residual_rm.values,
+
+    # ===== Cumulative integrals =====
+    "Hml_mean_2012": Hml_mean_2012.values,
+    "Hml_recon_steric_2012":Hml_recon_steric_2012.values,
+    "Hml_recon_submeso_2012":Hml_recon_submeso_2012.values,
+    "Hml_recon_wbeddy_2012":Hml_recon_wbeddy_2012.values,
+
+}
+
+
+matfile = f"{datadir}Hml_tendency_all_plot_data.mat"
+
+savemat(matfile, mat_data)
+
+print("Saved:", matfile)
+
+
+
+
+
 # # ==============================================================
 # # Plot 3 — Cumulative integrals
 # # ==============================================================
@@ -412,7 +483,7 @@ plt.savefig(filename, dpi=200, bbox_inches="tight")
 # plt.plot(diff_cum.time, diff_cum, label="Cumulative (total - surf - Ekman)", linestyle='--', color='tab:green')
 
 # plt.plot(hori_steric_cum.time, hori_steric_cum, label="steric", color=darkpink)
-# plt.plot(hori_submeso_cum_14.time, hori_submeso_cum_14, label="SSH submeso 14 km", color='orange', linestyle='-')
+# plt.plot(hori_submeso_cum.time, hori_submeso_cum, label="SSH submeso 14 km", color='orange', linestyle='-')
 # plt.plot(wb_eddy_cum.time, wb_eddy_cum, label=r"$B_{eddy}$", color='purple', linestyle='-')
 # # plt.plot(
 # #     wb_eddy_cum.time,

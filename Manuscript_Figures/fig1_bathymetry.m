@@ -33,7 +33,7 @@ topo_sub = topo(lon_idx, lat_idx);
 mycolor2 = flip(cmocean('ice'));
 mycolor  = [boxcolor; mycolor2];
 
-fontsize = 14;
+fontsize = 16;
 
 %%% ===== Figure and axes =====
 lat0 = mean(lat_sub);

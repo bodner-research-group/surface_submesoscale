@@ -29,7 +29,7 @@ eta_dir = os.path.join(base_dir, "surface_24h_avg")
 # Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
 
 # out_dir = os.path.join(base_dir, "SSH_submesoscale")
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/Manuscript_Data/{domain_name}"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/Manuscript_Data/{domain_name}/steric_submeso"
 os.makedirs(out_dir, exist_ok=True)
 
 figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/SSH_submesoscale/"
@@ -63,8 +63,8 @@ Eta_daily = ds_eta["Eta"]
 Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
-# shortname = "SSH_Gaussian_submeso_17.50kmCutoff"
-shortname = "SSH_Gaussian_submeso_LambdaMLI"
+shortname = "SSH_Gaussian_submeso_16.50kmCutoff"
+# shortname = "SSH_Gaussian_submeso_LambdaMLI"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
 # eta_submeso = xr.open_dataset(fname).eta_submeso ### Only for GCMFilters
@@ -101,11 +101,13 @@ eta_submeso_grad_list = []
 # Main loop over time steps
 # ==============================================================
 # for t in tqdm(range(len(Eta.time)), desc="Processing time steps"):
-t = 61+50
+# t = 61+45 ### Feb 15, 2012
+# t = 61+45+14+13 ### Mar 13, 2012
+t = 61+45+14+5 ### Mar 5, 2012
 time_val = Eta.time.isel(time=t).values
 date_tag = np.datetime_as_string(time_val, unit="D").replace("-", "")
 
-day_file = os.path.join(out_dir, f"grad_laplace_eta_submeso_{date_tag}.nc")
+day_file = os.path.join(out_dir, f"grad_laplace_eta_submeso_{date_tag}_16.50kmCutoff.nc")
 # if os.path.exists(day_file):
 #     print(f"Already processed: {day_file}")
 #     continue

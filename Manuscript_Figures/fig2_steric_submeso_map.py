@@ -18,8 +18,9 @@ os.makedirs(figdir, exist_ok=True)
 # ==============================================================
 # Choose day
 # ==============================================================
-date_tag = "20120215"
-datafile = os.path.join(data_dir, f"grad_laplace_eta_submeso_{date_tag}.nc")
+# date_tag = "20120215"
+date_tag = "20120305"
+datafile = os.path.join(data_dir, f"grad_laplace_eta_submeso_{date_tag}_16.50kmCutoff.nc")
 
 ds = xr.open_dataset(datafile)
 
@@ -73,6 +74,10 @@ fig.set_constrained_layout_pads(
 
 # fig.suptitle(f"SSH diagnostics — {date_tag}", fontsize=33)
 
+# import matplotlib as mpl
+
+# mpl.rcParams['mathtext.fontset'] = 'cm'   # Computer Modern
+# mpl.rcParams['font.family'] = 'serif'
 
 # ==============================================================
 # -------- Row 1: SSH fields --------
@@ -82,7 +87,7 @@ im00 = axes[0, 0].pcolormesh(
     cmap=cmap_rb, shading="auto",
     vmin=-ssh_lim, vmax=ssh_lim
 )
-axes[0, 0].set_title(r"SSH Anomaly $\eta-\langle \eta \rangle$")
+axes[0, 0].set_title(r"SSH anomaly $\eta-\langle \eta \rangle$")
 axes[0, 0].set_ylabel("Latitude")
 # axes[0, 0].text(0.02, 0.96, "(a)", transform=axes[0, 0].transAxes,
                 # fontweight="bold", va="top")
@@ -92,7 +97,7 @@ im01 = axes[0, 1].pcolormesh(
     cmap=cmap_rb, shading="auto",
     vmin=-ssh_lim, vmax=ssh_lim
 )
-axes[0, 1].set_title(r"Steric Height $\eta_{\mathrm{steric}}$")
+axes[0, 1].set_title(r"Steric height $\eta_{\mathrm{steric}}$")
 
 im02 = axes[0, 2].pcolormesh(
     lon, lat, ds.eta_submeso.squeeze(),
@@ -186,7 +191,7 @@ for ax in axes[:, 1:].flat:
 # ==============================================================
 # Save
 # ==============================================================
-outfile = os.path.join(figdir, f"SSH_3x3_grad_laplace_{date_tag}.png")
+outfile = os.path.join(figdir, f"SSH_3x3_grad_laplace_{date_tag}_16.50kmCutoff.png")
 plt.savefig(outfile, dpi=300)
 plt.close()
 

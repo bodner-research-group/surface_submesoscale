@@ -55,6 +55,7 @@ for fpath in nc_files:
     # NEW: Mask out shallow mixed layers |Hml| < 10 m
     # --------------------------------------------------
     deep_mask = Hml <= -10.0
+    # deep_mask = Hml <= 0
 
     Lambda_MLI = Lambda_MLI.where(deep_mask)
     Mml4 = Mml4.where(deep_mask)
