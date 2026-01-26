@@ -48,15 +48,14 @@ hold on;
 %%
 % Left y-axis: Gradient magnitude of mixed-layer steric height
 yyaxis left
-l11 = plot(time_steric, 1e6*eta_steric_grad_mean, 'Color',blue, 'LineWidth', 2);
+l11 = plot(time_steric, 1e6*eta_steric_grad_mean, 'Color',brown, 'LineWidth', 2);
 
 ylabel('\boldmath$\vert\nabla \eta_\mathrm{steric}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
 ax1 = gca;
-% ax1.YColor =  (blue + purple)/2; % Blue axis
-ax1.YColor =  blue;
+ax1.YColor =  brown;
 set(gca,'FontSize', fontsize);
 ylim([0 1.2])
-% l111 = plot(time_steric, zeros(1,length(time_steric)),'--' ,'Color',blue, 'LineWidth', 0.75);
+% l111 = plot(time_steric, zeros(1,length(time_steric)),'--' ,'Color',brown, 'LineWidth', 0.75);
 
 
 
@@ -64,10 +63,10 @@ ylim([0 1.2])
 %%
 % Right y-axis: Gradient magnitude of submesoscale SSH
 yyaxis right
-l12 = plot(time_submesoSSH, 1e6*eta_submeso_grad_mean,'k', 'LineWidth', 2);
+l12 = plot(time_submesoSSH, 1e6*eta_submeso_grad_mean,'Color',olive, 'LineWidth', 2);
 % ylabel('\boldmath$H_\mathrm{ML} (\mathrm{m})$','Interpreter','latex');
 ylabel('\boldmath$\vert\nabla\eta_\mathrm{submeso}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
-ax1.YColor = 'k';  % Black axis
+ax1.YColor = olive;  % Black axis
 set(gca,'FontSize', fontsize);
 ylim([0 1.2])
 
@@ -79,19 +78,19 @@ ax1_pos = ax1.Position;  % position of first axes
 
 annotation('textbox', [0.4928, 0.52, 0.25, 0.1], ...   % [x, y, width, height] in normalized figure units
            'String', 'Wavelength of the most unstable mode', ...
-           'Color', green, ...               % green color
+           'Color', black, ...               % olive color
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');                 % remove box border
 
 annotation('textbox', [0.38, 0.82, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
            'String', 'Submesoscale SSH', ...
-           'Color', 'k', ...               
+           'Color', olive, ...               
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');               
 
 annotation('textbox', [0.22, 0.52, 0.15, 0.1], ...   % [x, y, width, height] in normalized figure units
            'String', 'Mixed-layer steric height', ...
-           'Color', blue, ...               
+           'Color', brown, ...               
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');               
 
@@ -106,11 +105,11 @@ ax3 = axes('Position', ax1_pos, ...
            'Color', 'none', ...
            'YAxisLocation', 'right', ...
            'XAxisLocation', 'bottom', ...
-           'XColor', 'none', 'YColor', 'g');
+           'XColor', 'none', 'YColor', 'k');
 hold(ax3, 'on');
 % set(ax3, 'YScale', 'log');
 
-plot(ax3, time_lambda, Lambda_MLI_mean, '-.','Color',green, 'LineWidth', 2);
+plot(ax3, time_lambda, Lambda_MLI_mean, '-.','Color',black, 'LineWidth', 2);
 ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex');
 set(ax3, 'FontSize', fontsize);
 ylim([0 24])
@@ -123,7 +122,7 @@ ax3_label = axes('Position', ax1_pos, ...
                  'Color', 'none', ...
                  'YAxisLocation', 'right', ...
                  'XAxisLocation', 'bottom', ...
-                 'XColor', 'none', 'YColor', green);
+                 'XColor', 'none', 'YColor', black);
 
 % Shift this axis right
 ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
