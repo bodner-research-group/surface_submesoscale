@@ -30,9 +30,9 @@ tr_wbeddy  = datetime(time_wbeddy_rm , 'ConvertFrom','datenum');     % raw time
 p2 = plot(t, vert, 'Color',blue);        p2.Color(4) = 0.25;
 p3 = plot(t, tendency_ekman, 'Color',cyan); p3.Color(4) = 0.25;
 p4 = plot(t, diff, 'Color',lightred2);   p4.Color(4) = 0.25;
-p7 = plot(t_wbeddy, wb_eddy, 'Color',purple2); p7.Color(4) = 0.25;
 p5 = plot(t, hori_steric, 'Color',brown);  p5.Color(4) = 0.25;
 p6 = plot(t, hori_submeso, 'Color',olive); p6.Color(4) = 0.25;
+p7 = plot(t_wbeddy, wb_eddy, '-.','Color',purple2); p7.Color(4) = 0.25;
 % p8 = plot(t, residual, 'Color',lightgray); p8.Color(4) = 0.25;
 p1 = plot(t, dHml_dt,'-','Color',black);     p1.Color(4) = 0.25;
 
@@ -40,9 +40,9 @@ p1 = plot(t, dHml_dt,'-','Color',black);     p1.Color(4) = 0.25;
 p2r = plot(tr, vert_rm, 'Color',blue, 'LineWidth', 2);
 p3r = plot(tr, tendency_ekman_rm, 'Color',cyan, 'LineWidth', 2);
 p4r = plot(tr, diff_rm, 'Color',lightred2, 'LineWidth', 2); p4r.Color(4) = 0.6;
-p7r = plot(tr_wbeddy, wb_eddy_rm, 'Color',purple2, 'LineWidth', 2.5);
 p5r = plot(tr, hori_steric_rm, 'Color',brown, 'LineWidth', 2.5);
 p6r = plot(tr, hori_submeso_rm, 'Color',olive, 'LineWidth', 2.5);
+p7r = plot(tr_wbeddy, wb_eddy_rm, '-.','Color',purple2, 'LineWidth', 2.5);
 % p8r = plot(tr, residual_rm,'Color', gray, 'LineWidth', 2.5);
 p1r = plot(tr, dHml_dt_rm,'-','Color',black, 'LineWidth', 1.5);
 
@@ -104,7 +104,7 @@ lgd2.Box = 'off';
 % ---- Third legend: ax1c ----
 lgd3 = legend(ax1c,[p4r], ...
     {'\textbf{Horizontal $\partial_t \langle H \rangle - \rho_0 \langle B_\mathrm{surf}+B_\mathrm{Ek}\rangle/(g\Delta\rho)$}'}, ...
-    'FontSize',fontsize-1,'Interpreter','latex','Position',[0.3937 0.8473 0.5538 0.0365]);
+    'FontSize',fontsize-1,'Interpreter','latex','Position',[0.3849 0.8473 0.5538 0.0365]);
 lgd3.Box = 'off';
 
 %%

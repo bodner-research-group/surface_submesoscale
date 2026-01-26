@@ -64,8 +64,8 @@ vert = Bflux_daily_avg * rho0/g/delta_rho * 86400
 # wb_eddy = - wb_eddy_mean * rho0/g/delta_rho * 86400 
 
 # shortname = "hourly_wb_eddy_window22"
-shortname = "hourly_wb_eddy_gaussian_wide_correct"
-# shortname = "hourly_wb_eddy_gaussian_wide"
+# shortname = "hourly_wb_eddy_gaussian_wide_correct"
+shortname = "hourly_wb_eddy_gaussian_30km_manuscript"
 # shortname = "hourly_wb_eddy_gaussian_30km" ### 1.18 times wb_eddy
 # shortname = "hourly_wb_eddy_gaussian_60km"
 # shortname = "hourly_wb_eddy_gaussian_2sigma"
@@ -361,7 +361,7 @@ Hml_recon_wbeddy_2012 = (
 
 Hml_recon_steric_2012 = Hml_recon_steric_2012-Hml_recon_steric_2012.isel(time=61+12-1)+Hml_mean_2012[61+12-1]
 Hml_recon_submeso_2012 = Hml_recon_submeso_2012-Hml_recon_submeso_2012.isel(time=61+12-1)+Hml_mean_2012[61+12-1]
-Hml_recon_wbeddy_2012 = Hml_recon_wbeddy_2012-Hml_recon_wbeddy_2012.isel(time=12-1)+Hml_mean_2012[61+12-1]
+Hml_recon_wbeddy_2012 = Hml_recon_wbeddy_2012-Hml_recon_wbeddy_2012.isel(time=61+12-1)+Hml_mean_2012[61+12-1]
 
 
 

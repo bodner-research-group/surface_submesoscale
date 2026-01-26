@@ -16,7 +16,7 @@ face = 2
 i = slice(527, 1007)
 j = slice(2960, 3441)
 
-shortname = "hourly_wb_eddy_gaussian_2sigma"
+shortname = "hourly_wb_eddy_gaussian_30km_manuscript"
 data_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/{shortname}"
 boundary = 2
 

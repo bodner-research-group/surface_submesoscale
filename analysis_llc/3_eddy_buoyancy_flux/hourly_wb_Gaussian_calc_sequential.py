@@ -36,7 +36,7 @@ rho_dir = (
 
 out_dir = (
     f"/orcd/data/abodner/002/ysi/surface_submesoscale/"
-    f"analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_wide"
+    f"analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_30km_manuscript"
 )
 os.makedirs(out_dir, exist_ok=True)
 
@@ -115,11 +115,12 @@ W_all = W_all.chunk({"time": 1, "j": -1, "i": -1})
 
 # ================= Lambda_MLI (time-mean) =================
 ds_lambda = xr.open_dataset(Lambda_file)
-lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 61 + 62))
+lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 61 + 60))
 lambda_km = float(lambda_window.mean().values) / 1000.0
 
 # sigma_km = lambda_km / np.sqrt(8.0 * np.log(2.0))
-sigma_km = lambda_km
+# sigma_km = lambda_km
+sigma_km = 30
 sigma_pts = sigma_km / dx_km
 
 print(
