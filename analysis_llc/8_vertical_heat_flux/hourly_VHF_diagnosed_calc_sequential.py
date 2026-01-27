@@ -139,6 +139,7 @@ target_files = rho_files[0 * 24 : 366 * 24 + 1]
 #                   MAIN LOOP (SEQUENTIAL)
 # ============================================================
 for f in target_files:
+# for f in target_files[::-1]:
 
     tag = os.path.basename(f).replace("rho_Hml_", "").replace(".nc", "")
     out_file = os.path.join(out_dir, f"wT_eddy_{tag}.nc")

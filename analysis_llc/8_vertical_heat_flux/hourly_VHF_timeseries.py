@@ -113,9 +113,9 @@ figfile = os.path.join(figdir, f"{shortname}_all_timeseries.png")
 
 fig, ax = plt.subplots(figsize=(12, 6))
 
-ax.plot(ts.time, ts.wT_total_mean, label=r"$\langle wT \rangle$")
-ax.plot(ts.time, ts.wT_mean_mean, label=r"$\langle \bar{w}\bar{b} \rangle$")
-ax.plot(ts.time, ts.wT_eddy_mean, label=r"$\langle w'b' \rangle$")
+ax.plot(ts.time, ts.wT_total_mean, label=r"$\langle w\theta \rangle$")
+ax.plot(ts.time, ts.wT_mean_mean, label=r"$\langle \bar{w}\bar{\theta} \rangle$")
+ax.plot(ts.time, ts.wT_eddy_mean, label=r"$\langle w'\theta' \rangle$")
 
 ax.axhline(0, color="k", lw=0.7)
 ax.set_title("Horizontal Mean (⟨⋅⟩ₓᵧ)")
@@ -136,7 +136,7 @@ figfile = os.path.join(figdir, f"{shortname}_eddy_timeseries.png")
 
 fig, ax = plt.subplots(figsize=(12, 6))
 
-ax.plot(ts.time, ts.wT_eddy_mean, label=r"$\langle w'b' \rangle$")
+ax.plot(ts.time, ts.wT_eddy_mean, label=r"$\langle w'\theta' \rangle$")
 ax.axhline(0, color="k", lw=0.7)
 
 ax.set_title("Horizontal Mean (⟨⋅⟩ₓᵧ)")

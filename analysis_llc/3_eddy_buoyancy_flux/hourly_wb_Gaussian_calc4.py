@@ -26,7 +26,7 @@ min_H = 10.0
 #                       PATHS
 # ============================================================
 rho_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_rho_Hml"
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wT_gaussian_30km"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_30km_manuscript"
 os.makedirs(out_dir, exist_ok=True)
 
 Lambda_file = (
@@ -99,11 +99,9 @@ def main():
     W_all = ds_grid.W.isel(face=face, i=i, j=j, time=time)
     W_all = W_all.chunk({"time": 1, "j": -1, "i": -1})
 
-    T_all = ds_grid.Theta.isel(face=face, i=i, j=j, time=time)
-    T_all = T_all.chunk({"time": 1, "j": -1, "i": -1})
-
     # ================= Lambda_MLI (time-mean) =================
     ds_lambda = xr.open_dataset(Lambda_file)
+    # lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 91))
     lambda_window = ds_lambda.Lambda_MLI_mean.isel(time=slice(61, 61+60))
     lambda_km = float(lambda_window.mean().values) / 1000.0
 
@@ -117,7 +115,7 @@ def main():
     # ================= FILE LIST =================
     rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
     # target_files = rho_files[(61+15*3) * 24 : (61+15*4) * 24+1]
-    target_files = rho_files[61*0*24 : 61*1*24+1]
+    target_files = rho_files[61*3*24 : 61*4*24+1]
 
     # ============================================================
     #                   PROCESS ONE FILE
@@ -126,7 +124,7 @@ def main():
     def process_file(f):
 
         tag = os.path.basename(f).replace("rho_Hml_", "").replace(".nc", "")
-        out_file = os.path.join(out_dir, f"wT_eddy_{tag}.nc")
+        out_file = os.path.join(out_dir, f"wb_eddy_{tag}.nc")
 
         if os.path.exists(out_file):
             print(f"Skipping {tag}")
@@ -135,10 +133,11 @@ def main():
         print(f"Processing {tag}")
 
         ds_rho = xr.open_dataset(f)
+        rho = ds_rho["rho"].chunk({"j": -1, "i": -1})
         Hml = -ds_rho["Hml_SurfRef"].chunk({"j": -1, "i": -1})
 
         # Match W time
-        t_index = int(np.argmin(np.abs(W_all.time.values - Hml.time.values)))
+        t_index = int(np.argmin(np.abs(W_all.time.values - rho.time.values)))
         w_kp1 = W_all.isel(time=t_index)
 
         w_k = (
@@ -148,40 +147,43 @@ def main():
                     .fillna(0)
         )
 
-        # Temperature
-        T = T_all.isel(time=t_index)
+        # Buoyancy
+        b = -gravity * (rho - rho0) / rho0
 
         # ================= GAUSSIAN FILTER =================
         def gfilter(x):
             return gaussian_filter(x, sigma=(0, sigma_pts, sigma_pts), mode="reflect")
 
         w_f = xr.apply_ufunc(gfilter, w_k, dask="parallelized", output_dtypes=[float])
-        T_f = xr.apply_ufunc(gfilter, T,   dask="parallelized", output_dtypes=[float])
+        b_f = xr.apply_ufunc(gfilter, b,   dask="parallelized", output_dtypes=[float])
+        # wb_f = xr.apply_ufunc(gfilter, w_k * b, dask="parallelized", output_dtypes=[float])
 
         # ================= MIXED-LAYER AVERAGES =================
-        wT_eddy   = ml_integral((w_k-w_f)*(T-T_f), Hml, depth, dz3d, min_H)
-        wT_total  = ml_integral(w_k * T,           Hml, depth, dz3d, min_H)
-        wT_mean   = wT_total - wT_eddy
+        # wb_total = ml_integral(wb_f,        Hml, depth, dz3d, min_H)
+        # wb_mean  = ml_integral(w_f * b_f,   Hml, depth, dz3d, min_H)
+        # wb_eddy   = wb_total - wb_mean
 
-        # wT_mean  = ml_integral(w_f * b_f,   Hml, depth, dz3d, min_H)
-        # wT_eddy   = wT_total - wT_mean
+        wb_eddy   = ml_integral((w_k-w_f)*(b-b_f), Hml, depth, dz3d, min_H)
+        wb_total  = ml_integral(w_k * b,           Hml, depth, dz3d, min_H)
+        wb_mean   = wb_total - wb_eddy
         
 
         # ================= SAVE =================
         ds_out = xr.Dataset(
             {
-                "wT_total": wT_total,
-                "wT_mean": wT_mean,
-                "wT_eddy": wT_eddy,
+                "wb_total": wb_total,
+                "wb_mean": wb_mean,
+                "wb_eddy": wb_eddy,
+                # "Hml": Hml,
             },
-            coords={"time": Hml.time},
+            coords={"time": rho.time},
         )
 
         ds_out.to_netcdf(out_file)
         print(f"Saved → {out_file}")
 
         ds_rho.close()
-        del ds_out, T, Hml, w_k
+        del ds_out
         gc.collect()
 
     # ================= RUN =================

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=job6_hourly_VHF_diagnosed_calc
-#SBATCH --output=job6_hourly_VHF_diagnosed_calc.out
-#SBATCH --error=job6_hourly_VHF_diagnosed_calc.err
+#SBATCH --job-name=job1_hourly_VHF_diagnosed_calc
+#SBATCH --output=job1_hourly_VHF_diagnosed_calc.out
+#SBATCH --error=job1_hourly_VHF_diagnosed_calc.err
 #SBATCH --partition=mit_preemptable
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                # IMPORTANT: use 1 task (you use 64 threads inside Dask)
@@ -13,8 +13,8 @@ source ~/.bashrc-conda
 
 cd 8_vertical_heat_flux
 
-python3 hourly_VHF_diagnosed_calc6.py
-echo "Complete: hourly_VHF_diagnosed_calc6"
+python3 hourly_VHF_diagnosed_calc.py
+echo "Complete: hourly_VHF_diagnosed_calc"
 
 # python3 py31_hourly_rho5.py
 # echo "Complete: py31_hourly_rho5"

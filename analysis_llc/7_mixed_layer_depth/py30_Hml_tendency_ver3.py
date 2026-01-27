@@ -41,6 +41,7 @@ sigma_avg = 44/63 ### mixed-layer averaged mu(z)
 # fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily.nc"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
 Hml_mean = abs(xr.open_dataset(fname).Hml_mean)
+Hml_mean = Hml_mean.fillna(10.0)
 dHml_dt = Hml_mean.differentiate(coord="time") * 1e9 * 86400
 dHml_dt = dHml_dt.assign_coords(time=dHml_dt.time.dt.floor("D"))
 

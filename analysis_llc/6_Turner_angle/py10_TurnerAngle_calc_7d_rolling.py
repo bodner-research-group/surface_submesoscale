@@ -24,7 +24,7 @@ print("Dask dashboard:", client.dashboard_link)
 # ===================
 zarr_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 rho_input_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_weekly"
-out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle"
+out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/TurnerAngle_7d_rolling"
 os.makedirs(out_dir, exist_ok=True)
 
 # Load grid from zarr format with Dask-chunking
