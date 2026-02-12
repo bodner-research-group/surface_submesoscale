@@ -84,7 +84,7 @@ l11 = plot(time_Hml, Bflux_daily_avg*1e7, 'Color',blue, 'LineWidth', 2);
 % l111 = plot(time_qnet, vertical_bf_submeso_mld*300*1e7, 'Color',purple, 'LineWidth', 2);
 
 
-ylabel('\boldmath$B_0\ (\mathrm{m^2/s^3})$','Interpreter','latex','FontSize',fontsize+1);
+ylabel('\boldmath$\langle B_0\rangle\ (\mathrm{m^2/s^3})$','Interpreter','latex','FontSize',fontsize+1);
 % ylabel('\boldmath$\mathrm{Buoyancy\ flux}\ (10^{-7}\,\mathrm{m^2/s^3})$','Interpreter','latex');
 ax1 = gca;
 % ax1.YColor =  (blue + purple)/2; % Blue axis
@@ -149,7 +149,7 @@ hold(ax3, 'on');
 set(ax3, 'YScale', 'log');
 
 plot(ax3, time_Hml, N2ml_mean_logsafe, 'Color',green, 'LineWidth', 2);
-ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex','FontSize',fontsize+1);
+% ylabel(ax3, '\boldmath$\langle N^2\rangle\ (\mathrm{s^{-2}})$','Interpreter','latex','FontSize',fontsize+1);
 set(ax3, 'FontSize', fontsize-2);
 ylim([3e-7 3e-4])
 
@@ -169,7 +169,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 % Hide the plot in ax3_label, only show y-axis
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$N^2\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex','FontSize',fontsize+1);
+ylabel(ax3_label, '\boldmath$\langle N^2\rangle\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex','FontSize',fontsize+1);
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis

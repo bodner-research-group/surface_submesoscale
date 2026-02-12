@@ -8,7 +8,23 @@ from scipy.signal import detrend
 from dask.distributed import Client, LocalCluster
 from dask import delayed, compute
 
-from set_constant import domain_name, face, i, j, start_hours, end_hours
+
+# from set_constant import domain_name, face, i, j, start_hours, end_hours
+# ========== Time settings ==========
+nday_avg = 28
+delta_days = 7
+start_hours = (49 + 91) * 24
+end_hours = start_hours + 24 * nday_avg
+step_hours = delta_days * 24
+
+# ========== Domain ==========
+domain_name = "icelandic_basin"
+face = 2
+i = slice(527, 1007)   # icelandic_basin -- larger domain
+j = slice(2960, 3441)  # icelandic_basin -- larger domain
+
+
+
 plt.rcParams.update({'font.size': 16}) # Global font size setting for figures
 
 # =====================

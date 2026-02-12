@@ -28,7 +28,7 @@ Cp = 3995
 Ce = 0.06
 mu0 = 44 / 63
 g = 9.81
-alpha = 1.7e-4    
+alpha = 1.6011e-04   # annual mean
 # alpha = 1.4e-4     # winter average
 f0 = 1.27e-4
 
@@ -95,10 +95,62 @@ VHF_theory_steric = (
     .mean(dim=("i", "j"))
 )
 
+from scipy.io import savemat
+
+# # =====================
+# # Prepare data for MATLAB
+# # =====================
+# dates = pd.to_datetime(VHF_theory_submeso.time.values)
+
+# mat_dict = {
+#     "time_datenum": dates.to_julian_date().values,  # Julian date
+#     "VHF_theory_submeso": VHF_theory_submeso.values,
+#     "VHF_theory_steric": VHF_theory_steric.values,
+#     "Q_eddy_daily": Q_eddy_daily.values
+# }
+
+# mat_path = os.path.join(figdir, "VHF_timeseries_MeanAlpha.mat")
+# savemat(mat_path, mat_dict)
+
+# print(f"Saved MAT file to: {mat_path}")
+
+
+# =====================
+# Save to NetCDF instead of .mat
+# =====================
+
+dates = pd.to_datetime(VHF_theory_submeso.time.values)
+
+ds_out = xr.Dataset(
+    data_vars=dict(
+        VHF_theory_submeso=("time", VHF_theory_submeso.values),
+        VHF_theory_steric=("time", VHF_theory_steric.values),
+        Q_eddy_daily=("time", Q_eddy_daily.values),
+    ),
+    coords=dict(
+        time=VHF_theory_submeso.time
+    ),
+    attrs=dict(
+        description="Domain-averaged VHF theory and diagnosed eddy heat flux",
+        domain=domain_name,
+        alpha=alpha,
+        f0=f0,
+        Const=Const,
+        units="W m-2"
+    )
+)
+
+data_output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/Manuscript_Data/{domain_name}/"
+
+nc_path = os.path.join(data_output_dir, "VHF_timeseries_MeanAlpha.nc")
+ds_out.to_netcdf(nc_path)
+
+print(f"Saved NetCDF file to: {nc_path}")
+
+
 # =====================
 # Plot time series
 # =====================
-dates = pd.to_datetime(VHF_theory_submeso.time.values)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
@@ -143,7 +195,7 @@ plt.tight_layout()
 # =====================
 # Save
 # =====================
-fig_path = os.path.join(figdir, "VHF_theory_domain_mean_alpha1.7.png")
+fig_path = os.path.join(figdir, "VHF_theory_domain_MeanAlpha.png")
 fig.savefig(fig_path, dpi=300)
 
 print(f"\nSaved figure to: {fig_path}")

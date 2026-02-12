@@ -131,7 +131,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'));
 % set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$\lambda_\mathrm{MLI}\ (\mathrm{m})$ ','Interpreter','latex');
+ylabel(ax3_label, '\boldmath$\lambda_\mathrm{MLI}\ (\mathrm{km})$ ','Interpreter','latex');
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis
