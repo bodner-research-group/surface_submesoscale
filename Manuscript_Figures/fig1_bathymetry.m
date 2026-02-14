@@ -3,7 +3,7 @@
 %%%%% Panel 1: bathymetry 
 
 clear; close all;
-% set(groot, 'DefaultFigureRenderer', 'painters')
+set(groot, 'DefaultFigureRenderer', 'painters')
 
 
 addpath colormaps bathymetry colormaps/slanCM
@@ -33,7 +33,7 @@ topo_sub = topo(lon_idx, lat_idx);
 mycolor2 = flip(cmocean('ice'));
 mycolor  = [boxcolor; mycolor2];
 
-fontsize = 16;
+fontsize = 18;
 
 %%% ===== Figure and axes =====
 lat0 = mean(lat_sub);
@@ -62,7 +62,7 @@ hold on;
 
 %%% ===== Plot zero contour =====
 black = [0 0 0];
-contourm(Lat, Lon, -topo_sub'/1000, [0 0], 'EdgeColor', black, 'LineWidth', 1.2);
+contourm(Lat, Lon, -topo_sub'/1000, [0 0], 'EdgeColor', darkgray, 'LineWidth', 0.7);
 
 
 
@@ -78,7 +78,7 @@ clim([0 5]);
 cb = colorbar;
 cb.Label.String = 'Depth (km)';
 cb.Ticks = 0:1:5;
-set(cb,'YDir','reverse','Position',[0.81 0.4 0.015 0.4]);
+set(cb,'YDir','reverse','Position',[0.79 0.48 0.015 0.4]);
 
 set(gca,'fontsize',fontsize);
 box off

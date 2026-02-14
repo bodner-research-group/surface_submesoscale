@@ -60,10 +60,10 @@ delta_norm = ds["divergence"] / f0_mean
 # ==== Daily Maps ====
 print("\nGenerating daily maps...")
 # for t in range(len(ds.time)):
-t = 300
+# t = 300 ### Aug 27,2012
 
 # t = 61+45 ### Feb 15, 2012
-# t = 61+45+14+13 ### Mar 13, 2012
+t = 61+45+14+13 ### Mar 13, 2012
 # t = 61+45+14+5 ### Mar 5, 2012
 
 date_str = str(ds.time[t].values)[:10]
@@ -96,7 +96,7 @@ cbar1 = plt.colorbar(im1, ax=axes[1], orientation="vertical", pad=0.02, fraction
 # cbar1.set_label(r'$\sigma/|f_0|$')
 
 # subplot 3
-im2 = axes[2].pcolormesh(lon_g, lat_g, v2, cmap='BrBG', shading="auto", vmin=-0.5, vmax=0.5)
+im2 = axes[2].pcolormesh(lon_g, lat_g, v2, cmap='BrBG', shading="auto", vmin=-0.2, vmax=0.2)
 axes[2].set_title(r'$\Delta/f_0$')
 axes[2].set_xlabel("Longitude")
 # axes[2].set_ylabel("Latitude")
