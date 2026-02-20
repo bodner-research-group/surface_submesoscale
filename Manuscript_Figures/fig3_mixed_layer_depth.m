@@ -192,5 +192,4 @@ xtickformat('MMM yyyy')
 
 
 
-
 print(gcf, [figdir 'figure3_timeseries'], '-dpng', '-r300')
