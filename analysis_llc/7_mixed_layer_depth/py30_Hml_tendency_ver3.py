@@ -91,7 +91,7 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # ==============================================================
 # SSH submesoscale 
 # ==============================================================
-# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_17.50kmCutoff_timeseries.nc"
+# fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_16.50kmCutoff_timeseries.nc"
 fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
 eta_submeso_grad2 = xr.open_dataset(fname14).eta_submeso_grad2_mean
 

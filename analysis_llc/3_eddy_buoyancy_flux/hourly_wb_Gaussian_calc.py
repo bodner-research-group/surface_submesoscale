@@ -115,7 +115,7 @@ def main():
     # ================= FILE LIST =================
     rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
     # target_files = rho_files[(61+15*3) * 24 : (61+15*4) * 24+1]
-    target_files = rho_files[0*24 : 61*24+1]
+    target_files = rho_files[0*24 : 61*24+1] 
 
     # ============================================================
     #                   PROCESS ONE FILE

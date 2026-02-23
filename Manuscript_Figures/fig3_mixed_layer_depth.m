@@ -40,7 +40,7 @@ p1 = plot(t, dHml_dt,'-','Color',black);     p1.Color(4) = 0.25;
 p2r = plot(tr, vert_rm, 'Color',blue, 'LineWidth', 2);
 p3r = plot(tr, tendency_ekman_rm, 'Color',cyan, 'LineWidth', 2);
 p4r = plot(tr, diff_rm, 'Color',lightred2, 'LineWidth', 2); p4r.Color(4) = 0.6;
-p5r = plot(tr, hori_steric_rm,'-', 'Color',brown, 'LineWidth', 2);
+p5r = plot(tr, hori_steric_rm,'-.', 'Color',brown, 'LineWidth', 2);
 p6r = plot(tr, hori_submeso_rm,'-', 'Color',olive, 'LineWidth', 2);
 p7r = plot(tr_wbeddy, wb_eddy_rm, '-.','Color',purple2, 'LineWidth', 2);
 % p8r = plot(tr, residual_rm,'Color', gray, 'LineWidth', 2.5);
@@ -142,7 +142,7 @@ tw = datetime(time_rec,'ConvertFrom','datenum');
 tw_steric = datetime(time_Hml_recon_steric_2012,'ConvertFrom','datenum');
 % tw_wbeddy = datetime(time_Hml_recon_wbeddy_2012,'ConvertFrom','datenum');
 
-h2 = plot(tw_steric, Hml_recon_steric_2012,'-','Color',brown, 'LineWidth', 2);
+h2 = plot(tw_steric, Hml_recon_steric_2012,'-.','Color',brown, 'LineWidth', 2);
 h3 = plot(tw_steric, Hml_recon_submeso_2012,'-','Color',olive, 'LineWidth', 2);
 % h4 = plot(tw_wbeddy, Hml_recon_wbeddy_2012, 'Color',[0.5 0 0.5], 'LineWidth', 1.8);
 h1 = plot(tw, Hml_mean_2012,'-','Color',black, 'LineWidth', 2);

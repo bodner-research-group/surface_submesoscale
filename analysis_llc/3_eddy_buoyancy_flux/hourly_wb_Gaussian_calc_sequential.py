@@ -38,6 +38,10 @@ out_dir = (
     f"/orcd/data/abodner/002/ysi/surface_submesoscale/"
     f"analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_30km_manuscript"
 )
+# out_dir = (
+#     f"/orcd/data/abodner/002/ysi/surface_submesoscale/"
+#     f"analysis_llc/data/{domain_name}/hourly_wb_eddy_gaussian_60km"
+# )
 os.makedirs(out_dir, exist_ok=True)
 
 Lambda_file = (
@@ -130,7 +134,8 @@ print(
 
 # ================= FILE LIST =================
 rho_files = sorted(glob(os.path.join(rho_dir, "rho_Hml_*.nc")))
-target_files = rho_files[0 * 24 : 366 * 24 + 1]
+# target_files = rho_files[0 * 24 : 366 * 24 + 1]
+target_files = rho_files[61 * 24 : (61+60) * 24 + 1]
 
 # ============================================================
 #                   MAIN LOOP (SEQUENTIAL)

@@ -29,6 +29,7 @@ Ce = 0.06
 mu0 = 44 / 63
 g = 9.81
 alpha_mean = 1.6011e-04
+# alpha_mean = 1.406e-04
 f0 = 1.27e-4
 
 Const = rho0 * Cp * Ce * mu0 * g / (alpha_mean * f0)
@@ -43,6 +44,13 @@ eta_steric_grad_mag = xr.open_dataset(
 eta_submeso_grad_mag = xr.open_dataset(
     f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/VHF_theory/eta_submeso_grad_mag_daily.nc"
 ).eta_submeso_grad_mag.sel(i=i, j=j)
+
+
+# eta_submeso_grad_mag = xr.open_dataset(
+#     f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/VHF_theory/eta_submeso_grad_mag_daily_17km.nc"
+# ).eta_submeso_grad_mag.sel(i=i, j=j)
+
+
 
 # =====================
 # Load DAILY EDDY HEAT FLUX
@@ -78,6 +86,8 @@ buoyancy_ratio_linear = ds_br["buoyancy_ratio_linearEOS"].sel(i=i, j=j)
 
 buoyancy_ratio["time"] = buoyancy_ratio.indexes["time"].normalize()
 buoyancy_ratio_linear["time"] = buoyancy_ratio_linear.indexes["time"].normalize()
+buoyancy_ratio = buoyancy_ratio.reset_coords(drop=True)
+buoyancy_ratio_linear = buoyancy_ratio_linear.reset_coords(drop=True)
 
 # =====================
 # Align in time

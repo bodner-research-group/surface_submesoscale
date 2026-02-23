@@ -21,7 +21,7 @@ eta_dir = os.path.join(base_dir, "surface_24h_avg")
 
 outdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/VHF_theory"
 os.makedirs(outdir, exist_ok=True)
-out_file = os.path.join(outdir, "eta_submeso_grad_mag_daily.nc")
+out_file = os.path.join(outdir, "eta_submeso_grad_mag_daily_17km.nc")
 
 # ==============================================================
 # Load grid info
@@ -63,7 +63,8 @@ grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 # ==============================================================
 # Load submesoscale SSH
 # ==============================================================
-shortname = "SSH_Gaussian_submeso_LambdaMLI"
+shortname = "SSH_Gaussian_submeso_17kmCutoff"
+# shortname = "SSH_Gaussian_submeso_LambdaMLI"
 fname = os.path.join(
     base_dir,
     "SSH_submesoscale",

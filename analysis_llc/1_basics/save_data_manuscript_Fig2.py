@@ -36,6 +36,11 @@ fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{dom
 eta_submeso_grad_mean = xr.open_dataset(fname).eta_submeso_grad_mean
 
 
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_17kmCutoff_timeseries.nc"
+eta_submeso_grad_mean_winter = xr.open_dataset(fname).eta_submeso_grad_mean
+
+
+
 ###### Wavelength of the most unstable mixed-layer-instability (MLI) waves
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
 Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
@@ -47,6 +52,7 @@ mat_data = {
     "eta_grad_mean":eta_grad_mean.values,
     "eta_steric_grad_mean":eta_steric_grad_mean.values,
     "eta_submeso_grad_mean":eta_submeso_grad_mean.values,
+    "eta_submeso_grad_mean_winter":eta_submeso_grad_mean_winter.values,
     "Lambda_MLI_mean": Lambda_MLI_mean.values,
     # Optional: Save coordinates (e.g. time) if needed
     "time_SSH": eta_grad_mag_daily.time.values.astype('datetime64[s]').astype(str),
