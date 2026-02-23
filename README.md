@@ -1,10 +1,10 @@
-# Code Description
-
-## Manuscript_Figures
-  MATLAB scripts for generating all figures in the manuscript and Supporting Information.
+# Data and Code Description
 
 ## Manuscript_Data
   All data used to generate the figures in the manuscript and Supporting Information.
+
+## Manuscript_Figures
+  MATLAB scripts for generating all figures in the manuscript and Supporting Information.
 
 ## analysis_llc
 ### 1_basics:
