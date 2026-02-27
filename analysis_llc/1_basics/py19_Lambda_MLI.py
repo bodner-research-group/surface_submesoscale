@@ -7,6 +7,7 @@ import cmocean
 from xgcm import Grid
 from dask.diagnostics import ProgressBar
 from scipy.io import savemat
+import gsw
 
 from set_colormaps import WhiteBlueGreenYellowRed
 cmap = WhiteBlueGreenYellowRed()
@@ -22,6 +23,7 @@ from dask.distributed import Client, LocalCluster
 
 # Dask Cluster Setup
 cluster = LocalCluster(n_workers=32, threads_per_worker=1, memory_limit="11GB")
+# cluster = LocalCluster(n_workers=20, threads_per_worker=1, memory_limit="17.6GB")
 client = Client(cluster)
 print("✅ Dask cluster started")
 print("Dask dashboard:", client.dashboard_link)
@@ -39,8 +41,8 @@ grid_path = "/orcd/data/abodner/003/LLC4320/LLC4320"
 # output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI"
 # hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_7d_*.nc")))
 hml_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/rho_Hml_TS_daily_avg"
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_daily_surface_reference"
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily_surface_reference"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/Lambda_MLI_daily_surface_reference_GSW"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily_surface_reference_GSW"
 # hml_files = sorted(glob(os.path.join(hml_dir, "rho_Hml_TS_daily_*.nc")))
 hml_files = sorted(glob(os.path.join(hml_dir, "Hml_daily_surface_reference_*.nc")))
 
@@ -51,8 +53,8 @@ os.makedirs(output_dir, exist_ok=True)
 # --- Load Grid & Setup xgcm ---
 ds1 = xr.open_zarr(grid_path, consolidated=False)
 drF = ds1.drF  # vertical grid spacing, 1D
-lon = ds1['XC'].isel(face=face, i=i, j=j)
-lat = ds1['YC'].isel(face=face, i=i, j=j)
+lon = ds1['XC'].isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
+lat = ds1['YC'].isel(face=face, i=i, j=j).chunk({"j": -1, "i": -1})
 drF3d, _, _ = xr.broadcast(drF, lon, lat)
 
 # ds_grid_face = ds1.isel(face=face,i=i, j=j,i_g=i, j_g=j,k=0,k_p1=0,k_u=0)
@@ -87,21 +89,25 @@ metrics = {
 grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
 
-lat2d = ds1.YC.isel(face=face, i=i, j=j)
-lon2d = ds1.XC.isel(face=face, i=i, j=j)
+lat = ds1.YC.isel(face=face, i=i, j=j)
+lon = ds1.XC.isel(face=face, i=i, j=j)
 depth = ds1.Z.values
+depth_full = ds1.Z
 
-# lon_plot = lon2d.transpose("j", "i").values[:-1, :-1]
-# lat_plot = lat2d.transpose("j", "i").values[:-1, :-1]
+# ========== Broadcast lon, lat, depth ==========
+depth_for_broadcast = ds1.Z
+depth3d, _, _ = xr.broadcast(np.abs(depth_for_broadcast), lon, lat)
+depth3d = depth3d.chunk({"k": -1, "j": -1, "i": -1})
 
-lon_plot = lon2d.transpose("j", "i")
-lat_plot = lat2d.transpose("j", "i")
+# lon_plot = lon.transpose("j", "i").values[:-1, :-1]
+# lat_plot = lat.transpose("j", "i").values[:-1, :-1]
+
+lon_plot = lon.transpose("j", "i")
+lat_plot = lat.transpose("j", "i")
 
 # --- Coriolis parameter ---
-f_cor = 2 * omega * np.sin(np.deg2rad(lat2d.values))
+f_cor = 2 * omega * np.sin(np.deg2rad(lat.values))
 f_cor_squared = f_cor**2
-
-
 
 # --- Helper function to compute N² ---
 # def compute_N2_xr(rho, depth):
@@ -111,22 +117,24 @@ f_cor_squared = f_cor**2
 #     return N2
 
 #### Incorrect: use GSW toolbox to compute N^2
-def compute_N2_xr(rho, depth, grid):
-    drho_dz = grid.derivative(rho, axis="Z") / grid.derivative(depth, axis="Z")
-    N2 = - (g / rho0) * drho_dz
-    # Optional: interp to center
-    N2_centered = grid.interp(N2, axis="Z", to="center")
-    return N2_centered
+# def compute_N2_xr(rho, depth, grid):
+#     drho_dz = grid.derivative(rho, axis="Z") / grid.derivative(depth, axis="Z")
+#     N2 = - (g / rho0) * drho_dz
+#     # Optional: interp to center
+#     N2_centered = grid.interp(N2, axis="Z", to="center")
+#     return N2_centered
 
 
 # --- Loop through files ---
 for fpath in hml_files:
+# for fpath in hml_files[::-1]:
+# fpath = hml_files[0]
 
     print(f"Processing {os.path.basename(fpath)}")
     ds = xr.open_dataset(fpath)
     date_tag = os.path.basename(fpath).split("_")[-1].replace(".nc", "")
     out_nc = os.path.join(output_dir, f"Lambda_MLI_{date_tag}.nc")
-    
+
     if os.path.exists(out_nc):
         print(f"⏭️  Skipping {date_tag}, output already exists.")
         continue
@@ -137,15 +145,40 @@ for fpath in hml_files:
     ds_rho = xr.open_dataset(raw_file)
     rho = ds_rho["rho_daily"].load()  # (k, j, i)
 
-    # Depth broadcast
-    depth_broadcasted = xr.DataArray(
-        np.broadcast_to(depth[:, None, None], rho.shape),
-        dims=rho.dims,
-        coords=rho.coords
-    )
+    T_daily = ds_rho["T_daily"].load()
+    S_daily = ds_rho["S_daily"].load()
 
-    # Compute N²
-    N2 = compute_N2_xr(rho, depth_broadcasted, grid)
+    # Ensure vertical is single chunk and load into memory
+    S_daily = S_daily.chunk({"k": -1})
+    T_daily = T_daily.chunk({"k": -1})
+
+    # --- Compute pressure ---
+    pressure = gsw.p_from_z(-depth3d, lat.values)
+
+    # --- Compute Absolute Salinity ---
+    SA = gsw.SA_from_SP(S_daily.values, pressure, lon.values, lat.values)
+
+    # --- Compute Conservative Temperature ---
+    CT = gsw.CT_from_pt(SA, T_daily.values)
+
+    # --- Compute N² along vertical ---
+    N2_array, p_mid = gsw.Nsquared(SA, CT, pressure, lat=lat.values, axis=0)
+
+    # --- Wrap as xarray DataArray using k index ---
+    N2 = xr.DataArray(
+        N2_array,
+        dims=("k", "j", "i"),
+        coords={
+            "k": np.arange(N2_array.shape[0]),  # keep simple 0..k-1 index
+            "j": lat.j,
+            "i": lat.i
+        },
+        name="N2",
+        attrs={
+            "long_name": "Buoyancy frequency squared",
+            "units": "s^-2"
+        }
+    )
 
     # Find index of Hml base
     k_hml_base = np.abs(depth[:, None, None] - Hml.values[None, :, :]).argmin(axis=0)
@@ -261,7 +294,7 @@ for fpath in hml_files:
         }
     )
 
-    
+
 
     # Optional: Compression
     encoding = {
@@ -272,5 +305,7 @@ for fpath in hml_files:
     ds_out.to_netcdf(out_nc, encoding=encoding)
 
     print(f"✅ Saved NetCDF to {out_nc}")
+
+
 
 print("✅ All done.")

@@ -56,7 +56,7 @@ metrics = {("X",): ["dxC", "dxG"], ("Y",): ["dyC", "dyG"]}
 grid = Grid(ds_grid_face, coords=coords, metrics=metrics, periodic=False)
 
 # ==============================================================
-# Load Eta (7-day rolling mean)
+# Load Eta 
 # ==============================================================
 eta_path = os.path.join(eta_dir, "eta_24h_*.nc")
 ds_eta = xr.open_mfdataset(eta_path, combine="by_coords")
