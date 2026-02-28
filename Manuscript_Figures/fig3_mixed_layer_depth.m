@@ -4,7 +4,7 @@ clear; close all;
 set(groot, 'DefaultFigureRenderer', 'painters')
 
 % Load data
-load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/Hml_tendency_all_plot_data.mat')
+load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/Hml_tendency_all_plot_data_GSW0.8.mat')
 
 addpath ~/surface_submesoscale/analysis_llc/colormap
 load_colors

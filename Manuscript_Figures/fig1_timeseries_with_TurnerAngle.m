@@ -18,6 +18,7 @@ set(groot, 'DefaultFigureRenderer', 'painters')
 
 
 load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/timeseries_data_new.mat')
+% load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/timeseries_data_new_GSW.mat')
 
 Lambda_MLI_mean = [NaN NaN NaN Lambda_MLI_mean NaN NaN NaN];
 N2ml_mean = [NaN NaN NaN N2ml_mean NaN NaN NaN];
@@ -164,7 +165,9 @@ set(ax3, 'YScale', 'log');
 plot(ax3, time_Hml, N2ml_mean_logsafe, 'Color',green, 'LineWidth', 2);
 % ylabel(ax3, '\boldmath$\langle N^2\rangle\ (\mathrm{s^{-2}})$','Interpreter','latex','FontSize',fontsize+1);
 set(ax3, 'FontSize', fontsize-2);
-ylim([3e-7 3e-4])
+% ylim([3e-7 3e-4])
+ylim([3e-7 2e-4])
+
 
 ax3.YColor = 'none';
 ax3.YTick = [1e-6 1e-5 1e-4];
@@ -182,7 +185,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 % Hide the plot in ax3_label, only show y-axis
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$\langle N^2\rangle\ (\mathrm{s^{-2}})$  (50\%--90\% ML)','Interpreter','latex','FontSize',fontsize+1);
+ylabel(ax3_label, '\boldmath$\langle N^2\rangle\ (\mathrm{s^{-2}})$ (50\%--90\% ML)','Interpreter','latex','FontSize',fontsize+1);
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis

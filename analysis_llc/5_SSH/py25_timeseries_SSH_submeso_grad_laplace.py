@@ -63,8 +63,8 @@ Eta = Eta_daily
 Eta= Eta.assign_coords(time=Eta.time.dt.floor("D"))
 
 # shortname = "SSH_Gaussian_submeso_16.50kmCutoff"
-shortname = "SSH_Gaussian_submeso_17kmCutoff"
-# shortname = "SSH_Gaussian_submeso_LambdaMLI"
+# shortname = "SSH_Gaussian_submeso_17kmCutoff"
+shortname = "SSH_Gaussian_submeso_LambdaMLI_GSW0.8"
 fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/{shortname}.nc" 
 eta_submeso = xr.open_dataset(fname).SSH_submesoscale
 # eta_submeso = xr.open_dataset(fname).eta_submeso ### Only for GCMFilters
@@ -166,10 +166,10 @@ print(f"✅ Saved domain-mean |∇η_submeso|² timeseries: {shortname}_timeseri
 # ts_ds = ts_ds.chunk({"time": 365})  # or any chunk >= 7
 
 plt.figure(figsize=(8, 4))
-ts_ds["eta_submeso_grad2_mean"].plot(label="⟨submesoscale |∇η′|²⟩", color="tab:orange")
+ts_ds["eta_submeso_grad_mean"].plot(label="⟨submesoscale |∇η′|²⟩", color="tab:orange")
 
 # 7-day rolling mean
-ts_ds["eta_submeso_grad2_mean"].compute().rolling(time=7, center=True).mean().plot(label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
+ts_ds["eta_submeso_grad_mean"].compute().rolling(time=7, center=True).mean().plot(label="⟨submesoscale |∇η′|²⟩ (7d)", color="tab:orange", linestyle="--")
 
 plt.title("Domain-mean submesoscale |∇η′|² Timeseries")
 plt.ylabel("Mean(submesoscale |∇η′|²) [m²/m²]")

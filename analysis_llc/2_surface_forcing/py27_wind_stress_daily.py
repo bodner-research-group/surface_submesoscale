@@ -148,7 +148,7 @@ j = slice(2960, 3441)  # icelandic_basin -- larger domain
 
 
 outfile = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Ekman_buoyancy_flux/windstress_center_daily_avg.nc"
-figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/figs/{domain_name}/wind_stress"
+figdir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/wind_stress"
 os.makedirs(figdir, exist_ok=True)
 
 print("\nLoading saved center-interpolated wind stress...")
@@ -183,6 +183,34 @@ print(f"Time series plot saved to: {plot_file}")
 print("DONE plotting.")
 
 
+
+
+
+# =============================================================
+# Save wind-stress magnitude time series
+# =============================================================
+
+save_dir = "/orcd/data/abodner/002/ysi/surface_submesoscale/Manuscript_Data/icelandic_basin"
+os.makedirs(save_dir, exist_ok=True)
+
+ts_outfile = os.path.join(save_dir, "windstress_magnitude_timeseries_daily.nc")
+
+print("Saving time series to:", ts_outfile)
+
+ds_ts = xr.Dataset(
+    {
+        "tau_mag_mean": tau_mag_mean
+    }
+)
+
+ds_ts["tau_mag_mean"].attrs = {
+    "long_name": "domain-mean wind stress magnitude",
+    "units": "N m-2"
+}
+
+ds_ts.to_netcdf(ts_outfile)
+
+print("Time series saved successfully.")
 
 
 

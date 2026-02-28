@@ -37,15 +37,17 @@ eta_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{d
 base_out_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale"
 os.makedirs(base_out_dir, exist_ok=True)
 
-out_nc_path_submeso = os.path.join(base_out_dir, "SSH_Gaussian_submeso_LambdaMLI.nc")
-out_nc_path_meso = os.path.join(base_out_dir, "SSH_Gaussian_meso_LambdaMLI.nc")
-out_nc_path_meso_coarse = os.path.join(base_out_dir, "SSH_Gaussian_meso_LambdaMLI_1_12deg.nc")
+out_nc_path_submeso = os.path.join(base_out_dir, "SSH_Gaussian_submeso_LambdaMLI_GSW0.8.nc")
+out_nc_path_meso = os.path.join(base_out_dir, "SSH_Gaussian_meso_LambdaMLI_GSW0.8.nc")
+out_nc_path_meso_coarse = os.path.join(base_out_dir, "SSH_Gaussian_meso_LambdaMLI_1_12deg_GSW0.8.nc")
 
 # =====================
 # Load Lambda_MLI_mean (km)
 # =====================
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference_GSW.nc"
 Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean / 1000.0
+
+Lambda_MLI_mean = 0.8*Lambda_MLI_mean ### Set the filter scale to be 80% of the most unstable wavelength
 
 # =====================
 # Reference grid info

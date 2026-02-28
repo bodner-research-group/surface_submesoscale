@@ -32,7 +32,8 @@ eta_steric_grad_mean = xr.open_dataset(fname).eta_prime_grad_mean
 eta_grad_mean = xr.open_dataset(fname).eta_grad_mean
 
 ###### Submesoscale SSH gradient magnitude
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+# fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_GSW0.8_timeseries.nc"
 eta_submeso_grad_mean = xr.open_dataset(fname).eta_submeso_grad_mean
 
 
@@ -42,7 +43,7 @@ eta_submeso_grad_mean_winter = xr.open_dataset(fname).eta_submeso_grad_mean
 
 
 ###### Wavelength of the most unstable mixed-layer-instability (MLI) waves
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference_GSW.nc"
 Lambda_MLI_mean = xr.open_dataset(fname).Lambda_MLI_mean/1000  # in km
 
 
@@ -64,6 +65,6 @@ mat_data = {
 }
 
 # --- Save to .mat file ---
-savemat(f"{output_dir}/timeseries_steric_submesoSSH.mat", mat_data)
+savemat(f"{output_dir}/timeseries_steric_submesoSSH_GSW0.8.mat", mat_data)
 
-print("Saved to timeseries_steric_submesoSSH.mat")
+print("Saved to timeseries_steric_submesoSSH_GSW0.8.mat")

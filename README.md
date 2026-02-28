@@ -38,6 +38,9 @@
 - **py07_Qnet_mean.py**  
   Compute surface buoyancy flux (contributed by net heat flux/freshwater flux)
 
+- **py27_wind_stress_daily.py**  
+  Calculate daily and domain-averaged wind stress magnitude.
+
 - **py29_KPPhbl_vs_MLD.py**  
   Plot the KPP boundary layer height and compare it to the mixed layer depth.
 
@@ -79,6 +82,9 @@
 
 - **py25_timeseries_SSH_submeso_grad_laplace.py**  
   Compute the time series of domain-averaged submesoscale SSH gradient magnitude.
+
+- **save_SSH_submeso_gradient_maps.py**
+  Save the data required to calculate the vertical heat flux.
 
 
 ### 6_Turner_angle:

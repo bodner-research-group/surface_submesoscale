@@ -39,7 +39,7 @@ sigma_avg = 44/63 ### mixed-layer averaged mu(z)
 # 1. dHml/dt from MLD
 # ==============================================================
 # fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily.nc"
-fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference.nc"
+fname = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_timeseries_daily_surface_reference_GSW.nc"
 Hml_mean = abs(xr.open_dataset(fname).Hml_mean)
 Hml_mean = Hml_mean.fillna(10.0)
 dHml_dt = Hml_mean.differentiate(coord="time") * 1e9 * 86400
@@ -92,7 +92,7 @@ hori_steric = -sigma_avg*Ce/abs_f * eta_prime_grad2_mean * g*rho0/delta_rho * 86
 # SSH submesoscale 
 # ==============================================================
 # fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_16.50kmCutoff_timeseries.nc"
-fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_timeseries.nc"
+fname14 = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/SSH_submesoscale/SSH_Gaussian_submeso_LambdaMLI_GSW0.8_timeseries.nc"
 eta_submeso_grad2 = xr.open_dataset(fname14).eta_submeso_grad2_mean
 
 hori_submeso = -sigma_avg*Ce/abs_f * eta_submeso_grad2 * g*rho0/delta_rho * 86400 
@@ -157,7 +157,7 @@ darkpink = '#d1007c'
 # ==============================================================
 # Plot 1 — Hml tendency
 # ==============================================================
-filename = f"{figdir}Hml_tendency.png"
+filename = f"{figdir}Hml_tendency_GSW0.8.png"
 plt.figure(figsize=(12, 6.5))
 
 plt.plot(dHml_dt.time, dHml_dt, label="dHml/dt (total)", color='k')
@@ -196,7 +196,7 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 # ==============================================================
 # Plot 2 — Reconstructed Hml
 # ==============================================================
-filename = f"{figdir}Hml_reconstructed.png"
+filename = f"{figdir}Hml_reconstructed_GSW0.8.png"
 plt.figure(figsize=(12, 6.5))
 
 H0 = Hml_mean.isel(time=0)
@@ -254,7 +254,7 @@ residual_rm = residual.rolling(time=window, center=True).mean()
 # Plot — 7-day rolling mean tendency
 # ==============================================================
 
-filename = f"{figdir}Hml_tendency_7day_rolling.png"
+filename = f"{figdir}Hml_tendency_7day_rolling_GSW0.8.png"
 plt.figure(figsize=(12, 6.5))
 
 plt.plot(dHml_dt_rm.time, dHml_dt_rm,
@@ -298,7 +298,7 @@ plt.savefig(filename, dpi=200, bbox_inches='tight')
 
 
 import pandas as pd
-filename = f"{figdir}Hml_reconstructed_winter.png"
+filename = f"{figdir}Hml_reconstructed_winter_GSW0.8.png"
 
 # ==============================================================
 # Select start date
@@ -462,7 +462,7 @@ mat_data = {
 }
 
 
-matfile = f"{datadir}Hml_tendency_all_plot_data.mat"
+matfile = f"{datadir}Hml_tendency_all_plot_data_GSW0.8.mat"
 
 savemat(matfile, mat_data)
 

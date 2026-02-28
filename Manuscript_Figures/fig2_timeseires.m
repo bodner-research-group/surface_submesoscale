@@ -3,7 +3,7 @@
 clear;close all;
 set(groot, 'DefaultFigureRenderer', 'painters')
 
-load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/timeseries_steric_submesoSSH.mat')
+load('~/surface_submesoscale/Manuscript_Data/icelandic_basin/timeseries_steric_submesoSSH_GSW0.8.mat')
 
 
 addpath ~/surface_submesoscale/analysis_llc/colormap
@@ -50,7 +50,7 @@ hold on;
 yyaxis left
 l11 = plot(time_steric, 1e6*eta_steric_grad_mean, 'Color',brown, 'LineWidth', 2);
 
-ylabel('\boldmath$\vert\nabla \eta_\mathrm{steric}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ylabel('\boldmath$\langle\vert\nabla \eta_\mathrm{steric}\vert\rangle\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
 ax1 = gca;
 ax1.YColor =  brown;
 set(gca,'FontSize', fontsize);
@@ -65,7 +65,7 @@ ylim([0 1.2])
 yyaxis right
 l12 = plot(time_submesoSSH, 1e6*eta_submeso_grad_mean,'Color',olive, 'LineWidth', 2);
 % ylabel('\boldmath$H_\mathrm{ML} (\mathrm{m})$','Interpreter','latex');
-ylabel('\boldmath$\vert\nabla\eta_\mathrm{submeso}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ylabel('\boldmath$\langle\vert\nabla\eta_\mathrm{submeso}\vert\rangle\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
 ax1.YColor = olive;  % Black axis
 set(gca,'FontSize', fontsize);
 ylim([0 1.2])
@@ -82,7 +82,7 @@ annotation('textbox', [0.4928, 0.52, 0.25, 0.1], ...   % [x, y, width, height] i
            'FontSize', fontsize+2, ...
            'EdgeColor', 'none');                 % remove box border
 
-annotation('textbox', [0.38, 0.82, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
+annotation('textbox', [0.38, 0.79, 0.3, 0.1], ...   % [x, y, width, height] in normalized figure units
            'String', 'Submesoscale SSH', ...
            'Color', olive, ...               
            'FontSize', fontsize+2, ...
@@ -110,12 +110,13 @@ hold(ax3, 'on');
 % set(ax3, 'YScale', 'log');
 
 plot(ax3, time_lambda, Lambda_MLI_mean, '-.','Color',black, 'LineWidth', 2);
-ylabel(ax3, '\boldmath$N^2\ (\mathrm{s^{-2}})$','Interpreter','latex');
 set(ax3, 'FontSize', fontsize);
-ylim([0 24])
+% ylim([0 24])
+ylim([0 30])
 
 ax3.YColor = 'none';
-ax3.YTick = [0:4:24];
+% ax3.YTick = [0:4:24];
+ax3.YTick = [0:5:30];
 
 % Now create a new axes only for the y-axis labels and ticks, shifted right
 ax3_label = axes('Position', ax1_pos, ...
@@ -131,7 +132,7 @@ ax3_label.Position(1) = ax3_label.Position(1) + 0.09;
 set(ax3_label, 'XTick', [], 'YTick', get(ax3, 'YTick'));
 set(ax3_label, 'YLim', get(ax3, 'YLim'));
 % set(ax3_label, 'YLim', get(ax3, 'YLim'), 'YScale', 'log');
-ylabel(ax3_label, '\boldmath$\lambda_\mathrm{MLI}\ (\mathrm{km})$ ','Interpreter','latex');
+ylabel(ax3_label, '\boldmath$\langle\lambda_\mathrm{MLI}\rangle\ (\mathrm{km})$ ','Interpreter','latex');
 set(ax3_label, 'FontSize', fontsize);
 
 % Hide x-axis and box for the label axis

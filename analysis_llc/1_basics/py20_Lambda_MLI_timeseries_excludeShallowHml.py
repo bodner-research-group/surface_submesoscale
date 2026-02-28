@@ -13,12 +13,12 @@ j = slice(2960, 3441)
 plt.rcParams.update({'font.size': 16})
 
 # --- Paths ---
-output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily_surface_reference"
+output_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/Lambda_MLI_daily_surface_reference_GSW"
 out_timeseries_path = os.path.join(
     f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}",
-    "Lambda_MLI_timeseries_daily_surface_reference.nc"
+    "Lambda_MLI_timeseries_daily_surface_reference_GSW.nc"
 )
-fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/Lambda_MLI_daily_surface_reference"
+fig_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/figs/{domain_name}/Lambda_MLI_daily_surface_reference_GSW"
 os.makedirs(fig_dir, exist_ok=True)
 
 # --- Get list of output files ---
@@ -100,18 +100,18 @@ ds_out = xr.Dataset(
 # --------------------------------------------------
 # NEW: Time-average Lambda from 2012-01-01 to 2012-03-01
 # --------------------------------------------------
-lambda_winter_mean = (
-    ds_out["Lambda_MLI_mean_km"]
-    .sel(time=slice("2012-01-01", "2012-03-01"))
-    .mean(skipna=True)
-)
+# lambda_winter_mean = (
+#     ds_out["Lambda_MLI_mean_km"]
+#     .sel(time=slice("2012-01-01", "2012-03-01"))
+#     .mean(skipna=True)
+# )
 
-ds_out.attrs["Lambda_MLI_Jan01_to_Mar01_2012_mean_km"] = float(lambda_winter_mean)
+# ds_out.attrs["Lambda_MLI_Jan01_to_Mar01_2012_mean_km"] = float(lambda_winter_mean)
 
-print(
-    "✅ Time-mean Lambda_MLI (Jan 01 – Mar 01 2012): "
-    f"{lambda_winter_mean.values:.2f} km"
-)
+# print(
+#     "✅ Time-mean Lambda_MLI (Jan 01 – Mar 01 2012): "
+#     f"{lambda_winter_mean.values:.2f} km"
+# )
 
 # --- Save NetCDF ---
 encoding = {var: {"zlib": True, "complevel": 4} for var in ds_out.data_vars}
@@ -142,7 +142,7 @@ axs[3].set_xlabel("Time")
 for ax in axs:
     ax.grid(True)
 
-plot_path = os.path.join(fig_dir, "MLI_timeseries_plot.png")
+plot_path = os.path.join(fig_dir, "MLI_timeseries_plot_GSW.png")
 plt.savefig(plot_path, dpi=150)
 plt.show()
 

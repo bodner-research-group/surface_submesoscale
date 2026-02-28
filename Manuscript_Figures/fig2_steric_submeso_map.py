@@ -18,9 +18,11 @@ os.makedirs(figdir, exist_ok=True)
 # ==============================================================
 # Choose day
 # ==============================================================
-# date_tag = "20120215"
-date_tag = "20120305"
-datafile = os.path.join(data_dir, f"grad_laplace_eta_submeso_{date_tag}_16.50kmCutoff.nc")
+date_tag = "20120215"
+# date_tag = "20120305"
+# datafile = os.path.join(data_dir, f"grad_laplace_eta_submeso_{date_tag}_16.50kmCutoff.nc")
+datafile = os.path.join(data_dir, f"grad_laplace_eta_submeso_{date_tag}_GSW0.8.nc")
+
 
 ds = xr.open_dataset(datafile)
 
@@ -191,7 +193,8 @@ for ax in axes[:, 1:].flat:
 # ==============================================================
 # Save
 # ==============================================================
-outfile = os.path.join(figdir, f"SSH_3x3_grad_laplace_{date_tag}_16.50kmCutoff.png")
+# outfile = os.path.join(figdir, f"SSH_3x3_grad_laplace_{date_tag}_16.50kmCutoff.png")
+outfile = os.path.join(figdir, f"SSH_3x3_grad_laplace_{date_tag}_GSW0.8.png")
 plt.savefig(outfile, dpi=300)
 plt.close()
 

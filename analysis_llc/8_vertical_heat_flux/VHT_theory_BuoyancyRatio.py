@@ -42,7 +42,7 @@ eta_steric_grad_mag = xr.open_dataset(
 ).eta_prime_grad_mag.sel(i=i, j=j)
 
 eta_submeso_grad_mag = xr.open_dataset(
-    f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/VHF_theory/eta_submeso_grad_mag_daily.nc"
+    f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{domain_name}/VHF_theory/eta_submeso_grad_mag_daily_GSW0.8.nc"
 ).eta_submeso_grad_mag.sel(i=i, j=j)
 
 
@@ -161,7 +161,7 @@ ds_out = xr.Dataset(
 
 nc_path = os.path.join(
     data_output_dir,
-    "VHF_timeseries_MapBuoyancyRatio.nc"
+    "VHF_timeseries_MapBuoyancyRatio_GSW0.8.nc"
 )
 
 ds_out.to_netcdf(nc_path)

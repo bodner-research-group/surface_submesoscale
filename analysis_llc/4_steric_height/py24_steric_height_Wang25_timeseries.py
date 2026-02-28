@@ -28,7 +28,7 @@ base_dir = f"/orcd/data/abodner/002/ysi/surface_submesoscale/analysis_llc/data/{
 eta_dir = os.path.join(base_dir, "surface_24h_avg")
 rho_dir = os.path.join(base_dir, "rho_insitu_hydrostatic_pressure_daily")
 # Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily.nc")
-Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily_surface_reference.nc")
+Hml_file = os.path.join(base_dir, "Lambda_MLI_timeseries_daily_surface_reference_GSW.nc")
 
 # out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries")
 out_dir = os.path.join(base_dir, "steric_height_anomaly_timeseries_surface_reference")

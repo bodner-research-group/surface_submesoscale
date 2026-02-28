@@ -9,7 +9,7 @@ fontsize = 19;
 
 % Load data
 % fname = '~/surface_submesoscale/Manuscript_Data/icelandic_basin/VHF_timeseries_MeanAlpha.nc';
-fname = '~/surface_submesoscale/Manuscript_Data/icelandic_basin/VHF_timeseries_MapBuoyancyRatio.nc';
+fname = '~/surface_submesoscale/Manuscript_Data/icelandic_basin/VHF_timeseries_MapBuoyancyRatio_GSW0.8.nc';
 
 VHF_diagnosed = ncread(fname,'Q_eddy_daily');
 VHF_steric = ncread(fname,'VHF_steric_fullEOS');
@@ -54,7 +54,7 @@ grid on; grid minor; box on;
 
 title('Eddy-induced vertical heat flux','FontWeight','normal',...
     'FontSize', fontsize+5)
-ylabel('\textbf{VHF (W m$^{-2}$)}','Interpreter','latex')
+ylabel('\boldmath{$\langle\mathrm{VHF}\rangle$ \textbf{(W m$^{-2}$)}}','Interpreter','latex')
 
 lg1= legend([l_diagnosed l_steric l_submeso],'\textbf{Diagnosed VHF $\rho_0 C_p\langle-\overline{w^\prime \theta^\prime}^{z}\rangle$}',...
        '\textbf{Theory using $\eta_\mathrm{steric}$}', ...

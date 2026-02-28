@@ -37,7 +37,7 @@ nexttile
 % Left y-axis: Gradient magnitude of mixed-layer steric height
 yyaxis left
 l11 = plot(time_steric, 1e6*eta_steric_grad_mean, 'Color',brown, 'LineWidth', 2);
-ylabel('\boldmath$\vert\nabla \eta_\mathrm{steric}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ylabel('\boldmath$\langle\vert\nabla \eta_\mathrm{steric}\vert\rangle\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
 ax1 = gca;
 ax1.YColor =  brown;
 set(gca,'FontSize', fontsize);
@@ -46,7 +46,7 @@ ylim([0 1.2])
 % Right y-axis: Gradient magnitude of submesoscale SSH
 yyaxis right
 l12 = plot(time_submesoSSH, 1e6*eta_submeso_grad_mean_winter,'Color',olive, 'LineWidth', 2);
-ylabel('\boldmath$\vert\nabla\eta_\mathrm{submeso}\vert\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
+ylabel('\boldmath$\langle\vert\nabla\eta_\mathrm{submeso}\vert\rangle\ (10^{-6}\,\mathrm{m})$','Interpreter','latex');
 ax1.YColor = olive;  
 set(gca,'FontSize', fontsize);
 ylim([0 1.2])
@@ -134,7 +134,7 @@ set(gca,'FontSize', fontsize)
 grid on; grid minor; box on;
 title('Eddy-induced vertical heat flux (constant filter)','FontWeight','normal',...
     'FontSize', fontsize+5)
-ylabel('\textbf{VHF (W m$^{-2}$)}','Interpreter','latex')
+ylabel('\boldmath{$\langle\mathrm{VHF}\rangle$ \textbf{(W m$^{-2}$)}}','Interpreter','latex')
 lg1= legend([l_diagnosed l_steric l_submeso],'\textbf{Diagnosed VHF $\rho_0 C_p\langle-\overline{w^\prime \theta^\prime}^{z}\rangle$}',...
        '\textbf{Theory using $\eta_\mathrm{steric}$}', ...
        '\textbf{Theory using $\eta_\mathrm{submeso}$ (constant filter)}', ...
